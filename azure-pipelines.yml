@@ -5,7 +5,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  azureSubscription: 'Your-Azure-Subscription'
+  azureSubscription: 'Azure subscription 1'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
   containerRegistry: 'AzurePhotoFlowACR'
@@ -25,16 +25,17 @@ stages:
       inputs:
         command: build
         dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
-        containerName: azurephotoflow-backend
-        tags: $(Build.BuildId)
+        repository: azurephotoflow-backend  # Correct input name
+        tags: |
+          $(Build.BuildId)                 # Properly tag the image
     - task: Docker@2
       displayName: Build Frontend Docker Image
       inputs:
         command: build
         dockerfile: frontend/Dockerfile
-        containerName: azurephotoflow-frontend
-        tags: $(Build.BuildId)
-
+        repository: azurephotoflow-frontend # Correct input name
+        tags: |
+          $(Build.BuildId)
 - stage: Test
   displayName: Test Stage
   dependsOn: Build
