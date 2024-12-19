@@ -1,0 +1,125 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  azureSubscription: 'Your-Azure-Subscription'
+  resourceGroupName: 'AzurePhotoFlow-RG'
+  location: 'eastus'
+  containerRegistry: 'AzurePhotoFlowACR'
+  storageAccountName: 'tfstate'
+  cognitiveAccountName: 'azurephotoflowvision'
+  tfStateFile: 'azurephotoflow.tfstate' 
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: BuildDockerImages
+    displayName: Build Docker Images
+    steps:
+    - task: Docker@2
+      displayName: Build Backend Docker Image
+      inputs:
+        command: build
+        dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
+        containerName: azurephotoflow-backend
+        tags: $(Build.BuildId)
+    - task: Docker@2
+      displayName: Build Frontend Docker Image
+      inputs:
+        command: build
+        dockerfile: frontend/Dockerfile
+        containerName: azurephotoflow-frontend
+        tags: $(Build.BuildId)
+
+- stage: Test
+  displayName: Test Stage
+  dependsOn: Build
+  jobs:
+  - job: RunTests
+    displayName: Run Unit and Integration Tests
+    steps:
+    - script: |
+        cd backend
+        dotnet test
+        cd ../frontend
+        npm test
+      displayName: Run Tests
+
+- stage: DeployInfrastructure
+  displayName: Deploy Infrastructure
+  jobs:
+  - job: TerraformBackendSetup
+    displayName: Setup Terraform Backend
+    steps:
+    - task: AzureCLI@2
+      displayName: Create Blob Storage for Terraform State
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az storage account create --name $(storageAccountName) --resource-group $(resourceGroupName) --location $(location) --sku Standard_LRS
+          az storage container create --name $(containerName) --account-name $(storageAccountName)
+
+  - job: DeployTerraform
+    displayName: Deploy Infrastructure with Terraform
+    dependsOn: TerraformBackendSetup
+    steps:
+    - script: |
+        terraform init \
+          -backend-config="storage_account_name=$(storageAccountName)" \
+          -backend-config="container_name=$(containerName)" \
+          -backend-config="key=$(tfStateFile)" \
+          -backend-config="resource_group_name=$(resourceGroupName)" \
+          -backend-config="subscription_id=$(System.AccessToken)"
+      displayName: Initialize Terraform with Backend
+
+    - script: |
+        terraform apply -auto-approve \
+          -var="resource_group_name=$(resourceGroupName)" \
+          -var="location=$(location)"
+      displayName: Apply Terraform Configuration
+
+- stage: DeployApplications
+  displayName: Deploy Applications
+  dependsOn: DeployInfrastructure
+  jobs:
+  - job: PushDockerImages
+    displayName: Push Docker Images to ACR
+    steps:
+    - task: Docker@2
+      displayName: Push Backend Image
+      inputs:
+        command: push
+        containerName: azurephotoflow-backend
+        tags: $(Build.BuildId)
+    - task: Docker@2
+      displayName: Push Frontend Image
+      inputs:
+        command: push
+        containerName: azurephotoflow-frontend
+        tags: $(Build.BuildId)
+  - job: DeployToAzure
+    displayName: Deploy Docker Containers to Azure
+    steps:
+    - task: AzureWebAppContainer@1
+      displayName: Deploy Backend to Azure App Service
+      inputs:
+        azureSubscription: $(azureSubscription)
+        appName: AzurePhotoFlow-Backend
+        containerRegistry: $(containerRegistry).azurecr.io
+        imageName: azurephotoflow-backend
+        imageTag: $(Build.BuildId)
+    - task: AzureWebAppContainer@1
+      displayName: Deploy Frontend to Azure App Service
+      inputs:
+        azureSubscription: $(azureSubscription)
+        appName: AzurePhotoFlow-Frontend
+        containerRegistry: $(containerRegistry).azurecr.io
+        imageName: azurephotoflow-frontend
+        imageTag: $(Build.BuildId)
+
