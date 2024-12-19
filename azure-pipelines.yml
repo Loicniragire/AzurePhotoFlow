@@ -52,37 +52,23 @@ stages:
 - stage: DeployInfrastructure
   displayName: Deploy Infrastructure
   jobs:
-  - job: TerraformBackendSetup
-    displayName: Setup Terraform Backend
-    steps:
-    - task: AzureCLI@2
-      displayName: Create Blob Storage for Terraform State
-      inputs:
-        azureSubscription: $(azureSubscription)
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az storage account create --name $(storageAccountName) --resource-group $(resourceGroupName) --location $(location) --sku Standard_LRS
-          az storage container create --name $(containerName) --account-name $(storageAccountName)
-
   - job: DeployTerraform
     displayName: Deploy Infrastructure with Terraform
-    dependsOn: TerraformBackendSetup
     steps:
-    - script: |
-        terraform init \
-          -backend-config="storage_account_name=$(storageAccountName)" \
-          -backend-config="container_name=$(containerName)" \
-          -backend-config="key=$(tfStateFile)" \
-          -backend-config="resource_group_name=$(resourceGroupName)" \
-          -backend-config="subscription_id=$(System.AccessToken)"
-      displayName: Initialize Terraform with Backend
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
 
     - script: |
-        terraform apply -auto-approve \
-          -var="resource_group_name=$(resourceGroupName)" \
-          -var="location=$(location)"
-      displayName: Apply Terraform Configuration
+        export TF_VAR_storage_account_name=$(storageAccountName)
+        export TF_VAR_container_name=$(containerName)
+        export TF_VAR_key=$(tfStateFile)
+        export TF_VAR_resource_group_name=$(resourceGroupName)
+        export TF_VAR_subscription_id=$(System.AccessToken)
+
+        terraform init
+        terraform apply -auto-approve
+      displayName: Initialize and Apply Terraform
 
 - stage: DeployApplications
   displayName: Deploy Applications

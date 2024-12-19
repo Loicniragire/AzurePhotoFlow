@@ -1,5 +1,9 @@
 # AzurePhotoFlow
 
+## DevOps:
+https://dev.azure.com/loicniragire01
+Project: AzurePhotoFlow
+
 ## Features:
 ### 1. AI-Based Photo Tagging and Classification
 ### 2. Face Recognition for Portrait Classification
