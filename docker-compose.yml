@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  backend-api:
+    build:
+      context: ./backend/AzurePhotoFlow.Api
+      dockerfile: Dockerfile
+    ports:
+      - "5000:80"
+    depends_on:
+      - backend-functions
+
+  backend-functions:
+    build:
+      context: ./backend/AzurePhotoFlow.Functions
+      dockerfile: Dockerfile
+    ports:
+      - "5001:80"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend-api
+
+  terraform:
+    build:
+      context: ./infrastructure
+      dockerfile: Dockerfile
+    volumes:
+      - "./infrastructure:/terraform"
+    working_dir: /terraform
+
