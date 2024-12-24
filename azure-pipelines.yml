@@ -24,12 +24,14 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-      - task: UseGitVersion@5
+      # Checkout GitHub repository
+      - task: Checkout@1
         displayName: Checkout GitHub Repository
         inputs:
           repository: $(repo)
           fetchDepth: 1
 
+      # Build Backend Docker Image
       - task: Docker@2
         displayName: Build Backend Docker Image
         inputs:
@@ -39,6 +41,7 @@ stages:
           tags: |
             $(Build.BuildId)
 
+      # Build Frontend Docker Image
       - task: Docker@2
         displayName: Build Frontend Docker Image
         inputs:
