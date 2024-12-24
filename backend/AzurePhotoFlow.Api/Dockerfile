@@ -1,5 +1,5 @@
 # Use .NET SDK for build and runtime
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
 # Copy project files
@@ -11,7 +11,7 @@ COPY . .
 RUN dotnet publish -c Release -o out
 
 # Use a runtime image for deployment
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/out .
 
