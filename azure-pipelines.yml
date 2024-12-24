@@ -28,7 +28,7 @@ stages:
   - job: BuildDockerImages
     displayName: Build Docker Images
     pool:
-      vmImage: 'ubuntu-latest'
+      name: 'Default'
     steps:
       # Checkout GitHub repository.
       - checkout: github_repo
