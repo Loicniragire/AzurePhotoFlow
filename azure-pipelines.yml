@@ -13,7 +13,13 @@ variables:
   storageAccountName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
   tfStateFile: 'azurephotoflow.tfstate' 
-  repo: 'https://github.com/Loicniragire/AzurePhotoFlow'
+
+resources:
+  repositories:
+    - repository: github_repo
+      type: github
+      name: Loicniragire/AzurePhotoFlow
+      endpoint: 'github.com_Loicniragire' 
 
 stages:
 - stage: Build
@@ -25,11 +31,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
       # Checkout GitHub repository
-      - task: Checkout@1
-        displayName: Checkout GitHub Repository
-        inputs:
-          repository: $(repo)
-          fetchDepth: 1
+      - checkout: github_repo
 
       # Build Backend Docker Image
       - task: Docker@2
@@ -50,7 +52,6 @@ stages:
           repository: azurephotoflow-frontend
           tags: |
             $(Build.BuildId)
-
 - stage: Test
   displayName: Test Stage
   dependsOn: Build
