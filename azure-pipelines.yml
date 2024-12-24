@@ -30,7 +30,7 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-      # Checkout GitHub repository
+      # Checkout GitHub repository.
       - checkout: github_repo
 
       # Build Backend Docker Image
