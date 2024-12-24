@@ -2,6 +2,7 @@ trigger:
 - main
 
 pool:
+  name: Default
   vmImage: 'ubuntu-latest'
 
 variables:
@@ -12,6 +13,7 @@ variables:
   storageAccountName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
   tfStateFile: 'azurephotoflow.tfstate' 
+  repo: 'https://github.com/Loicniragire/AzurePhotoFlow'
 
 stages:
 - stage: Build
@@ -19,23 +21,33 @@ stages:
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images
+    pool:
+      vmImage: 'ubuntu-latest'
     steps:
-    - task: Docker@2
-      displayName: Build Backend Docker Image
-      inputs:
-        command: build
-        dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
-        repository: azurephotoflow-backend  # Correct input name
-        tags: |
-          $(Build.BuildId)                 # Properly tag the image
-    - task: Docker@2
-      displayName: Build Frontend Docker Image
-      inputs:
-        command: build
-        dockerfile: frontend/Dockerfile
-        repository: azurephotoflow-frontend # Correct input name
-        tags: |
-          $(Build.BuildId)
+      - task: UseGitVersion@5
+        displayName: Checkout GitHub Repository
+        inputs:
+          repository: $(repo)
+          fetchDepth: 1
+
+      - task: Docker@2
+        displayName: Build Backend Docker Image
+        inputs:
+          command: build
+          dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
+          repository: azurephotoflow-backend
+          tags: |
+            $(Build.BuildId)
+
+      - task: Docker@2
+        displayName: Build Frontend Docker Image
+        inputs:
+          command: build
+          dockerfile: frontend/Dockerfile
+          repository: azurephotoflow-frontend
+          tags: |
+            $(Build.BuildId)
+
 - stage: Test
   displayName: Test Stage
   dependsOn: Build
