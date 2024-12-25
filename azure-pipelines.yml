@@ -85,35 +85,24 @@ stages:
     displayName: Deploy Infrastructure with Terraform
     variables:
     - group: PhotoFlow
+
     steps:
+    # Set environment variables for Terraform authentication
     - script: |
-        # Authenticate with Azure using a Service Principal
-        az login --service-principal \
-          --username $(azureClientId) \
-          --password $(azureClientSecret) \
-          --tenant $(azureTenantId)
-        az account set --subscription $(azureSubscriptionId)
-      displayName: Authenticate with Azure
+        export ARM_CLIENT_ID=$(azureClientId)
+        export ARM_CLIENT_SECRET=$(azureClientSecret)
+        export ARM_TENANT_ID=$(azureTenantId)
+        export ARM_SUBSCRIPTION_ID=$(azureSubscriptionId)
 
-    - script: |
         cd $(Build.SourcesDirectory)/Infrastructure
-        export TF_VAR_storage_account_name=$(storageAccountName)
-        export TF_VAR_container_name=$(containerName)
-        export TF_VAR_key=$(tfStateFile)
-        export TF_VAR_resource_group_name=$(resourceGroupName)
-        export TF_VAR_subscription_id=$(azureSubscriptionId)
-
-        # Initialize Terraform with backend configuration
         terraform init \
           -backend-config="storage_account_name=$(storageAccountName)" \
           -backend-config="container_name=$(containerName)" \
           -backend-config="key=$(tfStateFile)" \
           -backend-config="resource_group_name=$(resourceGroupName)" \
           -backend-config="subscription_id=$(azureSubscriptionId)"
-
-        # Apply Terraform changes
         terraform apply -auto-approve
-      displayName: Initialize and Apply Terraform
+      displayName: Authenticate and Apply Terraform
 
 - stage: DeployApplications
   displayName: Deploy Applications
