@@ -100,7 +100,7 @@ stages:
           -backend-config="container_name=$(containerName)" \
           -backend-config="key=$(tfStateFile)" \
           -backend-config="resource_group_name=$(resourceGroupName)" \
-          -backend-config="subscription_id=$(azureSubscriptionId)"
+          -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
         terraform apply -auto-approve
       displayName: Authenticate and Apply Terraform
 
