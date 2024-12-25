@@ -83,6 +83,8 @@ stages:
   jobs:
   - job: DeployTerraform
     displayName: Deploy Infrastructure with Terraform
+    variables:
+    - group: PhotoFlow
     steps:
     - script: |
         # Authenticate with Azure using a Service Principal
