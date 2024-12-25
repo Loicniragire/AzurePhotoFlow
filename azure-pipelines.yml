@@ -10,7 +10,7 @@ variables:
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
   containerRegistry: 'AzurePhotoFlowACR'
-  storageAccountName: 'tfstate'
+  storageAccountName: 'photoflowtfstatedev'
   containerName: 'AzurePhotoFlowContainer'
   cognitiveAccountName: 'azurephotoflowvision'
   tfStateFile: 'azurephotoflow.tfstate' 
