@@ -60,7 +60,7 @@ stages:
     displayName: Run Unit and Integration Tests
     steps:
     - script: |
-        cd backend
+        cd backend/AzurePhotoFlow.Api.Tests
         dotnet test
         cd ../frontend
         npm test
