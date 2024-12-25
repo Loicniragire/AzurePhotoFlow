@@ -91,7 +91,7 @@ stages:
         export TF_VAR_resource_group_name=$(resourceGroupName)
         export TF_VAR_subscription_id=$(System.AccessToken)
 
-        terraform init
+        terraform init -backend-config=backend-config.tfvars
         terraform apply -auto-approve
       displayName: Initialize and Apply Terraform
 
