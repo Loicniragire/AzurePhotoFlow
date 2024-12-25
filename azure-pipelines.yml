@@ -11,6 +11,7 @@ variables:
   location: 'eastus'
   containerRegistry: 'AzurePhotoFlowACR'
   storageAccountName: 'tfstate'
+  containerName: 'AzurePhotoFlowContainer'
   cognitiveAccountName: 'azurephotoflowvision'
   tfStateFile: 'azurephotoflow.tfstate' 
 
@@ -83,6 +84,7 @@ stages:
     displayName: Deploy Infrastructure with Terraform
     steps:
     - script: |
+        cd $(Build.SourcesDirectory)/Infrastructure
         export TF_VAR_storage_account_name=$(storageAccountName)
         export TF_VAR_container_name=$(containerName)
         export TF_VAR_key=$(tfStateFile)
