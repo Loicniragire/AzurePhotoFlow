@@ -10,3 +10,7 @@ az storage container create \
   --name images \
   --account-name photoflowtfstatedev
 
+az storage container create \
+  --name tfstate \
+  --account-name photoflowtfstatedev
+
