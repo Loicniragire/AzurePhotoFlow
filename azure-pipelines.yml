@@ -89,10 +89,10 @@ stages:
     steps:
     # Set environment variables for Terraform authentication
     - script: |
-        export ARM_CLIENT_ID=$(azureClientId)
-        export ARM_CLIENT_SECRET=$(azureClientSecret)
-        export ARM_TENANT_ID=$(azureTenantId)
-        export ARM_SUBSCRIPTION_ID=$(azureSubscriptionId)
+        export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
+        export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
+        export ARM_TENANT_ID=$(ARM_TENANT_ID)
+        export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
 
         cd $(Build.SourcesDirectory)/Infrastructure
         terraform init \
