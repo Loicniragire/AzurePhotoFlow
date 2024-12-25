@@ -52,6 +52,7 @@ stages:
           repository: azurephotoflow-frontend
           tags: |
             $(Build.BuildId)
+
 - stage: Test
   displayName: Test Stage
   dependsOn: Build
@@ -59,12 +60,21 @@ stages:
   - job: RunTests
     displayName: Run Unit and Integration Tests
     steps:
+    - checkout: self
+
+    # Run backend tests
     - script: |
-        cd backend/AzurePhotoFlow.Api.Tests
+        cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
+        dotnet restore
         dotnet test
-        cd ../frontend
+      displayName: Run Backend Tests
+
+    # Run frontend tests
+    - script: |
+        cd $(Build.SourcesDirectory)/frontend
+        npm install
         npm test
-      displayName: Run Tests
+      displayName: Run Frontend Tests
 
 - stage: DeployInfrastructure
   displayName: Deploy Infrastructure
