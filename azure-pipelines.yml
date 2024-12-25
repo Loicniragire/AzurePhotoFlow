@@ -82,10 +82,6 @@ stages:
   - job: DeployTerraform
     displayName: Deploy Infrastructure with Terraform
     steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.x'
-
     - script: |
         export TF_VAR_storage_account_name=$(storageAccountName)
         export TF_VAR_container_name=$(containerName)
