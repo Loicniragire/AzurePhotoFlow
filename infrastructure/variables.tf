@@ -13,11 +13,6 @@ variable "storage_account_name" {
   default     = "photoflowtfstatedev"
 }
 
-variable "container_name" {
-  description = "The name of the container"
-  default     = "images"
-}
-
 variable "resource_group_name" {
   description = "The name of the resource group"
   default     = "AzurePhotoFlow-RG"
@@ -26,4 +21,10 @@ variable "resource_group_name" {
 variable "cognitive_account_name" {
   description = "The name of the cognitive account"
   default     = "photoflowcognitive"
+}
+
+variable "container_names" {
+  description = "The names of the containers"
+  type        = list(string)
+  default     = ["images", "tfstate"]
 }

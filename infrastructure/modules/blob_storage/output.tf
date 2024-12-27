@@ -6,7 +6,7 @@ output "images_primary_blob_endpoint" {
 }
 
 output "storage_container_name" {
-  value = data.azurerm_storage_container.container.name
+  value = data.azurerm_storage_container.containers[*].name
 }
 
 

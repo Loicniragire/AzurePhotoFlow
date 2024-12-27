@@ -6,4 +6,4 @@ variable "location" {}
 variable "account_replication_type" {}
 variable "account_tier" {}
 variable "delete_retention_days" {}
-variable "container_name" {}
+variable "container_names" {}

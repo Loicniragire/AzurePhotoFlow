@@ -5,8 +5,9 @@ data "azurerm_storage_account" "storage" {
 }
 
 # retrieve existing containers
-data "azurerm_storage_container" "container" {
-  name                  = var.container_name
+data "azurerm_storage_container" "containers" {
+  for_each				= toset(var.container_names)
+  name                  = each.value
   storage_account_name  = data.azurerm_storage_account.storage.name
 }
 
