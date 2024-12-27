@@ -32,7 +32,7 @@ module "cognitive_search" {
   source              = "./modules/cognitive_search"
   cognitive_account_name = var.cognitive_account_name
   resource_group_name  = var.resource_group_name
-  kind                 = "CognitiveServices"
+  kind                 = "CognitiveServices" # Enables general purpose APIs
   location             = var.location
   sku_name             = "S0"
 }

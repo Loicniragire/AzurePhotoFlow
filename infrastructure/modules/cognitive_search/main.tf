@@ -5,15 +5,6 @@ resource "azurerm_cognitive_account" "cognitive" {
   kind                = var.kind
   sku_name            = var.sku_name
 
-  # Enable Computer Vision capability
-  capabilities{ name = "ComputerVision" }
-
-  # Enable Face capability
-  capabilities{ name = "Face" }
-
-  # Enable Cognitive Search capability
-  capabilities{ name = "CognitiveSearch" }
-
   tags = {
 	environment = "dev"
     project = "AzurePhotoFlow"
