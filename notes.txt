@@ -1,0 +1,6 @@
+1. Pipeline and Initial Terraform setup completed.
+  - stages:
+	- Build
+	- Test
+	- deploy infrastructure
+

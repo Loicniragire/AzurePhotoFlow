@@ -6,7 +6,7 @@ output "images_primary_blob_endpoint" {
 }
 
 output "storage_container_names" {
-  value = [for container in azurerm_storage_container.containers : container.name]
+  value = [for container in data.azurerm_storage_container.containers : container.name]
 }
 
 
