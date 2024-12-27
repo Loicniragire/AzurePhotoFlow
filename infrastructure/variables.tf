@@ -1,24 +1,19 @@
 variable "location" {
-  description = "The location of the storage account"
+  description = "the location of the storage account",
+  value = "eastus"
 }
 
 variable "storage_account_name" {
-  description = "The name of the storage account"
+  description = "The name of the storage account",
+  value = "photoflowtfstatedev"
 }
 
 variable "container_name" {
-  description = "The name of the container"
-}
-
-variable "key" {
-  description = "The key to use for the storage account"
+  description = "The name of the container",
+  value = "tfstate"
 }
 
 variable "resource_group_name" {
-  description = "The name of the resource group"
+  description = "The name of the resource group",
+  value = "AzurePhotoFlow-RG"
 }
-
-variable "subscription_id" {
-  description = "The subscription id"
-}
-
