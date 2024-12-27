@@ -1,4 +1,6 @@
-az group create --name AzurePhotoFlow-RG --location eastus
+az group create \
+	--name AzurePhotoFlow-RG \
+	--location eastus
 
 az storage account create \
   --name photoflowtfstatedev \
