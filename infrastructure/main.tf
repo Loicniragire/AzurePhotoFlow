@@ -21,22 +21,20 @@ module "blob_storage" {
   storage_account_name = var.storage_account_name
   resource_group_name  = var.resource_group_name
   location             = var.location
-}
-
-# Module: Computer Vision
-module "computer_vision" {
-  source               = "./modules/computer_vision"
-  cognitive_account_name = var.cognitive_account_name
-  resource_group_name  = var.resource_group_name
-  location             = var.location
+  account_replication_type = var.account_replication_type
+  account_tier = "Standard"
+  delete_retention_days = 7
+  container_name = "tfstate"
 }
 
 # Module: Cognitive Search
 module "cognitive_search" {
   source              = "./modules/cognitive_search"
-  cognitive_search_name = var.cognitive_search_name
+  cognitive_account_name = var.cognitive_account_name
   resource_group_name  = var.resource_group_name
+  kind                 = "CognitiveServices"
   location             = var.location
+  sku_name             = "S0"
 }
 
 # Add other modules as needed, such as ML Workspace and Function Apps
