@@ -4,5 +4,5 @@ variable "cognitive_account_name" {}
 variable "resource_group_name" {}
 variable "location" {}
 variable "kind" {}
-varialbe "sku_name" {}
+variable "sku_name" {}
 

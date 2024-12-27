@@ -3,7 +3,7 @@
 variable "storage_account_name" {}
 variable "resource_group_name" {}
 variable "location" {}
-varialbe "account_replication_type" {}
+variable "account_replication_type" {}
 variable "account_tier" {}
 variable "delete_retention_days" {}
 variable "container_name" {}
