@@ -24,7 +24,7 @@ module "blob_storage" {
   account_replication_type = var.account_replication_type
   account_tier = "Standard"
   delete_retention_days = 7
-  container_name = "tfstate"
+  container_names = var.container_names
 }
 
 # Module: Cognitive Search
