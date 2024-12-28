@@ -14,7 +14,8 @@ variables:
   containerName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
   tfStateFile: 'azurephotoflow.tfstate' 
-  appServicePlan: 'AzurePhotoFlowSP'
+  backendAppServiceName: 'AzurePhotoFlowBE'
+  frontendAppServiceName: 'AzurePhotoFlowFE'
 
 resources:
   repositories:
@@ -131,7 +132,7 @@ stages:
       displayName: Deploy Backend to Azure App Service
       inputs:
         azureSubscription: $(azureSubscription)
-        appName: $(appServicePlan)
+        appName: $(backendAppServiceName)
         containerRegistry: $(containerRegistry).azurecr.io
         imageName: azurephotoflow-backend
         imageTag: $(Build.BuildId)
@@ -139,7 +140,7 @@ stages:
       displayName: Deploy Frontend to Azure App Service
       inputs:
         azureSubscription: $(azureSubscription)
-        appName: $(appServicePlan)
+        appName: $(frontendAppServiceName)
         containerRegistry: $(containerRegistry).azurecr.io
         imageName: azurephotoflow-frontend
         imageTag: $(Build.BuildId)

@@ -21,5 +21,3 @@ December 28, 2024
 	- Azure Container Registry
 	- Azure App Service Plan
 	- Azure App Service
-
-2. Consider moving the entire infrastructure to East US 2
