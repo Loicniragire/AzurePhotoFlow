@@ -55,17 +55,13 @@ resource "azurerm_container_registry" "acr" {
 
 
 # Shared service plan for all App Services
-resource "azurerm_app_service_plan" "service_plan" {
+resource "azurerm_service_plan" "service_plan" {
   name                = var.service_plan_name
   location            = var.location
   resource_group_name = var.resource_group_name
-  kind                = "Linux"
-  reserved            = true # Required for Linux-based App Services
-
-  sku {
-    tier = "Basic"
-    size = "B1" # Options: F1 (Free), B1-B3 (Basic), S1-S3 (Standard), etc.
-  }
+  os_type             = "Linux"
+  reserved            = true 
+  sku_name			  = "B1" 
 
   tags = {
     environment = var.environment
@@ -78,7 +74,7 @@ resource "azurerm_app_service" "backend" {
   name                = var.backend_app_name
   location            = var.location
   resource_group_name = var.resource_group_name
-  app_service_plan_id = azurerm_app_service_plan.service_plan.id
+  app_service_plan_id = azurerm_service_plan.service_plan.id
 
   site_config {
     app_command_line = ""
@@ -103,7 +99,7 @@ resource "azurerm_app_service" "frontend" {
   name                = var.frontend_app_name
   location            = var.location
   resource_group_name = var.resource_group_name
-  app_service_plan_id = azurerm_app_service_plan.service_plan.id
+  app_service_plan_id = azurerm_service_plan.service_plan.id
 
   site_config {
     app_command_line = ""
