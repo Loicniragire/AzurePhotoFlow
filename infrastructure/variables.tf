@@ -9,7 +9,7 @@ variable "account_replication_type" {
 }
 variable "location" {
   description = "The location of the storage account"
-  default     = "eastus"
+  default     = "eastus2"
 }
 
 variable "storage_account_name" {
