@@ -71,7 +71,7 @@ resource "azurerm_service_plan" "service_plan" {
 # Backend App Service
 resource "azurerm_linux_web_app" "backend" {
   name                = var.backend_app_name
-  location            = var.location
+  location            = "eastus2"
   resource_group_name = var.resource_group_name
   service_plan_id 	  = azurerm_service_plan.service_plan.id
 
@@ -93,7 +93,7 @@ resource "azurerm_linux_web_app" "backend" {
 # Frontend App Service
 resource "azurerm_linux_web_app" "frontend" {
   name                = var.frontend_app_name
-  location            = var.location
+  location            = "eastus2"
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.service_plan.id
 

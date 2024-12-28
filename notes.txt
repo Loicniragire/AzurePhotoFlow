@@ -13,3 +13,11 @@ December 27, 2024
 2. Resource group and storage account are created outside on Terraform through a manual script.
 
 3. Ready to move on to the next task. Pipeline is stable at this point.
+
+
+December 28, 2024
+1. Updated Terraform deploy infrastructure stage to include the missing resources.
+- Added the following resources:
+	- Azure Container Registry
+	- Azure App Service Plan
+	- Azure App Service
