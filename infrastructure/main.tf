@@ -77,14 +77,10 @@ resource "azurerm_linux_web_app" "backend" {
 
   site_config {
     app_command_line = ""
-    linux_fx_version = "DOCKER|${var.container_registry_name}.azurecr.io/azurephotoflow-backend:latest"
   }
 
   app_settings = {
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false" # typical for containerized apps, container handles storage
-    DOCKER_REGISTRY_SERVER_URL          = "https://${azurerm_container_registry.acr.login_server}"
-    DOCKER_REGISTRY_SERVER_USERNAME     = azurerm_container_registry.acr.admin_username
-    DOCKER_REGISTRY_SERVER_PASSWORD     = azurerm_container_registry.acr.admin_password
   }
 
   tags = {
@@ -102,14 +98,10 @@ resource "azurerm_linux_web_app" "frontend" {
 
   site_config {
     app_command_line = ""
-    linux_fx_version = "DOCKER|${var.container_registry_name}.azurecr.io/azurephotoflow-frontend:latest"
   }
 
   app_settings = {
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
-    DOCKER_REGISTRY_SERVER_URL          = "https://${azurerm_container_registry.acr.login_server}"
-    DOCKER_REGISTRY_SERVER_USERNAME     = azurerm_container_registry.acr.admin_username
-    DOCKER_REGISTRY_SERVER_PASSWORD     = azurerm_container_registry.acr.admin_password
   }
 
   tags = {
