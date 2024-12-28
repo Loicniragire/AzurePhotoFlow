@@ -77,6 +77,7 @@ resource "azurerm_linux_web_app" "backend" {
 
   site_config {
     app_command_line = ""
+	always_on = false # must be set to false when using F1 Service Plan
   }
 
   app_settings = {
@@ -98,6 +99,7 @@ resource "azurerm_linux_web_app" "frontend" {
 
   site_config {
     app_command_line = ""
+	always_on = false
   }
 
   app_settings = {
