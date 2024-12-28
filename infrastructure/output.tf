@@ -8,11 +8,6 @@ output "acr_admin_username" {
   value       = azurerm_container_registry.acr.admin_username
 }
 
-output "acr_admin_password" {
-  description = "The admin password for the Azure Container Registry"
-  value       = azurerm_container_registry.acr.admin_password
-}
-
 output "container_registry_login_server" {
   description = "The login server URL for the Azure Container Registry"
   value       = azurerm_container_registry.acr.login_server
