@@ -60,7 +60,7 @@ resource "azurerm_service_plan" "service_plan" {
   location            = var.location
   resource_group_name = var.resource_group_name
   os_type             = "Linux"
-  sku_name			  = "B1" 
+  sku_name			  = "F1"
 
   tags = {
     environment = var.environment
@@ -69,11 +69,11 @@ resource "azurerm_service_plan" "service_plan" {
 }
 
 # Backend App Service
-resource "azurerm_app_service" "backend" {
+resource "azurerm_linux_web_app" "backend" {
   name                = var.backend_app_name
   location            = var.location
   resource_group_name = var.resource_group_name
-  app_service_plan_id = azurerm_service_plan.service_plan.id
+  service_plan_id 	  = azurerm_service_plan.service_plan.id
 
   site_config {
     app_command_line = ""
@@ -94,11 +94,11 @@ resource "azurerm_app_service" "backend" {
 }
 
 # Frontend App Service
-resource "azurerm_app_service" "frontend" {
+resource "azurerm_linux_web_app" "frontend" {
   name                = var.frontend_app_name
   location            = var.location
   resource_group_name = var.resource_group_name
-  app_service_plan_id = azurerm_service_plan.service_plan.id
+  service_plan_id     = azurerm_service_plan.service_plan.id
 
   site_config {
     app_command_line = ""
