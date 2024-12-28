@@ -39,3 +39,88 @@ module "cognitive_search" {
 
 # Add other modules as needed, such as ML Workspace and Function Apps
 
+# Container Registry
+resource "azurerm_container_registry" "acr" {
+  name                = var.container_registry_name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = "Basic"
+  admin_enabled       = true
+
+  tags = {
+	environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+
+# Shared service plan for all App Services
+resource "azurerm_app_service_plan" "service_plan" {
+  name                = var.service_plan_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  kind                = "Linux"
+  reserved            = true # Required for Linux-based App Services
+
+  sku {
+    tier = "Basic"
+    size = "B1" # Options: F1 (Free), B1-B3 (Basic), S1-S3 (Standard), etc.
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+# Backend App Service
+resource "azurerm_app_service" "backend" {
+  name                = var.backend_app_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  app_service_plan_id = azurerm_app_service_plan.service_plan.id
+
+  site_config {
+    app_command_line = ""
+    linux_fx_version = "DOCKER|${var.container_registry_name}.azurecr.io/azurephotoflow-backend:latest"
+  }
+
+  app_settings = {
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    DOCKER_REGISTRY_SERVER_URL          = "https://${azurerm_container_registry.acr.login_server}"
+    DOCKER_REGISTRY_SERVER_USERNAME     = azurerm_container_registry.acr.admin_username
+    DOCKER_REGISTRY_SERVER_PASSWORD     = azurerm_container_registry.acr.admin_password
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+# Frontend App Service
+resource "azurerm_app_service" "frontend" {
+  name                = var.frontend_app_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  app_service_plan_id = azurerm_app_service_plan.service_plan.id
+
+  site_config {
+    app_command_line = ""
+    linux_fx_version = "DOCKER|${var.container_registry_name}.azurecr.io/azurephotoflow-frontend:latest"
+  }
+
+  app_settings = {
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    DOCKER_REGISTRY_SERVER_URL          = "https://${azurerm_container_registry.acr.login_server}"
+    DOCKER_REGISTRY_SERVER_USERNAME     = azurerm_container_registry.acr.admin_username
+    DOCKER_REGISTRY_SERVER_PASSWORD     = azurerm_container_registry.acr.admin_password
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+

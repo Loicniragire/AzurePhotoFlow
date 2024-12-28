@@ -1,3 +1,7 @@
+variable "environment" {
+  description = "The environment in which the resources are deployed"
+  default     = "dev"
+}
 
 variable "account_replication_type" {
   description = "The type of replication to use for the storage account"
@@ -27,4 +31,24 @@ variable "container_names" {
   description = "The names of the containers"
   type        = list(string)
   default     = ["images", "tfstate"]
+}
+
+variable "container_registry_name" {
+  description = "The name of the container registry"
+  default     = "AzurePhotoFlowACR"
+}
+
+variable "service_plan_name" {
+  description = "The name of the service plan"
+  default     = "AzurePhotoFlowSP"
+}
+
+variable "backend_app_name" {
+  description = "The name of the backend app"
+  default     = "AzurePhotoFlowBE"
+}
+
+variable "frontend_app_name" {
+  description = "The name of the frontend app"
+  default     = "AzurePhotoFlowFE"
 }

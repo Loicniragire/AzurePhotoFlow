@@ -1,6 +1,15 @@
+December 27, 2024
+
+0. Build agent:
+	- Running a local build agent.
+	- Location: "~/Workspace/AzurePhotoFlow/build_agents/vsts-agent-osx-x64-3.248.0" 
 1. Pipeline and Initial Terraform setup completed.
   - stages:
 	- Build
 	- Test
 	- deploy infrastructure
+	- deploy application: missing a few resources to complete the stage.
 
+2. Resource group and storage account are created outside on Terraform through a manual script.
+
+3. Ready to move on to the next task. Pipeline is stable at this point.
