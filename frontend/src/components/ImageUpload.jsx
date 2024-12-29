@@ -41,26 +41,35 @@ const ImageUpload = () => {
         }
     };
 
-    return (
-        <div className="image-upload">
-            <h2>Upload Your Image</h2>
-            <input type="file" accept="image/*" onChange={handleFileChange} />
-            <button onClick={handleUpload}>Upload</button>
+	return (
+		<div className="image-upload">
+			<h2>Upload Your Image</h2>
+			<label htmlFor="file-input" className="file-label">
+				Choose an image
+			</label>
+			<input
+				id="file-input"
+				type="file"
+				accept="image/*"
+				onChange={handleFileChange}
+				className="file-input"
+			/>
+			<button onClick={handleUpload}>Upload</button>
 
-            {uploadProgress > 0 && (
-                <div className="progress-bar">
-                    <div
-                        className="progress"
-                        style={{ width: `${uploadProgress}%` }}
-                    >
-                        {uploadProgress}%
-                    </div>
+			{uploadProgress > 0 && (
+				<div className="progress-bar">
+					<div
+						className="progress"
+						style={{ width: `${uploadProgress}%` }}
+                >
+                    {uploadProgress}%
                 </div>
-            )}
+            </div>
+        )}
 
-            {uploadStatus && <p className="status-message">{uploadStatus}</p>}
-        </div>
-    );
+        {uploadStatus && <p className="status-message">{uploadStatus}</p>}
+    </div>
+);
 };
 
 export default ImageUpload;

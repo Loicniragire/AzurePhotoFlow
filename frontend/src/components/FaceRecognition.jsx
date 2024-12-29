@@ -49,7 +49,7 @@ const FaceRecognition = ({ imageUrl, faceData = [] }) => {
 };
 
 FaceRecognition.propTypes = {
-    imageUrl: PropTypes.string.isRequired,
+    imageUrl: PropTypes.string,
     faceData: PropTypes.arrayOf(
         PropTypes.shape({
             boundingBox: PropTypes.shape({

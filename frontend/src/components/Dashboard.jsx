@@ -1,6 +1,25 @@
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+);
+
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Bar } from 'react-chartjs-2';
 import '../styles/Dashboard.css';
 
 const Dashboard = () => {
@@ -27,18 +46,18 @@ const Dashboard = () => {
     if (loading) return <p>Loading dashboard data...</p>;
     if (error) return <p className="error-message">{error}</p>;
 
-    const tagFrequencyData = {
-        labels: data.tagFrequency.map((item) => item.tag),
-        datasets: [
-            {
-                label: 'Tag Frequency',
-                data: data.tagFrequency.map((item) => item.count),
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-            },
-        ],
-    };
+	const tagFrequencyData = {
+		labels: data.tagFrequency?.map((item) => item.tag) || [], // Fallback to empty array
+		datasets: [
+			{
+				label: 'Tag Frequency',
+				data: data.tagFrequency?.map((item) => item.count) || [],
+				backgroundColor: 'rgba(75, 192, 192, 0.2)',
+				borderColor: 'rgba(75, 192, 192, 1)',
+				borderWidth: 1,
+			},
+		],
+	};
 
     const options = {
         scales: {

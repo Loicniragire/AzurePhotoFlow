@@ -59,3 +59,22 @@
     color: #333;
 }
 
+.file-input {
+    display: none; /* Hide the actual file input */
+}
+
+.file-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.file-label:hover {
+    background-color: #0056b3;
+}

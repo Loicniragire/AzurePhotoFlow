@@ -1,0 +1,24 @@
+.home {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    text-align: center;
+    color: #333;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+}
+
+.home h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: #007bff;
+}
+
+.home p {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: #555;
+}
+
