@@ -1,4 +1,3 @@
-// import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ImageUpload from './components/ImageUpload';
 import ImageSearch from './components/ImageSearch';
@@ -12,7 +11,7 @@ const App = () => {
         <Router>
             <div className="app-container">
                 <header className="app-header">
-                    <h1>AzurePhotoFlow</h1>
+                    <h1>Photo Flow</h1>
                     <nav>
                         <ul>
                             <li><a href="/upload">Upload</a></li>
