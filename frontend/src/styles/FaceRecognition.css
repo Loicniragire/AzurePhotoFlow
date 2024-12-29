@@ -1,0 +1,67 @@
+.face-recognition {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+}
+
+.face-recognition h2 {
+    font-size: 1.8rem;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.image-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.analyzed-image {
+    max-width: 100%;
+    border-radius: 10px;
+}
+
+.face-box {
+    position: absolute;
+    border: 2px solid #ff0000;
+    background-color: rgba(255, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.face-box:hover {
+    background-color: rgba(255, 0, 0, 0.4);
+}
+
+.face-details {
+    width: 100%;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.face-details h3 {
+    font-size: 1.4rem;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.face-details ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.face-details ul li {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 8px;
+}
+
