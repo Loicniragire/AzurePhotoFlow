@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import './styles/NaturalLanguageSearch.css';
+import '../styles/NaturalLanguageSearch.css';
 
 const NaturalLanguageSearch = () => {
     const [query, setQuery] = useState('');

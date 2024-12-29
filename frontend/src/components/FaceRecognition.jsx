@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import './styles/FaceRecognition.css';
+import '../styles/FaceRecognition.css';
 
 const FaceRecognition = ({ imageUrl, faceData = [] }) => {
     const [selectedFace, setSelectedFace] = useState(null);

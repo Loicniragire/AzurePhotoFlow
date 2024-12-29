@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import './styles/ImageSearch.css';
+import '../styles/ImageSearch.css';
 
 const ImageSearch = () => {
     const [searchQuery, setSearchQuery] = useState('');

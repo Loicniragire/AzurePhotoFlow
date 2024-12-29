@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import './styles/ImageUpload.css';
+import '../styles/ImageUpload.css';
 
 const ImageUpload = () => {
     const [selectedFile, setSelectedFile] = useState(null);

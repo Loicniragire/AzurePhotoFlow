@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import './styles/TagDisplay.css';
+import '../styles/TagDisplay.css';
 
 const TagDisplay = ({ tags = [], onTagClick }) => {
     if (!tags.length) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import './styles/SearchRefinement.css';
+import '../styles/SearchRefinement.css';
 
 const SearchRefinement = ({ onApplyFilters }) => {
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
