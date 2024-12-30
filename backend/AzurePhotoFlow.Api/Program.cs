@@ -3,9 +3,15 @@ using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(8080);
+});
 
 // Load Environment Variables
 DotNetEnv.Env.Load();
+
+Console.WriteLine($"Azure Blob Storage Connection String: {Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE")}");
 
 // Configure services
 builder.Services.AddControllers(); // Add support for MVC controllers

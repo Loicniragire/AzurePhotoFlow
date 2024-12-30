@@ -5,7 +5,8 @@ services:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
     ports:
-      - "5000:80"
+      - "8080:80"
+      - "8443:443"
     depends_on:
       - backend-functions
 
