@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load Environment Variables
+DotNetEnv.Env.Load();
+
 // Configure services
 builder.Services.AddControllers(); // Add support for MVC controllers
 builder.Services.AddEndpointsApiExplorer(); // Enable API explorer for Swagger or similar tools
 builder.Services.AddSwaggerGen(); // Add Swagger for API documentation
 
 // Add BlobServiceClient for Azure Blob Storage
-builder.Services.AddSingleton(x =>
-    new BlobServiceClient(builder.Configuration.GetConnectionString("AzureBlobStorage")));
+var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage") 
+                                   ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+builder.Services.AddSingleton(x => new BlobServiceClient(azureBlobStorageConnectionString));
 
 // Add custom services
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();

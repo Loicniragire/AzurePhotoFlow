@@ -4,6 +4,7 @@ using Azure.Storage.Blobs;
 
 public class ImageUploadService : IImageUploadService
 {
+	private const string ContainerName = "images";
     private readonly BlobServiceClient _blobServiceClient;
 
     public ImageUploadService(BlobServiceClient blobServiceClient)
@@ -13,7 +14,7 @@ public class ImageUploadService : IImageUploadService
 
     public async Task<ImageMetadata> UploadImageAsync(IFormFile file)
     {
-        var containerClient = _blobServiceClient.GetBlobContainerClient("images");
+        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
         var blobClient = containerClient.GetBlobClient(file.FileName);
 
         await using var stream = file.OpenReadStream();
