@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import '../styles/ImageUpload.css';
+import {uploadImage} from '../services/api';
 
 const ImageUpload = () => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -52,6 +53,8 @@ const ImageUpload = () => {
             });
 
             setUploadStatus('Upload successful!');
+			const result = await uploadImage(selectedFile);
+			setUploadStatus(`Upload successful: ${result.fileName}`);
             console.log('Upload response:', response.data);
         } catch (error) {
             setUploadStatus('Upload failed. Please try again.');
