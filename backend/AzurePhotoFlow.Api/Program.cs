@@ -18,6 +18,11 @@ Console.WriteLine($"Azure Blob Storage Connection String: {Environment.GetEnviro
 builder.Services.AddControllers(); // Add support for MVC controllers
 builder.Services.AddEndpointsApiExplorer(); // Enable API explorer for Swagger or similar tools
 
+// Configure Logging
+builder.Logging.AddConsole(); // Adds Console logging
+builder.Logging.AddDebug(); // Adds Debug logging for Visual Studio
+builder.Logging.AddEventSourceLogger(); // Adds EventSource logging
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AzurePhotoFlow API", Version = "v1" });
