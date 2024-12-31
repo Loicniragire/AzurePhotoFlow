@@ -4,7 +4,7 @@ namespace Api.Interfaces;
 public interface IImageUploadService
 {
 	Task<ImageMetadata> UploadImageAsync(IFormFile image);
-    Task<List<string>> ExtractAndUploadImagesAsync(IFormFile directoryFile, string directoryName);
+    Task<List<string>> ExtractAndUploadImagesAsync(IFormFile directoryFile, string directoryName, DateTime timestamp);
 }
 
 

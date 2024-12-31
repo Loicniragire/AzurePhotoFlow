@@ -39,7 +39,7 @@ public class ImageUploadService : IImageUploadService
         return blobClient.Uri.ToString(); // Return the URL of the uploaded blob
     }
 
-    public async Task<List<string>> ExtractAndUploadImagesAsync(IFormFile directoryFile, string directoryName)
+    public async Task<List<string>> ExtractAndUploadImagesAsync(IFormFile directoryFile, string directoryName, DateTime timestamp)
     {
         var uploadResults = new List<string>();
 
@@ -51,7 +51,7 @@ public class ImageUploadService : IImageUploadService
             // Check if the entry is a valid image file
             if (!string.IsNullOrWhiteSpace(entry.Name) && IsImageFile(entry.FullName))
             {
-                var blobPath = $"original/{directoryName}/{entry.Name}";
+                var blobPath = $"{timestamp:yyy-MM-dd}/{directoryName}/original/{entry.Name}";
 
                 // Open the entry stream and upload it
                 using var entryStream = entry.Open();

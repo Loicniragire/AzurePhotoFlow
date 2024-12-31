@@ -30,32 +30,31 @@ public class ImageController : ControllerBase
         }
     }
 
-	[HttpPost("upload-directory")]
-	[Consumes("multipart/form-data")]
-	public async Task<IActionResult> UploadDirectory([FromForm] IFormFile directoryFile)
-	{
-		if (directoryFile == null || directoryFile.Length == 0)
-		{
-			return BadRequest("A directory file must be provided.");
-		}
+    [HttpPost("upload-directory")]
+    public async Task<IActionResult> UploadDirectory(DateTime timeStamp, IFormFile directoryFile)
+    {
+        if (directoryFile == null || directoryFile.Length == 0)
+        {
+            return BadRequest("A Zip file must be provided.");
+        }
 
-		try
-		{
-			var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
+        try
+        {
+            var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
 
-			var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, directoryName);
+            var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, directoryName, timeStamp);
 
-			return Ok(new
-			{
-				Message = "Directory uploaded and files extracted successfully.",
-				Files = extractedFiles
-			});
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, $"Internal server error: {ex.Message}");
-		}
-	}
+            return Ok(new
+            {
+                Message = "Directory uploaded and files extracted successfully.",
+                Files = extractedFiles
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
 
 }
 
