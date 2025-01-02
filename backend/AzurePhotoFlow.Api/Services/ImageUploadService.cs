@@ -1,7 +1,9 @@
 using System.IO.Compression;
 using Api.Interfaces;
+using Api.Models;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using System.Globalization;
 
 public class ImageUploadService : IImageUploadService
 {
@@ -54,10 +56,10 @@ public class ImageUploadService : IImageUploadService
         string directoryName,
         DateTime timestamp,
         bool isRawFiles = true,
-		string rawfileDirectoryName = "")
+           string rawfileDirectoryName = "")
     {
         var uploadResults = new List<string>();
-        var destinationPath = GetDestinationPath(timestamp, projectName, isRawFiles?directoryName:rawfileDirectoryName, isRawFiles);
+        var destinationPath = GetDestinationPath(timestamp, projectName, isRawFiles ? directoryName : rawfileDirectoryName, isRawFiles);
 
         // If uploading processed files, check that the corresponding raw files path exists
         if (!isRawFiles)
@@ -183,11 +185,11 @@ public class ImageUploadService : IImageUploadService
 
     private async Task<bool> DoesPathExistAsync(BlobContainerClient containerClient, string pathPrefix, string removeSuffixDirectory = "")
     {
-		// if remoceSuffixDirectory is not empty, remove the last directory from the pathPrefix
-		if (!string.IsNullOrEmpty(removeSuffixDirectory))
-		{
-			pathPrefix = pathPrefix.Substring(0, pathPrefix.LastIndexOf(removeSuffixDirectory));
-		}
+        // if remoceSuffixDirectory is not empty, remove the last directory from the pathPrefix
+        if (!string.IsNullOrEmpty(removeSuffixDirectory))
+        {
+            pathPrefix = pathPrefix.Substring(0, pathPrefix.LastIndexOf(removeSuffixDirectory));
+        }
         await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: pathPrefix))
         {
             return true; // If any blob exists under the prefix, return true
@@ -206,6 +208,88 @@ public class ImageUploadService : IImageUploadService
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff" };
         var fileExtension = Path.GetExtension(fileName)?.ToLowerInvariant();
         return allowedExtensions.Contains(fileExtension);
+    }
+
+    public async Task<List<ProjectInfo>> GetProjects(string year, string projectName, DateTime? timestamp = null)
+    {
+        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+        var projects = new List<ProjectInfo>();
+
+        // Start recursive processing from the root
+        await ProcessHierarchy(containerClient, string.Empty, projects, year, projectName, timestamp);
+
+		_log.LogInformation($"Found {projects.Count} projects");
+
+        return projects;
+    }
+
+    private async Task ProcessHierarchy(
+        BlobContainerClient containerClient,
+        string prefix,
+        List<ProjectInfo> projects,
+        string year,
+        string projectName,
+        DateTime? timestamp)
+    {
+        await foreach (var blobItem in containerClient.GetBlobsByHierarchyAsync(prefix: prefix, delimiter: "/"))
+        {
+            if (blobItem.IsPrefix)
+            {
+                // Extract the blob path structure: year/datestamp/projectname/
+                var parts = blobItem.Prefix.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+                // Only process paths with at least 3 parts (year/datestamp/projectname)
+                if (parts.Length == 3)
+                {
+                    var currentYear = parts[0];
+                    var currentDateStamp = parts[1];
+                    var currentProjectName = parts[2];
+
+					_log.LogInformation($"Year: {currentYear}, DateStamp: {currentDateStamp}, ProjectName: {currentProjectName}");
+
+                    // Filter by year
+                    if (!string.IsNullOrEmpty(year) && currentYear != year)
+                    {
+						_log.LogInformation($"Skipped year: retrieved:{currentYear} searching:{year}");
+                        continue;
+                    }
+
+                    // Filter by project name
+                    if (!string.IsNullOrEmpty(projectName) && !currentProjectName.Equals(projectName, StringComparison.OrdinalIgnoreCase))
+                    {
+						_log.LogInformation($"Skipped: retrieved:{currentProjectName} searching:{projectName}");
+                        continue;
+                    }
+
+                    // Filter by date stamp
+                    if (timestamp.HasValue)
+                    {
+                        if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var parsedDate) ||
+                            parsedDate.Date != timestamp.Value.Date)
+                        {
+                            continue;
+                        }
+                    }
+
+					_log.LogInformation($"Adding project: {currentProjectName} - {currentDateStamp}");
+                    // Add valid project info
+                    if (DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var dateStamp))
+                    {
+                        projects.Add(new ProjectInfo
+                        {
+                            Name = currentProjectName,
+                            Datestamp = dateStamp,
+                        });
+						_log.LogInformation($"Added project: {currentProjectName} - {currentDateStamp}");
+                    }
+                }
+                else
+                {
+                    // Drill down further into the hierarchy
+                    await ProcessHierarchy(containerClient, blobItem.Prefix, projects, year, projectName, timestamp);
+                }
+            }
+        }
     }
 }
 

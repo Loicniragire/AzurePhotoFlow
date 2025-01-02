@@ -4,25 +4,39 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel for HTTP and HTTPS
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(8080);
+    options.ListenAnyIP(8080); // HTTP
+    options.ListenAnyIP(443, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    }); // HTTPS
 });
 
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
-Console.WriteLine($"Azure Blob Storage Connection String: {Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE")}");
+var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage")
+                                   ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
 
-// Configure services
-builder.Services.AddControllers(); // Add support for MVC controllers
-builder.Services.AddEndpointsApiExplorer(); // Enable API explorer for Swagger or similar tools
+if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
+{
+    Console.WriteLine("Azure Blob Storage Connection String is not set.");
+    throw new InvalidOperationException("Azure Blob Storage Connection String is missing.");
+}
 
-// Configure Logging
-builder.Logging.AddConsole(); // Adds Console logging
-builder.Logging.AddDebug(); // Adds Debug logging for Visual Studio
-builder.Logging.AddEventSourceLogger(); // Adds EventSource logging
+Console.WriteLine($"Azure Blob Storage Connection String: {azureBlobStorageConnectionString}");
 
+// Configure Services
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.PropertyNamingPolicy = null; // Use PascalCase for serialization
+    options.JsonSerializerOptions.WriteIndented = true;
+}); 
+
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AzurePhotoFlow API", Version = "v1" });
@@ -33,51 +47,54 @@ builder.Services.AddSwaggerGen(c =>
     // Enable annotation
     c.EnableAnnotations();
 
-	// Add form-data support explicitly
+    // Map IFormFile explicitly for Swagger
     c.MapType<IFormFile>(() => new OpenApiSchema
     {
         Type = "string",
         Format = "binary"
     });
 
-	c.MapType<DateTime>(() => new OpenApiSchema
+    // Map DateTime explicitly for Swagger
+    c.MapType<DateTime>(() => new OpenApiSchema
     {
         Type = "string",
         Format = "date-time"
     });
 });
 
+// Logging Configuration
+builder.Logging.ClearProviders(); // Optional: Clears default providers
+builder.Logging.AddConsole(); 
+builder.Logging.AddDebug(); 
+builder.Logging.AddEventSourceLogger(); 
 
-
-// Add BlobServiceClient for Azure Blob Storage
-var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage")
-                                   ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+// Add Azure Blob Storage Service
 builder.Services.AddSingleton(x => new BlobServiceClient(azureBlobStorageConnectionString));
 
 // Add custom services
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
 
-// Allow large files to be uploaded
+// Allow large file uploads
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 104857600; // Set limit to 100MB
+    options.MultipartBodyLengthLimit = 104857600; // 100MB
 });
 
+// Build the application
 var app = builder.Build();
 
-// Enable Swagger in development
+// Enable Swagger in Development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Add middleware
+// Middleware Pipeline
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
 
-// Map controllers
 app.MapControllers();
 
 app.Run();

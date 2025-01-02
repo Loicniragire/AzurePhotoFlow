@@ -1,5 +1,9 @@
 using Api.Interfaces;
+using Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using System.Globalization;
+using System.Text.Json;
 
 
 /*
@@ -18,10 +22,12 @@ using Microsoft.AspNetCore.Mvc;
 public class ImageController : ControllerBase
 {
     private readonly IImageUploadService _imageUploadService;
+    private readonly ILogger<ImageController> _logger;
 
-    public ImageController(IImageUploadService imageUploadService)
+    public ImageController(ILogger<ImageController> logger, IImageUploadService imageUploadService)
     {
         _imageUploadService = imageUploadService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -75,7 +81,7 @@ public class ImageController : ControllerBase
                 directoryName,
                 timeStamp,
                 isRawFiles: false,
-				rawfileDirectoryName);
+                   rawfileDirectoryName);
 
             return Ok(new
             {
@@ -98,6 +104,12 @@ public class ImageController : ControllerBase
     }
 
 
+    /// <summary>
+    /// Deletes a project and all its associated files.
+    /// Deletes at the project level, which includes all directories and files within the project.
+    /// </summary>
+    /// <param name="projectName">The name of the project to delete.</param>
+    /// <param name="timestamp">The timestamp of the project to delete.</param>
     [HttpDelete("delete-project")]
     public async Task<IActionResult> DeleteProject(string projectName, DateTime timestamp)
     {
@@ -110,6 +122,36 @@ public class ImageController : ControllerBase
         {
             await _imageUploadService.Delete(projectName, timestamp);
             return Ok($"Project '{projectName}' deleted successfully.");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
+
+    [HttpGet("projects")]
+    [SwaggerResponse(StatusCodes.Status200OK, Type = typeof(List<ProjectInfo>))]
+    public async Task<IActionResult> GetProjects([FromQuery] string year = null,
+                                                 [FromQuery] string projectName = null,
+                                                 [FromQuery] string timestamp = null)
+    {
+        try
+        {
+            _logger.LogInformation("Getting projects");
+
+            // Validate and parse timestamp if provided
+            DateTime? parsedTimestamp = null;
+            if (!string.IsNullOrEmpty(timestamp))
+            {
+                if (!DateTime.TryParseExact(timestamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var validDate))
+                {
+                    return BadRequest("Invalid timestamp format. Use 'yyyy-MM-dd'.");
+                }
+                parsedTimestamp = validDate;
+            }
+
+            var projects = await _imageUploadService.GetProjects(year, projectName, parsedTimestamp);
+            return Ok(projects);
         }
         catch (Exception ex)
         {
