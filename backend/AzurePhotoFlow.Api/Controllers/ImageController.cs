@@ -61,6 +61,18 @@ public class ImageController : ControllerBase
         }
     }
 
+	/// <summary>
+	/// Uploads a directory containing processed image files as a zip file.
+	/// Path to the directory is constructed as: {timestamp.year}/{timestamp}/{projectName}/{directoryName}/{fileName}
+	/// The directory is extracted and each image file is uploaded to the Azure Blob Storage.
+	/// </summary>
+	/// <param name="timeStamp">The timestamp to assign to this upload..</param>
+	/// <param name="projectName">The name of the project.</param>
+	/// <param name="rawfileDirectoryName">The name of the directory within this project for which to associate the
+	/// processed files. Suppose a project have 5 rolls of film named roll1, roll2,,roll5. This parameter states the
+	/// roll to associate these processed files.</param>
+	/// <param name="directoryFile">The zip file containing the directory.</param>
+	///
     [HttpPost("processed")]
     public async Task<IActionResult> UploadProcessedFiles(DateTime timeStamp, string projectName, string rawfileDirectoryName, IFormFile directoryFile)
     {

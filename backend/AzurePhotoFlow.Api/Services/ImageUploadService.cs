@@ -8,8 +8,7 @@ using System.Globalization;
 public class ImageUploadService : IImageUploadService
 {
     private const string ContainerName = "images";
-	private const string DATE_FORMAT = "yyyy-MM-dd";
-	private string[] ALLOWED_EXTENSIONS = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".CR3" };
+    private string[] ALLOWED_EXTENSIONS = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".CR3" };
 
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<ImageUploadService> _log;
@@ -37,10 +36,10 @@ public class ImageUploadService : IImageUploadService
             throw new ArgumentException("Project name cannot be null or empty", nameof(projectName));
 
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-        var blobs = containerClient.GetBlobsByHierarchy(prefix: $"{timestamp:DATE_FORMAT}/{projectName}");
+        var blobs = containerClient.GetBlobsByHierarchy(prefix: $"{timestamp:yyyy-MM-dd}/{projectName}");
 
         // Convert timestamp to the expected folder format
-        string timestampFolder = $"{timestamp.Year}/{timestamp:DATE_FORMAT}";
+        string timestampFolder = $"{timestamp.Year}/{timestamp:yyyy-MM-dd}";
 
         // Define the blob prefix to search for
         string blobPrefix = $"{timestampFolder}/{projectName}";
@@ -202,7 +201,7 @@ public class ImageUploadService : IImageUploadService
 
     private string GetDestinationPath(DateTime timestamp, string projectName, string directoryName, bool isRawFiles = true)
     {
-        var basePath = $"{timestamp.Year}/{timestamp:DATE_FORMAT}/{projectName}/{directoryName}";
+        var basePath = $"{timestamp.Year}/{timestamp:yyyy-MM-dd}/{projectName}/{directoryName}";
         return isRawFiles ? $"{basePath}/RawFiles" : $"{basePath}/ProcessedFiles";
     }
 
@@ -265,7 +264,7 @@ public class ImageUploadService : IImageUploadService
                     // Filter by date stamp
                     if (timestamp.HasValue)
                     {
-                        if (!DateTime.TryParseExact(currentDateStamp,DATE_FORMAT, null, DateTimeStyles.None, out var parsedDate) ||
+                        if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var parsedDate) ||
                             parsedDate.Date != timestamp.Value.Date)
                         {
                             continue;
@@ -278,7 +277,7 @@ public class ImageUploadService : IImageUploadService
                     var projectInfo = new ProjectInfo
                     {
                         Name = currentProjectName,
-                        Datestamp = DateTime.ParseExact(currentDateStamp,DATE_FORMAT, null)
+                        Datestamp = DateTime.ParseExact(currentDateStamp, "yyyy-MM-dd", null)
                     };
 
                     // Add directory details
@@ -336,8 +335,5 @@ public class ImageUploadService : IImageUploadService
 
         return count;
     }
-
-
-
 }
 
