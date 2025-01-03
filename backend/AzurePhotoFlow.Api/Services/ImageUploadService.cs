@@ -10,6 +10,7 @@ public class ImageUploadService : IImageUploadService
     private const string ContainerName = "images";
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<ImageUploadService> _log;
+	private const string DATE_FORMAT = "yyyy-MM-dd";
 
     public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient)
     {
@@ -34,10 +35,10 @@ public class ImageUploadService : IImageUploadService
             throw new ArgumentException("Project name cannot be null or empty", nameof(projectName));
 
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-        var blobs = containerClient.GetBlobsByHierarchy(prefix: $"{timestamp:yyyy-MM-dd}/{projectName}");
+        var blobs = containerClient.GetBlobsByHierarchy(prefix: $"{timestamp:DATE_FORMAT}/{projectName}");
 
         // Convert timestamp to the expected folder format
-        string timestampFolder = $"{timestamp.Year}/{timestamp:yyyy-MM-dd}";
+        string timestampFolder = $"{timestamp.Year}/{timestamp:DATE_FORMAT}";
 
         // Define the blob prefix to search for
         string blobPrefix = $"{timestampFolder}/{projectName}";
@@ -199,7 +200,7 @@ public class ImageUploadService : IImageUploadService
 
     private string GetDestinationPath(DateTime timestamp, string projectName, string directoryName, bool isRawFiles = true)
     {
-        var basePath = $"{timestamp.Year}/{timestamp:yyyy-MM-dd}/{projectName}/{directoryName}";
+        var basePath = $"{timestamp.Year}/{timestamp:DATE_FORMAT}/{projectName}/{directoryName}";
         return isRawFiles ? $"{basePath}/RawFiles" : $"{basePath}/ProcessedFiles";
     }
 
@@ -210,7 +211,7 @@ public class ImageUploadService : IImageUploadService
         return allowedExtensions.Contains(fileExtension);
     }
 
-    public async Task<List<ProjectInfo>> GetProjects(string year, string projectName, DateTime? timestamp = null)
+    public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)
     {
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
         var projects = new List<ProjectInfo>();
@@ -218,7 +219,7 @@ public class ImageUploadService : IImageUploadService
         // Start recursive processing from the root
         await ProcessHierarchy(containerClient, string.Empty, projects, year, projectName, timestamp);
 
-		_log.LogInformation($"Found {projects.Count} projects");
+        _log.LogInformation($"Found {projects.Count} projects");
 
         return projects;
     }
@@ -238,50 +239,53 @@ public class ImageUploadService : IImageUploadService
                 // Extract the blob path structure: year/datestamp/projectname/
                 var parts = blobItem.Prefix.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-                // Only process paths with at least 3 parts (year/datestamp/projectname)
-                if (parts.Length == 3)
+                if (parts.Length == 3) // year/datestamp/projectname
                 {
                     var currentYear = parts[0];
                     var currentDateStamp = parts[1];
                     var currentProjectName = parts[2];
 
-					_log.LogInformation($"Year: {currentYear}, DateStamp: {currentDateStamp}, ProjectName: {currentProjectName}");
+                    _log.LogInformation($"Year: {currentYear}, DateStamp: {currentDateStamp}, ProjectName: {currentProjectName}");
 
                     // Filter by year
                     if (!string.IsNullOrEmpty(year) && currentYear != year)
                     {
-						_log.LogInformation($"Skipped year: retrieved:{currentYear} searching:{year}");
+                        _log.LogInformation($"Skipped year: retrieved:{currentYear} searching:{year}");
                         continue;
                     }
 
                     // Filter by project name
                     if (!string.IsNullOrEmpty(projectName) && !currentProjectName.Equals(projectName, StringComparison.OrdinalIgnoreCase))
                     {
-						_log.LogInformation($"Skipped: retrieved:{currentProjectName} searching:{projectName}");
+                        _log.LogInformation($"Skipped: retrieved:{currentProjectName} searching:{projectName}");
                         continue;
                     }
 
                     // Filter by date stamp
                     if (timestamp.HasValue)
                     {
-                        if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var parsedDate) ||
+                        if (!DateTime.TryParseExact(currentDateStamp,DATE_FORMAT, null, DateTimeStyles.None, out var parsedDate) ||
                             parsedDate.Date != timestamp.Value.Date)
                         {
                             continue;
                         }
                     }
 
-					_log.LogInformation($"Adding project: {currentProjectName} - {currentDateStamp}");
-                    // Add valid project info
-                    if (DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var dateStamp))
+                    _log.LogInformation($"Adding project: {currentProjectName} - {currentDateStamp}");
+
+                    // Create a ProjectInfo object
+                    var projectInfo = new ProjectInfo
                     {
-                        projects.Add(new ProjectInfo
-                        {
-                            Name = currentProjectName,
-                            Datestamp = dateStamp,
-                        });
-						_log.LogInformation($"Added project: {currentProjectName} - {currentDateStamp}");
-                    }
+                        Name = currentProjectName,
+                        Datestamp = DateTime.ParseExact(currentDateStamp,DATE_FORMAT, null)
+                    };
+
+                    // Add directory details
+                    var projectPrefix = $"{currentYear}/{currentDateStamp}/{currentProjectName}/";
+                    projectInfo.Directories = await GetDirectoryDetails(containerClient, projectPrefix);
+
+                    projects.Add(projectInfo);
+                    _log.LogInformation($"Added project: {currentProjectName} - {currentDateStamp}");
                 }
                 else
                 {
@@ -291,5 +295,48 @@ public class ImageUploadService : IImageUploadService
             }
         }
     }
+
+    private async Task<List<ProjectDirectory>> GetDirectoryDetails(BlobContainerClient containerClient, string projectPrefix)
+    {
+        var directories = new List<ProjectDirectory>();
+
+        await foreach (var blobItem in containerClient.GetBlobsByHierarchyAsync(prefix: projectPrefix, delimiter: "/"))
+        {
+            if (blobItem.IsPrefix)
+            {
+                var directoryName = blobItem.Prefix.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+                var rawFilesCount = await CountFiles(containerClient, $"{blobItem.Prefix}RawFiles/");
+                var processedFilesCount = await CountFiles(containerClient, $"{blobItem.Prefix}ProcessedFiles/");
+
+                directories.Add(new ProjectDirectory
+                {
+                    Name = directoryName,
+                    RawFilesCount = rawFilesCount,
+                    ProcessedFilesCount = processedFilesCount
+                });
+            }
+        }
+
+        return directories;
+    }
+
+    private async Task<int> CountFiles(BlobContainerClient containerClient, string prefix)
+    {
+        var count = 0;
+
+        // Use GetBlobsByHierarchyAsync to traverse and count files
+        await foreach (var blobItem in containerClient.GetBlobsByHierarchyAsync(prefix: prefix, delimiter: "/"))
+        {
+            if (!blobItem.IsPrefix) // Count only files, not prefixes
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+
+
 }
 

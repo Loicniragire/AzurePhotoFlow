@@ -3,8 +3,6 @@ using Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Globalization;
-using System.Text.Json;
-
 
 /*
  * Blob storage structure:
@@ -38,7 +36,7 @@ public class ImageController : ControllerBase
     /// <param name="timeStamp">The timestamp to assign to this upload..</param>
     /// <param name="projectName">The name of the project.</param>
     /// <param name="directoryFile">The zip file containing the directory.</param>
-    [HttpPost("upload-raw-files")]
+    [HttpPost("raw")]
     public async Task<IActionResult> UploadDirectory(DateTime timeStamp, string projectName, IFormFile directoryFile)
     {
         if (directoryFile == null || directoryFile.Length == 0)
@@ -63,7 +61,7 @@ public class ImageController : ControllerBase
         }
     }
 
-    [HttpPost("upload-processed-files")]
+    [HttpPost("processed")]
     public async Task<IActionResult> UploadProcessedFiles(DateTime timeStamp, string projectName, string rawfileDirectoryName, IFormFile directoryFile)
     {
         if (directoryFile == null || directoryFile.Length == 0)
@@ -110,7 +108,7 @@ public class ImageController : ControllerBase
     /// </summary>
     /// <param name="projectName">The name of the project to delete.</param>
     /// <param name="timestamp">The timestamp of the project to delete.</param>
-    [HttpDelete("delete-project")]
+    [HttpDelete("projects")]
     public async Task<IActionResult> DeleteProject(string projectName, DateTime timestamp)
     {
         if (string.IsNullOrWhiteSpace(projectName))
