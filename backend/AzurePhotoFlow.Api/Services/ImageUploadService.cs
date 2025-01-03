@@ -8,9 +8,11 @@ using System.Globalization;
 public class ImageUploadService : IImageUploadService
 {
     private const string ContainerName = "images";
+	private const string DATE_FORMAT = "yyyy-MM-dd";
+	private string[] ALLOWED_EXTENSIONS = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".CR3" };
+
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<ImageUploadService> _log;
-	private const string DATE_FORMAT = "yyyy-MM-dd";
 
     public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient)
     {
@@ -206,9 +208,8 @@ public class ImageUploadService : IImageUploadService
 
     private bool IsImageFile(string fileName)
     {
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff" };
         var fileExtension = Path.GetExtension(fileName)?.ToLowerInvariant();
-        return allowedExtensions.Contains(fileExtension);
+        return ALLOWED_EXTENSIONS.Contains(fileExtension);
     }
 
     public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)
