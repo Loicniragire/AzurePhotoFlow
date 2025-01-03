@@ -5,18 +5,36 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load Environment Variables
+DotNetEnv.Env.Load();
+
 // Configure Kestrel for HTTP and HTTPS
 builder.WebHost.ConfigureKestrel(options =>
 {
+    string certDirectory = Directory.GetCurrentDirectory();
+
+    // Check if running in Docker
+    bool isInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
+    // Determine certificate path
+    string certFile = isInDocker
+        ? Environment.GetEnvironmentVariable("CERTIFICATE_PATH")
+		:Path.Combine(certDirectory, "..", "..", "certs", "https", "aspnetapp.pfx");
+
+    if (!File.Exists(certFile))
+    {
+        throw new FileNotFoundException("Certificate file not found", certFile);
+    }
+
     options.ListenAnyIP(8080); // HTTP
     options.ListenAnyIP(443, listenOptions =>
     {
-        listenOptions.UseHttps();
+        string certPassword = Environment.GetEnvironmentVariable("CERTIFICATE_PASSWORD");
+		Console.WriteLine($"Certificate Password: {certPassword}");
+        listenOptions.UseHttps(certFile, certPassword);
     }); // HTTPS
 });
 
-// Load Environment Variables
-DotNetEnv.Env.Load();
 
 var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage")
                                    ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
@@ -34,7 +52,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = null; // Use PascalCase for serialization
     options.JsonSerializerOptions.WriteIndented = true;
-}); 
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -64,9 +82,9 @@ builder.Services.AddSwaggerGen(c =>
 
 // Logging Configuration
 builder.Logging.ClearProviders(); // Optional: Clears default providers
-builder.Logging.AddConsole(); 
-builder.Logging.AddDebug(); 
-builder.Logging.AddEventSourceLogger(); 
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddEventSourceLogger();
 
 // Add Azure Blob Storage Service
 builder.Services.AddSingleton(x => new BlobServiceClient(azureBlobStorageConnectionString));

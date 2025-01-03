@@ -1,21 +1,25 @@
-# Use .NET SDK for build and runtime
+# Stage 1: Build the .NET application
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
-# Copy project files
+# Copy the project file and restore dependencies
 COPY AzurePhotoFlow.Functions.csproj .
 RUN dotnet restore
 
-# Copy and build the app
+# Copy the remaining application files and build the app
 COPY . .
-RUN dotnet publish -c Release -o out
+RUN dotnet publish -c Release -o /out
 
-# Use Azure Functions runtime image
+# Stage 2: Runtime image with Azure Functions
 FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4.0
-WORKDIR /app
-COPY --from=build /app/out .
+WORKDIR /home/site/wwwroot
 
-# Expose the Azure Functions port
+# Copy built application from the build stage
+COPY --from=build /out .
+
+# Expose the Azure Functions default port
 EXPOSE 80
+
+# Start the Azure Functions host
 CMD ["dotnet", "AzurePhotoFlow.Functions.dll"]
 
