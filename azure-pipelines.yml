@@ -129,6 +129,9 @@ stages:
 
   - job: DeployToAzure
     displayName: Deploy Docker Containers to Azure
+    variables:
+    - group: $(resourceGroup)
+
     steps:
     - task: AzureWebAppContainer@1
       displayName: Deploy Backend to Azure App Service
@@ -150,7 +153,16 @@ stages:
         echo "Configuring environment variables for App Services..."
         az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroup) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
         az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroup) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+
+        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings REACT_APP_API_BASE_URL=$(Backend_base_url)
+        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings REACT_APP_API_BASE_URL=$(Backend_base_url)
+
+        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+
       displayName: Set Environment Variables for App Services
       env:
         AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
+        REACT_APP_API_BASE_URL: $(Backend_base_url)
+        CERTIFICATE_PASSWORD: $(Https_cert_password)
 
