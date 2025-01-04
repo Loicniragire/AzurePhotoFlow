@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import ImageUpload from './components/ImageUpload';
 import ImageSearch from './components/ImageSearch';
 import NaturalLanguageSearch from './components/NaturalLanguageSearch';
@@ -17,11 +17,31 @@ const App = () => {
                 <div className="app-layout">
                     <nav className="app-sidebar">
                         <ul>
-                            <li><a href="/upload">Upload</a></li>
-                            <li><a href="/search">Search</a></li>
-                            <li><a href="/naturallanguage">Natural Language Search</a></li>
-                            <li><a href="/dashboard">Dashboard</a></li>
-                            <li><a href="/facerecognition">Face Recognition</a></li>
+                            <li>
+                                <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                                    Upload
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/search" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                                    Search
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/naturallanguage" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                                    Natural Language Search
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                                    Dashboard
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/facerecognition" className={({ isActive }) => (isActive ? 'active-link' : '')}>
+                                    Face Recognition
+                                </NavLink>
+                            </li>
                         </ul>
                     </nav>
                     <main className="app-main">
@@ -35,6 +55,9 @@ const App = () => {
                         </Routes>
                     </main>
                 </div>
+                <footer className="app-footer">
+                    <p>&copy; {new Date().getFullYear()} Photo Flow. All rights reserved.</p>
+                </footer>
             </div>
         </Router>
     );

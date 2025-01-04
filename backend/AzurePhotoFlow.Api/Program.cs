@@ -47,6 +47,18 @@ if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 
 Console.WriteLine($"Azure Blob Storage Connection String: {azureBlobStorageConnectionString}");
 
+// Add CORS 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", builder =>
+    {
+        builder.WithOrigins("http://localhost:3000") // Add your frontend's origin here
+               .AllowAnyMethod()
+               .AllowAnyHeader()
+               .AllowCredentials(); // Required for cookies/auth headers
+    });
+});
+
 // Configure Services
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -109,6 +121,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // Middleware Pipeline
+app.UseCors("AllowSpecificOrigin");
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();

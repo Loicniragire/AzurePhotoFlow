@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+console.log('API_BASE_URL:', API_BASE_URL);
 
 // Upload raw image directory as a zip file
 export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) => {
@@ -8,7 +9,7 @@ export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) 
   formData.append('directoryFile', directoryFile);
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/raw`, formData, {
+    const response = await axios.post(`${API_BASE_URL}/api/image/raw`, formData, {
       params: { timeStamp, projectName },
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -27,7 +28,7 @@ export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDi
   formData.append('directoryFile', directoryFile);
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/processed`, formData, {
+    const response = await axios.post(`${API_BASE_URL}/api/image/processed`, formData, {
       params: { timeStamp, projectName, rawfileDirectoryName },
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -43,7 +44,7 @@ export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDi
 // Delete a project and its associated files
 export const deleteProject = async (projectName, timestamp) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/projects`, {
+    const response = await axios.delete(`${API_BASE_URL}/api/image/projects`, {
       params: { projectName, timestamp },
     });
     return response.data; // Returns success message
@@ -56,7 +57,7 @@ export const deleteProject = async (projectName, timestamp) => {
 // Get a list of projects
 export const getProjects = async (year = null, projectName = null, timestamp = null) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/projects`, {
+    const response = await axios.get(`${API_BASE_URL}/api/image/projects`, {
       params: { year, projectName, timestamp },
     });
     return response.data; // Returns a list of projects

@@ -1,16 +1,17 @@
 .image-upload {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    max-width: 500px;
     margin: 0 auto;
+    background: #fff;
     padding: 20px;
-    max-width: 400px;
-    text-align: center;
-    background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
 }
+.image-upload h2 {
+    color: #007bff;
+    margin-bottom: 20px;
+}
+
 .file-label {
     display: inline-block;
     margin-bottom: 10px;
@@ -105,3 +106,66 @@ button:hover {
     resize: none;
     height: 80px;
 }
+
+
+/****/
+.project-name-input,
+.timestamp-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.upload-mode-toggle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.upload-mode-toggle label {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+}
+
+.upload-mode-toggle input {
+    margin-right: 5px;
+}
+
+.file-label {
+    display: block;
+    margin: 20px auto;
+    padding: 20px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.3s, color 0.3s;
+}
+
+.file-label:hover {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+button {
+    padding: 10px 20px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+button:hover {
+    background: #0056b3;
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+}*****/

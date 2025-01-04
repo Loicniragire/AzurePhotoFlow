@@ -8,6 +8,8 @@ export default defineConfig({
 	outDir: 'build',
   },
 	server:{
+		host: 'localhost', // default 'localhost
 		port: 3000,
+		protocol: 'ws'
 	}
 })
