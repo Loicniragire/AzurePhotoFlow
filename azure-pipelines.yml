@@ -9,7 +9,7 @@ variables:
   azureSubscription: 'AZ_PhotoFlow_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
-  containerRegistry: 'AzurePhotoFlowACR'
+  containerRegistry: 'AzurePhotoFlowACR_connection'
   storageAccountName: 'photoflowtfstatedev'
   containerName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
