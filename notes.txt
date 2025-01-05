@@ -21,3 +21,8 @@ December 28, 2024
 	- Azure Container Registry
 	- Azure App Service Plan
 	- Azure App Service
+
+
+January 5, 2025
+- When you run the entire APP in Docker containers, the frontend uses .env_production settings.
+
