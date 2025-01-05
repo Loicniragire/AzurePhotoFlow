@@ -16,7 +16,6 @@ variables:
   tfStateFile: 'azurephotoflow.tfstate' 
   backendAppServiceName: 'AzurePhotoFlowBE'
   frontendAppServiceName: 'AzurePhotoFlowFE'
-  resourceGroup: 'PhotoFlow' 
 
 resources:
   repositories:
@@ -88,7 +87,7 @@ stages:
   - job: DeployTerraform
     displayName: Deploy Infrastructure with Terraform
     variables:
-    - group: $(resourceGroup)
+    - group: 'PhotoFlow'
 
     steps:
     # Set environment variables for Terraform authentication
@@ -131,7 +130,7 @@ stages:
   - job: DeployToAzure
     displayName: Deploy Docker Containers to Azure
     variables:
-    - group: $(resourceGroup)
+    - group: 'PhotoFlow'
 
     steps:
     - task: AzureWebAppContainer@1
@@ -152,8 +151,8 @@ stages:
         imageTag: $(Build.BuildId)
     - script: |
         echo "Configuring environment variables for App Services..."
-        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroup) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
-        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroup) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
 
         az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
         az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
