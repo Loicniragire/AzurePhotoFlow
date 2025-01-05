@@ -9,7 +9,7 @@ variables:
   azureSubscription: 'AZ_PhotoFlow_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
-  containerRegistry: 'AzurePhotoFlowACR'
+  containerRegistry: 'AzurePhotoFlowACR_connection'
   storageAccountName: 'photoflowtfstatedev'
   containerName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
@@ -118,14 +118,14 @@ stages:
       displayName: Push Backend Image
       inputs:
         command: push
-        containerRegistry: $(containerRegistry).azurecr.io
+        containerRegistry: $(containerRegistry)
         repository: azurephotoflow-backend
         tags: $(Build.BuildId)
     - task: Docker@2
       displayName: Push Frontend Image
       inputs:
         command: push
-        containerRegistry: $(containerRegistry).azurecr.io
+        containerRegistry: $(containerRegistry)
         repository: azurephotoflow-frontend
         tags: $(Build.BuildId)
 
@@ -140,7 +140,7 @@ stages:
       inputs:
         azureSubscription: $(azureSubscription)
         appName: $(backendAppServiceName)
-        containerRegistry: $(containerRegistry).azurecr.io
+        containerRegistry: $(containerRegistry)
         imageName: azurephotoflow-backend
         imageTag: $(Build.BuildId)
     - task: AzureWebAppContainer@1
@@ -148,7 +148,7 @@ stages:
       inputs:
         azureSubscription: $(azureSubscription)
         appName: $(frontendAppServiceName)
-        containerRegistry: $(containerRegistry).azurecr.io
+        containerRegistry: $(containerRegistry)
         imageName: azurephotoflow-frontend
         imageTag: $(Build.BuildId)
     - script: |
