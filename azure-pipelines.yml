@@ -118,13 +118,15 @@ stages:
       displayName: Push Backend Image
       inputs:
         command: push
-        containerName: azurephotoflow-backend
+        containerRegistry: $(containerRegistry).azurecr.io
+        repository: azurephotoflow-backend
         tags: $(Build.BuildId)
     - task: Docker@2
       displayName: Push Frontend Image
       inputs:
         command: push
-        containerName: azurephotoflow-frontend
+        containerRegistry: $(containerRegistry).azurecr.io
+        repository: azurephotoflow-frontend
         tags: $(Build.BuildId)
 
   - job: DeployToAzure
