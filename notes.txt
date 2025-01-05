@@ -24,5 +24,5 @@ December 28, 2024
 
 
 January 5, 2025
-- When you run the entire APP in Docker containers, the frontend uses .env_production settings.
+- When you run the entire APP in Docker containers, the frontend uses .env_production settings. Use MODE argument to switch between development and production modes.
 

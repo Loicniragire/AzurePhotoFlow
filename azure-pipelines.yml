@@ -53,6 +53,7 @@ stages:
         inputs:
           command: build
           dockerfile: frontend/Dockerfile
+          arguments: --build-arg MODE=production
           repository: azurephotoflow-frontend
           tags: |
             $(Build.BuildId)
@@ -159,6 +160,9 @@ stages:
 
         az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
         az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+
+        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
+        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
 
       displayName: Set Environment Variables for App Services
       env:
