@@ -118,6 +118,7 @@ stages:
       displayName: Push Backend Image
       inputs:
         command: push
+        azureSubscription: $(azureSubscription)
         containerRegistry: $(containerRegistry)
         repository: azurephotoflow-backend
         tags: $(Build.BuildId)
@@ -125,6 +126,7 @@ stages:
       displayName: Push Frontend Image
       inputs:
         command: push
+        azureSubscription: $(azureSubscription)
         containerRegistry: $(containerRegistry)
         repository: azurephotoflow-frontend
         tags: $(Build.BuildId)
