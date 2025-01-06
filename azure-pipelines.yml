@@ -109,6 +109,8 @@ stages:
 
 - stage: DeployApplications
   displayName: Deploy Applications
+  variables:
+  - group: 'PhotoFlow'
   dependsOn: DeployInfrastructure
   jobs:
   - job: DeployContainers
