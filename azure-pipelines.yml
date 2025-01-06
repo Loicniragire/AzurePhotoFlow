@@ -115,16 +115,16 @@ stages:
   jobs:
   - job: DeployContainers
     displayName: Deploy Containers to Azure and Local Docker
-    variables:
-      ACR_USERNAME: $(ACR_USERNAME)
-      ACR_PASSWORD: $(ACR_PASSWORD)
-      ACR_SERVER: $(containerRegistry)
 
     steps:
       # Login to Azure Container Registry using Service Principal
       - script: |
           echo $ACR_PASSWORD | docker login $ACR_SERVER -u $ACR_USERNAME --password-stdin
         displayName: Login to Azure Container Registry
+        env:
+          ACR_USERNAME: $(ACR_USERNAME)
+          ACR_PASSWORD: $(ACR_PASSWORD)
+          ACR_SERVER: $(containerRegistry)
 
       # Pull Backend Image Locally
       - script: |
