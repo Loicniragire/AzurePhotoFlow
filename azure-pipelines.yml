@@ -117,12 +117,13 @@ stages:
   displayName: Deploy Applications
   dependsOn: DeployInfrastructure
   variables:
-    - group: 'PhotoFlow'
-      System.Debug: true
-      docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
+    System.Debug: true
+    docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
   jobs:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
+    variables:
+      - group: 'PhotoFlow'
     steps:
       # Login to Azure Container Registry
       - task: Docker@2
@@ -131,7 +132,7 @@ stages:
           command: login
           containerRegistry: $(containerRegistryConnection)
       - script: |
-          echo "Using Container Registry: $(containerRegistryName)"
+          echo "Using Container Registry: $(containerRegistryConnection)"
         displayName: 'Verify Container Registry Variable'
 
       - script: |
