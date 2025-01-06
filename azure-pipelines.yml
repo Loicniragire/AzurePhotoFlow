@@ -175,6 +175,20 @@ stages:
           command: login
           containerRegistry: $(containerRegistryConnection)
 
+      - script: |
+          export DOCKER_CONFIG=$HOME/.docker
+          docker context use desktop-linux
+        displayName: 'Set Docker Context with Config'
+
+      - script: |
+          docker context ls
+        displayName: 'Verify Docker Contexts'
+
+      - script: |
+          export DOCKER_HOST=$(docker_host)
+          docker ps
+        displayName: 'Test Docker Connection'
+
       # Pull Backend Docker Image Locally
       - script: |
           docker pull $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
