@@ -7,6 +7,7 @@ pool:
 
 variables:
   azureSubscription: 'AZ_PhotoFlow_connection'
+  subscriptionId: 'ebe2acfb-f4a5-4f6b-8f30-252c571813f9'
   containerRegistryConnection: 'AzurePhotoFlowACR_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
@@ -206,6 +207,13 @@ stages:
 
           az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
           az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
+
+          az webapp config set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --linux-fx-version "DOCKER|$(containerRegistry)/azurephotoflow-frontend:latest"
+
+          az resource update --ids "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.Web/sites/$(frontendAppServiceName)" --remove "properties.siteProperties.properties[?(@.name=='WindowsFxVersion')]"
+
+          az webapp log config --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --docker-container-logging filesystem
+
         displayName: Set Environment Variables for App Services
         env:
           AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
