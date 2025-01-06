@@ -123,6 +123,10 @@ stages:
           command: login
           containerRegistry: AzurePhotoFlowACR_connection
 
+      - script: |
+          docker ps
+        displayName: 'Test Docker Connection'
+
       # Push Backend Docker Image
       - script: |
           docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
