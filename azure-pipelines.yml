@@ -117,8 +117,9 @@ stages:
   displayName: Deploy Applications
   dependsOn: DeployInfrastructure
   variables:
-    System.Debug: true
-    docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
+    - group: 'PhotoFlow'
+      System.Debug: true
+      docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
   jobs:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
