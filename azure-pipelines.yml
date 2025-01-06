@@ -7,6 +7,7 @@ pool:
 
 variables:
   azureSubscription: 'AZ_PhotoFlow_connection'
+  containerRegistryConnection: 'AzurePhotoFlowACR_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
   containerRegistry: 'azurephotoflowacr.azurecr.io'  # Ensure lowercase
@@ -127,7 +128,10 @@ stages:
         displayName: Login to ACR
         inputs:
           command: login
-          containerRegistry: AzurePhotoFlowACR_connection
+          containerRegistry: $(containerRegistryConnection)
+      - script: |
+          echo "Using Container Registry: $(containerRegistryName)"
+        displayName: 'Verify Container Registry Variable'
 
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
