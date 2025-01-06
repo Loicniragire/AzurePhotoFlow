@@ -124,6 +124,7 @@ stages:
           containerRegistry: AzurePhotoFlowACR_connection
 
       - script: |
+          export DOCKER_HOST=$(DOCKER_HOST)
           docker ps
         displayName: 'Test Docker Connection'
 
