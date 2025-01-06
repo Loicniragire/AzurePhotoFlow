@@ -9,7 +9,7 @@ variables:
   azureSubscription: 'AZ_PhotoFlow_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
-  containerRegistry: 'azurephotoflowacr.azurecr.io'  # Use lowercase
+  containerRegistry: 'azurephotoflowacr.azurecr.io'  # Ensure lowercase
   storageAccountName: 'photoflowtfstatedev'
   containerName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
@@ -25,13 +25,14 @@ resources:
       endpoint: 'github.com_Loicniragire' 
 
 stages:
+# Build Stage
 - stage: Build
   displayName: Build Stage
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images
     steps:
-      # Checkout GitHub repository
+      # Checkout source code
       - checkout: github_repo
 
       # Build Backend Docker Image
@@ -55,9 +56,60 @@ stages:
           tags: |
             $(Build.BuildId)
 
+# Test Stage
+- stage: Test
+  displayName: Test Stage
+  dependsOn: Build
+  jobs:
+  - job: RunTests
+    displayName: Run Unit and Integration Tests
+    steps:
+      - checkout: self
+      # Run backend tests
+      - script: |
+          cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
+          dotnet restore
+          dotnet test
+        displayName: Run Backend Tests
+
+      # Run frontend tests
+      - script: |
+          cd $(Build.SourcesDirectory)/tests/frontend
+          npm install
+          npm test
+        displayName: Run Frontend Tests
+
+# Deploy Infrastructure Stage
+- stage: DeployInfrastructure
+  displayName: Deploy Infrastructure
+  dependsOn: Test
+  jobs:
+  - job: DeployTerraform
+    displayName: Deploy Infrastructure with Terraform
+    variables:
+    - group: 'PhotoFlow'
+    steps:
+    # Authenticate and apply Terraform
+    - script: |
+        export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
+        export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
+        export ARM_TENANT_ID=$(ARM_TENANT_ID)
+        export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
+
+        cd $(Build.SourcesDirectory)/Infrastructure
+        terraform init \
+          -backend-config="storage_account_name=$(storageAccountName)" \
+          -backend-config="container_name=$(containerName)" \
+          -backend-config="key=$(tfStateFile)" \
+          -backend-config="resource_group_name=$(resourceGroupName)" \
+          -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
+        terraform apply -auto-approve
+      displayName: Authenticate and Apply Terraform
+
+# Deploy Applications Stage
 - stage: DeployApplications
   displayName: Deploy Applications
-  dependsOn: Build
+  dependsOn: DeployInfrastructure
   jobs:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
