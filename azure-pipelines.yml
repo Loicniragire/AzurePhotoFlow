@@ -131,7 +131,7 @@ stages:
         displayName: Pull Backend Docker Image Locally
         env:
           DOCKER_HOST: $(DOCKER_HOST)
-          ACR_SERVER: $(containerRegistry)
+          ACR_SERVER: 'azurephotoflowacr.azurecr.io'
 
       # Pull Frontend Docker Image Locally
       - script: |
