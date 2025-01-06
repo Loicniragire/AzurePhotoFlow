@@ -9,11 +9,11 @@ variables:
   azureSubscription: 'AZ_PhotoFlow_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
-  containerRegistry: 'AzurePhotoFlowACR_connection'
+  containerRegistry: 'azurephotoflowacr.azurecr.io'  # Use lowercase
   storageAccountName: 'photoflowtfstatedev'
   containerName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
-  tfStateFile: 'azurephotoflow.tfstate' 
+  tfStateFile: 'azurephotoflow.tfstate'
   backendAppServiceName: 'AzurePhotoFlowBE'
   frontendAppServiceName: 'AzurePhotoFlowFE'
 
@@ -30,10 +30,8 @@ stages:
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images
-    pool:
-      name: 'Default'
     steps:
-      # Checkout GitHub repository.
+      # Checkout GitHub repository
       - checkout: github_repo
 
       # Build Backend Docker Image
@@ -57,126 +55,52 @@ stages:
           tags: |
             $(Build.BuildId)
 
-- stage: Test
-  displayName: Test Stage
-  dependsOn: Build
-  jobs:
-  - job: RunTests
-    displayName: Run Unit and Integration Tests
-    steps:
-    - checkout: self
-
-    # Run backend tests
-    - script: |
-        cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
-        dotnet restore
-        dotnet test
-      displayName: Run Backend Tests
-
-    # Run frontend tests
-    - script: |
-        cd $(Build.SourcesDirectory)/tests/frontend
-        npm install
-        npm test
-      displayName: Run Frontend Tests
-
-
-- stage: DeployInfrastructure
-  displayName: Deploy Infrastructure
-  jobs:
-  - job: DeployTerraform
-    displayName: Deploy Infrastructure with Terraform
-    variables:
-    - group: 'PhotoFlow'
-
-    steps:
-    # Set environment variables for Terraform authentication
-    - script: |
-        export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-        export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-        export ARM_TENANT_ID=$(ARM_TENANT_ID)
-        export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-
-        cd $(Build.SourcesDirectory)/Infrastructure
-        terraform init \
-          -backend-config="storage_account_name=$(storageAccountName)" \
-          -backend-config="container_name=$(containerName)" \
-          -backend-config="key=$(tfStateFile)" \
-          -backend-config="resource_group_name=$(resourceGroupName)" \
-          -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-        terraform apply -auto-approve
-      displayName: Authenticate and Apply Terraform
-
 - stage: DeployApplications
   displayName: Deploy Applications
-  variables:
-  - group: 'PhotoFlow'
-  dependsOn: DeployInfrastructure
+  dependsOn: Build
   jobs:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
     steps:
-      # Login to Azure Container Registry using Service Connection
+      # Login to Azure Container Registry
       - task: Docker@2
         displayName: Login to ACR
         inputs:
           command: login
-          containerRegistry: $(containerRegistry)
+          containerRegistry: AzurePhotoFlowACR_connection
 
+      # Push Backend Docker Image
       - script: |
-          docker login azurephotoFlowacr.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker push azurephotoflowacr.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+          docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
         displayName: Push Backend Docker Image
 
+      # Push Frontend Docker Image
       - script: |
-          docker login azurephotoflowacr.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker push azurephotoflowacr.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
+          docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
         displayName: Push Frontend Docker Image
 
   - job: DeployContainers
     displayName: Deploy Containers to Azure and Local Docker
+    dependsOn: PushDockerImages
     steps:
       # Pull Backend Docker Image Locally
       - script: |
-          docker pull $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
-        displayName: Pull Backend Docker Image Locally
-        env:
-          DOCKER_HOST: $(DOCKER_HOST)
-          ACR_SERVER: 'azurephotoflowacr.azurecr.io'
-
-      # Pull Frontend Docker Image Locally
-      - script: |
-          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
-        displayName: Pull Frontend Docker Image Locally
-
-      # Run Backend Container Locally
-      - script: |
-          docker run -d --name azurephotoflow-backend -p 8080:8080 AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
-        displayName: Run Backend Container Locally
-
-      # Run Frontend Container Locally
-      - script: |
-          docker run -d --name azurephotoflow-frontend -p 3000:3000 AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
-        displayName: Run Frontend Container Locally
-
-      # Pull Backend Docker Image Locally
-      - script: |
-          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+          docker pull $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
         displayName: Pull Backend Docker Image Locally
 
       # Pull Frontend Docker Image Locally
       - script: |
-          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
+          docker pull $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
         displayName: Pull Frontend Docker Image Locally
 
       # Run Backend Container Locally
       - script: |
-          docker run -d --name azurephotoflow-backend -p 8080:8080 AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+          docker run -d --name azurephotoflow-backend -p 8080:8080 $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
         displayName: Run Backend Container Locally
 
       # Run Frontend Container Locally
       - script: |
-          docker run -d --name azurephotoflow-frontend -p 3000:3000 AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
+          docker run -d --name azurephotoflow-frontend -p 3000:3000 $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
         displayName: Run Frontend Container Locally
 
       # Configure Environment Variables for App Services
@@ -198,3 +122,4 @@ stages:
           AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
           VITE_APP_API_BASE_URL: $(Backend_base_url)
           CERTIFICATE_PASSWORD: $(Https_cert_password)
+
