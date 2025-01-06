@@ -125,8 +125,13 @@ stages:
           containerRegistry: AzurePhotoFlowACR_connection
 
       - script: |
+          export DOCKER_CONFIG=$HOME/.docker
           docker context use desktop-linux
-        displayName: 'Set Docker Context'
+        displayName: 'Set Docker Context with Config'
+
+      - script: |
+          docker context ls
+        displayName: 'Verify Docker Contexts'
 
       - script: |
           export DOCKER_HOST=$(docker_host)
