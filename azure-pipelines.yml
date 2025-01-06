@@ -36,12 +36,6 @@ stages:
       # Checkout GitHub repository.
       - checkout: github_repo
 
-      - task: Docker@2
-        displayName: Login to ACR
-        inputs:
-          command: login
-          containerRegistry: $(containerRegistry)
-
       # Build Backend Docker Image
       - task: Docker@2
         displayName: Build Backend Docker Image
@@ -117,66 +111,75 @@ stages:
   displayName: Deploy Applications
   dependsOn: DeployInfrastructure
   jobs:
-  - job: PushDockerImages
-    displayName: Push Docker Images to ACR
-    steps:
-
-    - task: Docker@2
-      displayName: Push Backend Image
-      inputs:
-        command: push
-        azureSubscription: $(azureSubscription)
-        containerRegistry: $(containerRegistry)
-        repository: azurephotoflow-backend
-        tags: $(Build.BuildId)
-    - task: Docker@2
-      displayName: Push Frontend Image
-      inputs:
-        command: push
-        azureSubscription: $(azureSubscription)
-        containerRegistry: $(containerRegistry)
-        repository: azurephotoflow-frontend
-        tags: $(Build.BuildId)
-
-  - job: DeployToAzure
-    displayName: Deploy Docker Containers to Azure
+  - job: DeployContainers
+    displayName: Deploy Containers to Azure and Local Docker
     variables:
-    - group: 'PhotoFlow'
+      ACR_USERNAME: $(ACR_USERNAME)
+      ACR_PASSWORD: $(ACR_PASSWORD)
+      ACR_SERVER: $(containerRegistry)
 
     steps:
-    - task: AzureWebAppContainer@1
-      displayName: Deploy Backend to Azure App Service
-      inputs:
-        azureSubscription: $(azureSubscription)
-        appName: $(backendAppServiceName)
-        containerRegistry: $(containerRegistry)
-        imageName: azurephotoflow-backend
-        imageTag: $(Build.BuildId)
-    - task: AzureWebAppContainer@1
-      displayName: Deploy Frontend to Azure App Service
-      inputs:
-        azureSubscription: $(azureSubscription)
-        appName: $(frontendAppServiceName)
-        containerRegistry: $(containerRegistry)
-        imageName: azurephotoflow-frontend
-        imageTag: $(Build.BuildId)
-    - script: |
-        echo "Configuring environment variables for App Services..."
-        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
-        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+      # Login to Azure Container Registry using Service Principal
+      - script: |
+          echo $ACR_PASSWORD | docker login $ACR_SERVER -u $ACR_USERNAME --password-stdin
+        displayName: Login to Azure Container Registry
 
-        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
-        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
+      # Pull Backend Image Locally
+      - script: |
+          docker pull $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
+        displayName: Pull Backend Docker Image Locally
 
-        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
-        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+      # Pull Frontend Image Locally
+      - script: |
+          docker pull $ACR_SERVER/azurephotoflow-frontend:$(Build.BuildId)
+        displayName: Pull Frontend Docker Image Locally
 
-        az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
-        az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
+      # Run Backend Container Locally
+      - script: |
+          docker run -d --name azurephotoflow-backend -p 8080:8080 $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
+        displayName: Run Backend Container Locally
 
-      displayName: Set Environment Variables for App Services
-      env:
-        AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
-        VITE_APP_API_BASE_URL: $(Backend_base_url)
-        CERTIFICATE_PASSWORD: $(Https_cert_password)
+      # Run Frontend Container Locally
+      - script: |
+          docker run -d --name azurephotoflow-frontend -p 3000:3000 $ACR_SERVER/azurephotoflow-frontend:$(Build.BuildId)
+        displayName: Run Frontend Container Locally
 
+      # Deploy Backend to Azure App Service
+      - task: AzureWebAppContainer@1
+        displayName: Deploy Backend to Azure App Service
+        inputs:
+          azureSubscription: $(azureSubscription)
+          appName: $(backendAppServiceName)
+          containerRegistry: $(containerRegistry)
+          imageName: azurephotoflow-backend
+          imageTag: $(Build.BuildId)
+
+      # Deploy Frontend to Azure App Service
+      - task: AzureWebAppContainer@1
+        displayName: Deploy Frontend to Azure App Service
+        inputs:
+          azureSubscription: $(azureSubscription)
+          appName: $(frontendAppServiceName)
+          containerRegistry: $(containerRegistry)
+          imageName: azurephotoflow-frontend
+          imageTag: $(Build.BuildId)
+
+      # Configure Environment Variables for App Services
+      - script: |
+          echo "Configuring environment variables for App Services..."
+          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+
+          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
+          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
+
+          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+
+          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
+          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
+        displayName: Set Environment Variables for App Services
+        env:
+          AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
+          VITE_APP_API_BASE_URL: $(Backend_base_url)
+          CERTIFICATE_PASSWORD: $(Https_cert_password)
