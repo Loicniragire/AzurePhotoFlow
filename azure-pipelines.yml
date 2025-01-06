@@ -41,7 +41,7 @@ stages:
         inputs:
           command: build
           dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
-          repository: azurephotoflow-backend
+          repository: $(containerRegistry)/azurephotoflow-backend
           tags: |
             $(Build.BuildId)
 
@@ -52,9 +52,14 @@ stages:
           command: build
           dockerfile: frontend/Dockerfile
           arguments: --build-arg MODE=production
-          repository: azurephotoflow-frontend
+          repository: $(containerRegistry)/azurephotoflow-frontend
           tags: |
             $(Build.BuildId)
+
+      # Verify Images
+      - script: |
+          docker images
+        displayName: 'List Built Docker Images'
 
 # Test Stage
 - stage: Test
