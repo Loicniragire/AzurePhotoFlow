@@ -215,10 +215,12 @@ stages:
           az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
 
           az webapp config set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --linux-fx-version "DOCKER|$(containerRegistry)/azurephotoflow-frontend:latest"
-
           az resource update --ids "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.Web/sites/$(frontendAppServiceName)" --remove "properties.siteProperties.properties[?(@.name=='WindowsFxVersion')]"
-
           az webapp log config --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --docker-container-logging filesystem
+
+          az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
+          az webapp show --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --query "state"
+
 
         displayName: Set Environment Variables for App Services
         env:
