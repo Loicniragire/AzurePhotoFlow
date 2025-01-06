@@ -116,6 +116,13 @@ stages:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
     steps:
+      # Login to Azure Container Registry using Service Connection
+      - task: Docker@2
+        displayName: Login to ACR
+        inputs:
+          command: login
+          containerRegistry: $(containerRegistry)
+
       - script: |
           docker login azurephotoFlowacr.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push azurephotoflowacr.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
@@ -128,16 +135,7 @@ stages:
 
   - job: DeployContainers
     displayName: Deploy Containers to Azure and Local Docker
-
     steps:
-
-      # Login to Azure Container Registry using Service Connection
-      - task: Docker@2
-        displayName: Login to ACR
-        inputs:
-          command: login
-          containerRegistry: $(containerRegistry)
-
       # Pull Backend Docker Image Locally
       - script: |
           docker pull $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
