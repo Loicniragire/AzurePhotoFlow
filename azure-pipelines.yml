@@ -112,6 +112,7 @@ stages:
   dependsOn: DeployInfrastructure
   variables:
     System.Debug: true
+    docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
   jobs:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
@@ -124,7 +125,11 @@ stages:
           containerRegistry: AzurePhotoFlowACR_connection
 
       - script: |
-          export DOCKER_HOST=$(DOCKER_HOST)
+          docker context use desktop-linux
+        displayName: 'Set Docker Context'
+
+      - script: |
+          export DOCKER_HOST=$(docker_host)
           docker ps
         displayName: 'Test Docker Connection'
 
