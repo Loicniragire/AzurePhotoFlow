@@ -117,54 +117,53 @@ stages:
     displayName: Deploy Containers to Azure and Local Docker
 
     steps:
-      # Login to Azure Container Registry using Service Principal
-      - script: |
-          echo $ACR_PASSWORD | docker login $ACR_SERVER -u $ACR_USERNAME --password-stdin
-        displayName: Login to Azure Container Registry
-        env:
-          ACR_USERNAME: $(ACR_USERNAME)
-          ACR_PASSWORD: $(ACR_PASSWORD)
-          ACR_SERVER: $(containerRegistry)
 
-      # Pull Backend Image Locally
+      # Login to Azure Container Registry using Service Connection
+      - task: Docker@2
+        displayName: Login to ACR
+        inputs:
+          command: login
+          containerRegistry: $(containerRegistry)
+
+      # Pull Backend Docker Image Locally
       - script: |
-          docker pull $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
+          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
         displayName: Pull Backend Docker Image Locally
 
-      # Pull Frontend Image Locally
+      # Pull Frontend Docker Image Locally
       - script: |
-          docker pull $ACR_SERVER/azurephotoflow-frontend:$(Build.BuildId)
+          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
         displayName: Pull Frontend Docker Image Locally
 
       # Run Backend Container Locally
       - script: |
-          docker run -d --name azurephotoflow-backend -p 8080:8080 $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
+          docker run -d --name azurephotoflow-backend -p 8080:8080 AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
         displayName: Run Backend Container Locally
 
       # Run Frontend Container Locally
       - script: |
-          docker run -d --name azurephotoflow-frontend -p 3000:3000 $ACR_SERVER/azurephotoflow-frontend:$(Build.BuildId)
+          docker run -d --name azurephotoflow-frontend -p 3000:3000 AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
         displayName: Run Frontend Container Locally
 
-      # Deploy Backend to Azure App Service
-      - task: AzureWebAppContainer@1
-        displayName: Deploy Backend to Azure App Service
-        inputs:
-          azureSubscription: $(azureSubscription)
-          appName: $(backendAppServiceName)
-          containerRegistry: $(containerRegistry)
-          imageName: azurephotoflow-backend
-          imageTag: $(Build.BuildId)
+      # Pull Backend Docker Image Locally
+      - script: |
+          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+        displayName: Pull Backend Docker Image Locally
 
-      # Deploy Frontend to Azure App Service
-      - task: AzureWebAppContainer@1
-        displayName: Deploy Frontend to Azure App Service
-        inputs:
-          azureSubscription: $(azureSubscription)
-          appName: $(frontendAppServiceName)
-          containerRegistry: $(containerRegistry)
-          imageName: azurephotoflow-frontend
-          imageTag: $(Build.BuildId)
+      # Pull Frontend Docker Image Locally
+      - script: |
+          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
+        displayName: Pull Frontend Docker Image Locally
+
+      # Run Backend Container Locally
+      - script: |
+          docker run -d --name azurephotoflow-backend -p 8080:8080 AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+        displayName: Run Backend Container Locally
+
+      # Run Frontend Container Locally
+      - script: |
+          docker run -d --name azurephotoflow-frontend -p 3000:3000 AzurePhotoFlowACR.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
+        displayName: Run Frontend Container Locally
 
       # Configure Environment Variables for App Services
       - script: |
