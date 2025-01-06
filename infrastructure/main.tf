@@ -75,9 +75,14 @@ resource "azurerm_linux_web_app" "backend" {
   resource_group_name = var.resource_group_name
   service_plan_id 	  = azurerm_service_plan.service_plan.id
 
+  identity {
+    type = "SystemAssigned"
+  }
+
   site_config {
     app_command_line = ""
 	always_on = false # must be set to false when using F1 Service Plan
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:latest"
   }
 
   app_settings = {
@@ -90,54 +95,7 @@ resource "azurerm_linux_web_app" "backend" {
   }
 }
 
-# Frontend App Service
-resource "azurerm_linux_web_app" "frontend" {
-  name                = var.frontend_app_name
-  location            = "eastus2"
-  resource_group_name = var.resource_group_name
-  service_plan_id     = azurerm_service_plan.service_plan.id
 
-  site_config {
-    app_command_line = ""
-	always_on = false
-  }
-
-  app_settings = {
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
-  }
-
-  tags = {
-    environment = var.environment
-    project     = "AzurePhotoFlow"
-  }
-}
-
-# Add Managed Identity to Backend App Service
-resource "azurerm_linux_web_app" "backend" {
-  name                = var.backend_app_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  service_plan_id     = azurerm_service_plan.service_plan.id
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  site_config {
-    app_command_line = ""
-    always_on        = false
-    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:latest"
-  }
-
-  app_settings = {
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
-  }
-
-  tags = {
-    environment = var.environment
-    project     = "AzurePhotoFlow"
-  }
-}
 
 # Add Managed Identity to Frontend App Service
 resource "azurerm_linux_web_app" "frontend" {
