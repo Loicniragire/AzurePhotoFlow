@@ -110,6 +110,8 @@ stages:
 - stage: DeployApplications
   displayName: Deploy Applications
   dependsOn: DeployInfrastructure
+  variables:
+    System.Debug: true
   jobs:
   - job: PushDockerImages
     displayName: Push Docker Images to ACR
