@@ -187,11 +187,15 @@ stages:
 
       # Run Backend Container Locally
       - script: |
+          docker stop azurephotoflow-backend || true
+          docker rm azurephotoflow-backend || true
           docker run -d --name azurephotoflow-backend -p 8080:8080 $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
         displayName: Run Backend Container Locally
 
       # Run Frontend Container Locally
       - script: |
+          docker stop azurephotoflow-frontend || true
+          docker rm azurephotoflow-frontend || true
           docker run -d --name azurephotoflow-frontend -p 3000:3000 $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
         displayName: Run Frontend Container Locally
 
