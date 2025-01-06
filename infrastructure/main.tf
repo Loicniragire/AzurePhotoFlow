@@ -112,4 +112,72 @@ resource "azurerm_linux_web_app" "frontend" {
   }
 }
 
+# Add Managed Identity to Backend App Service
+resource "azurerm_linux_web_app" "backend" {
+  name                = var.backend_app_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  service_plan_id     = azurerm_service_plan.service_plan.id
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    app_command_line = ""
+    always_on        = false
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:latest"
+  }
+
+  app_settings = {
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+# Add Managed Identity to Frontend App Service
+resource "azurerm_linux_web_app" "frontend" {
+  name                = var.frontend_app_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  service_plan_id     = azurerm_service_plan.service_plan.id
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    app_command_line = ""
+    always_on        = false
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:latest"
+  }
+
+  app_settings = {
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+# Assign AcrPull Role to Backend App Service
+resource "azurerm_role_assignment" "backend_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_web_app.backend.identity[0].principal_id
+}
+
+# Assign AcrPull Role to Frontend App Service
+resource "azurerm_role_assignment" "frontend_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_web_app.frontend.identity[0].principal_id
+}
+
 
