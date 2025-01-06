@@ -123,12 +123,15 @@ stages:
         displayName: Login to ACR
         inputs:
           command: login
-          containerRegistry: AzurePhotoFlowACR_connection
+          containerRegistry: $(containerRegistry)
 
       # Pull Backend Docker Image Locally
       - script: |
-          docker pull AzurePhotoFlowACR.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+          docker pull $ACR_SERVER/azurephotoflow-backend:$(Build.BuildId)
         displayName: Pull Backend Docker Image Locally
+        env:
+          DOCKER_HOST: $(DOCKER_HOST)
+          ACR_SERVER: $(containerRegistry)
 
       # Pull Frontend Docker Image Locally
       - script: |
