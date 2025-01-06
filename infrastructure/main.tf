@@ -82,7 +82,6 @@ resource "azurerm_linux_web_app" "backend" {
   site_config {
     app_command_line = ""
 	always_on = false # must be set to false when using F1 Service Plan
-    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:latest"
   }
 
   app_settings = {
@@ -111,7 +110,6 @@ resource "azurerm_linux_web_app" "frontend" {
   site_config {
     app_command_line = ""
     always_on        = false
-    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:latest"
   }
 
   app_settings = {
