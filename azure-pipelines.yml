@@ -113,6 +113,19 @@ stages:
   - group: 'PhotoFlow'
   dependsOn: DeployInfrastructure
   jobs:
+  - job: PushDockerImages
+    displayName: Push Docker Images to ACR
+    steps:
+      - script: |
+          docker login azurephotoFlowacr.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker push azurephotoflowacr.azurecr.io/azurephotoflow-backend:$(Build.BuildId)
+        displayName: Push Backend Docker Image
+
+      - script: |
+          docker login azurephotoflowacr.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker push azurephotoflowacr.azurecr.io/azurephotoflow-frontend:$(Build.BuildId)
+        displayName: Push Frontend Docker Image
+
   - job: DeployContainers
     displayName: Deploy Containers to Azure and Local Docker
 
