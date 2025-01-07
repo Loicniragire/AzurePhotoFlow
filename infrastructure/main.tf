@@ -123,14 +123,14 @@ resource "azurerm_linux_web_app" "frontend" {
 }
 
 # Data Source for Backend Principal ID
-data "azurerm_web_app" "backend_identity" {
+data "azurerm_linux_web_app" "backend_identity" {
   name                = azurerm_linux_web_app.backend.name
   resource_group_name = azurerm_linux_web_app.backend.resource_group_name
   depends_on          = [azurerm_linux_web_app.backend]
 }
 
 # Data Source for Frontend Principal ID
-data "azurerm_web_app" "frontend_identity" {
+data "azurerm_linux_web_app" "frontend_identity" {
   name                = azurerm_linux_web_app.frontend.name
   resource_group_name = azurerm_linux_web_app.frontend.resource_group_name
   depends_on          = [azurerm_linux_web_app.frontend]
