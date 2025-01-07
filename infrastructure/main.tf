@@ -126,14 +126,14 @@ resource "azurerm_linux_web_app" "frontend" {
 resource "azurerm_role_assignment" "backend_acr_pull" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
-  principal_id         = azurerm_linux_web_app.backend.identity.principal_id
+  principal_id         = azurerm_linux_web_app.backend.identity[0].principal_id
 }
 
 # Assign AcrPull Role to Frontend App Service
 resource "azurerm_role_assignment" "frontend_acr_pull" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
-  principal_id         = azurerm_linux_web_app.frontend.identity.principal_id
+  principal_id         = azurerm_linux_web_app.frontend.identity[0].principal_id
 }
 
 
