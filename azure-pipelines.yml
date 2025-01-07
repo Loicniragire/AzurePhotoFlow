@@ -18,6 +18,7 @@ variables:
   tfStateFile: 'azurephotoflow.tfstate'
   backendAppServiceName: 'AzurePhotoFlowBE'
   frontendAppServiceName: 'AzurePhotoFlowFE'
+  stableTag: $(Build.SourceVersion)
 
 resources:
   repositories:
@@ -46,7 +47,7 @@ stages:
           repository: $(containerRegistry)/azurephotoflow-backend
           argument: --no-cache
           tags: |
-            $(Build.BuildId)
+            $(stableTag)
 
       # Build Frontend Docker Image
       - task: Docker@2
@@ -58,7 +59,7 @@ stages:
           repository: $(containerRegistry)/azurephotoflow-frontend
           argument: --no-cache
           tags: |
-            $(Build.BuildId)
+            $(stableTag)
 
       # Verify Images
       - script: |
@@ -183,12 +184,12 @@ stages:
 
       # Push Backend Docker Image
       - script: |
-          docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
+          docker push $(containerRegistry)/azurephotoflow-backend:$(stableTag)
         displayName: Push Backend Docker Image
 
       # Push Frontend Docker Image
       - script: |
-          docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
+          docker push $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
         displayName: Push Frontend Docker Image
 
   - job: DeployContainers
@@ -220,26 +221,26 @@ stages:
 
       # Pull Backend Docker Image Locally
       - script: |
-          docker pull $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
+          docker pull $(containerRegistry)/azurephotoflow-backend:$(stableTag)
         displayName: Pull Backend Docker Image Locally
 
       # Pull Frontend Docker Image Locally
       - script: |
-          docker pull $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
+          docker pull $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
         displayName: Pull Frontend Docker Image Locally
 
       # Run Backend Container Locally
       - script: |
           docker stop azurephotoflow-backend || true
           docker rm azurephotoflow-backend || true
-          docker run -d --name azurephotoflow-backend -p 8080:8080 $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
+          docker run -d --name azurephotoflow-backend -p 8080:8080 $(containerRegistry)/azurephotoflow-backend:$(stableTag)
         displayName: Run Backend Container Locally
 
       # Run Frontend Container Locally
       - script: |
           docker stop azurephotoflow-frontend || true
           docker rm azurephotoflow-frontend || true
-          docker run -d --name azurephotoflow-frontend -p 3000:3000 $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
+          docker run -d --name azurephotoflow-frontend -p 3000:3000 $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
         displayName: Run Frontend Container Locally
 
       # Configure Environment Variables for App Services
