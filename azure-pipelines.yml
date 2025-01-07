@@ -253,14 +253,11 @@ stages:
           echo "Configuring environment variables for App Services..."
           az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings \
               AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString) \
-              VITE_API_BASE_URL=$(Backend_base_url) \
               CERTIFICATE_PASSWORD=$(Https_cert_password) \
               NODE_ENV=production
 
           az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings \
-              AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString) \
-              VITE_API_BASE_URL=$(Backend_base_url) \
-              CERTIFICATE_PASSWORD=$(Https_cert_password) \
+              VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
               NODE_ENV=production
 
           az webapp config container set \
@@ -277,17 +274,18 @@ stages:
               --failed-request-tracing true \
               --web-server-logging filesystem
 
-          echo "Uploading SSL certificate to Azure Web App..."
-          az webapp config ssl upload \
+          echo "Enforcing HTTPS for Azure Web App..."
+          az webapp update \
               --name $(backendAppServiceName) \
               --resource-group $(resourceGroupName) \
-              --certificate-file certs/https/aspnetapp.pfx \
-              --certificate-password $(Https_cert_password)
+              --set httpsOnly=true
+
+          echo "HTTPS enforced successfully."
 
           az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
 
         displayName: Set Environment Variables for App Services
         env:
           AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
-          VITE_APP_API_BASE_URL: $(Backend_base_url)
+          VITE_APP_API_BASE_URL: $(VITE_API_BASE_URL)
           CERTIFICATE_PASSWORD: $(Https_cert_password)
