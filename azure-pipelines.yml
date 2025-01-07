@@ -266,7 +266,7 @@ stages:
           az webapp config container set \
               --name $(frontendAppServiceName) \
               --resource-group $(resourceGroupName) \
-              --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) \
+              --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:$(stableTag) \
               --docker-registry-server-url https://$(containerRegistry)
 
           az webapp log config \
@@ -277,10 +277,11 @@ stages:
               --failed-request-tracing true \
               --web-server-logging filesystem
 
+          echo "Uploading SSL certificate to Azure Web App..."
           az webapp config ssl upload \
               --name $(backendAppServiceName) \
               --resource-group $(resourceGroupName) \
-              --certificate-file certs/https/aspnetapp.pfx
+              --certificate-file certs/https/aspnetapp.pfx \
               --certificate-password $(Https_cert_password)
 
           az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
