@@ -115,6 +115,35 @@ stages:
         terraform apply -auto-approve
       displayName: Authenticate and Apply Terraform
 
+    # Assign AcrPull Role to Backend and Frontend App Services
+    - script: |
+        echo "Assigning AcrPull role to App Services..."
+        
+        # Retrieve the Principal ID for the Backend App Service
+        BACKEND_PRINCIPAL_ID=$(az webapp identity show \
+          --name $(backendAppServiceName) \
+          --resource-group $(resourceGroupName) \
+          --query principalId -o tsv)
+        
+        # Assign AcrPull role to Backend App Service
+        az role assignment create \
+          --assignee $BACKEND_PRINCIPAL_ID \
+          --role "AcrPull" \
+          --scope "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/azurephotoflowacr"
+
+        # Retrieve the Principal ID for the Frontend App Service
+        FRONTEND_PRINCIPAL_ID=$(az webapp identity show \
+          --name $(frontendAppServiceName) \
+          --resource-group $(resourceGroupName) \
+          --query principalId -o tsv)
+        
+        # Assign AcrPull role to Frontend App Service
+        az role assignment create \
+          --assignee $FRONTEND_PRINCIPAL_ID \
+          --role "AcrPull" \
+          --scope "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/azurephotoflowacr"
+      displayName: Assign AcrPull Role to App Services
+
 # Deploy Applications Stage
 - stage: DeployApplications
   displayName: Deploy Applications
