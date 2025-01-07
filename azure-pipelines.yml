@@ -18,7 +18,7 @@ variables:
   tfStateFile: 'azurephotoflow.tfstate'
   backendAppServiceName: 'AzurePhotoFlowBE'
   frontendAppServiceName: 'AzurePhotoFlowFE'
-  stableTag: $(Build.SourceVersion)
+  stableTag: "$(Build.DefinitionName)-$(Build.BuildId)"
 
 resources:
   repositories:
@@ -264,6 +264,9 @@ stages:
 
           az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
           az webapp show --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --query "state"
+
+          az webapp config container set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:latest --docker-registry-server-url https://$(containerRegistry)
+
 
 
         displayName: Set Environment Variables for App Services
