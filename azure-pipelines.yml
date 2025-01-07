@@ -38,27 +38,33 @@ stages:
       # Checkout source code
       - checkout: github_repo
 
+      # Set Docker Context
+      - script: |
+          export DOCKER_CONFIG=$HOME/.docker
+          docker context use desktop-linux
+        displayName: 'Set Docker Context'
+
       # Build Backend Docker Image
       - task: Docker@2
         displayName: Build Backend Docker Image
         inputs:
           command: build
-          arguments: --no-cache
           dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
           repository: $(containerRegistry)/azurephotoflow-backend
           tags: |
             $(stableTag)
+          arguments: --no-cache
 
       # Build Frontend Docker Image
       - task: Docker@2
         displayName: Build Frontend Docker Image
         inputs:
           command: build
-          arguments: --build-arg MODE=production --no-cache
           dockerfile: frontend/Dockerfile
           repository: $(containerRegistry)/azurephotoflow-frontend
           tags: |
             $(stableTag)
+          arguments: --build-arg MODE=production --no-cache
 
       # Verify Images
       - script: |
