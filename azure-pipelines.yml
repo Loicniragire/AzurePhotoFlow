@@ -18,7 +18,7 @@ variables:
   tfStateFile: 'azurephotoflow.tfstate'
   backendAppServiceName: 'AzurePhotoFlowBE'
   frontendAppServiceName: 'AzurePhotoFlowFE'
-  stableTag: "$(Build.DefinitionName)-$(Build.BuildId)"
+  stableTag: "$(Build.BuildId)"
 
 resources:
   repositories:
