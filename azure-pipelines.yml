@@ -245,26 +245,39 @@ stages:
       # Configure Environment Variables for App Services
       - script: |
           echo "Configuring environment variables for App Services..."
-          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
-          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString)
+          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings \
+              AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString) \
+              VITE_API_BASE_URL=$(Backend_base_url) \
+              CERTIFICATE_PASSWORD=$(Https_cert_password) \
+              NODE_ENV=production
 
-          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
-          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings VITE_API_BASE_URL=$(Backend_base_url)
+          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings \
+              AZURE_BLOB_STORAGE=$(AzureBlobStorageConnectionString) \
+              VITE_API_BASE_URL=$(Backend_base_url) \
+              CERTIFICATE_PASSWORD=$(Https_cert_password) \
+              NODE_ENV=production
 
-          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
-          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings CERTIFICATE_PASSWORD=$(Https_cert_password)
+          az webapp config container set \
+              --name $(frontendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) \
+              --docker-registry-server-url https://$(containerRegistry)
 
-          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
-          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings NODE_ENV=production
+          az webapp log config \
+              --name $(frontendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --application-logging filesystem \
+              --detailed-error-messages true \
+              --failed-request-tracing true \
+              --web-server-logging filesystem
 
-          az webapp config set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --linux-fx-version "DOCKER|$(containerRegistry)/azurephotoflow-frontend:latest"
-          az resource update --ids "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.Web/sites/$(frontendAppServiceName)" --remove "properties.siteProperties.properties[?(@.name=='WindowsFxVersion')]"
-          az webapp log config --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --docker-container-logging filesystem
+          az webapp config ssl upload \
+              --name $(backendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --certificate-file certs/https/aspnetapp.pfx
+              --certificate-password $(Https_cert_password)
 
           az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
-          az webapp show --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --query "state"
-
-          az webapp config container set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:latest --docker-registry-server-url https://$(containerRegistry)
 
         displayName: Set Environment Variables for App Services
         env:
