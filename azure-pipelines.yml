@@ -280,6 +280,11 @@ stages:
               --resource-group $(resourceGroupName) \
               --set httpsOnly=true
 
+          az webapp update \
+              --name $(frontendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --set httpsOnly=true
+
           echo "HTTPS enforced successfully."
 
           az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
