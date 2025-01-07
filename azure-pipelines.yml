@@ -43,9 +43,9 @@ stages:
         displayName: Build Backend Docker Image
         inputs:
           command: build
+          arguments: --no-cache
           dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
           repository: $(containerRegistry)/azurephotoflow-backend
-          arguments: --no-cache
           tags: |
             $(stableTag)
 
@@ -54,8 +54,8 @@ stages:
         displayName: Build Frontend Docker Image
         inputs:
           command: build
-          dockerfile: frontend/Dockerfile
           arguments: --build-arg MODE=production --no-cache
+          dockerfile: frontend/Dockerfile
           repository: $(containerRegistry)/azurephotoflow-frontend
           tags: |
             $(stableTag)
