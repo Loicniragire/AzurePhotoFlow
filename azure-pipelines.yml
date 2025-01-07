@@ -11,7 +11,7 @@ variables:
   containerRegistryConnection: 'AzurePhotoFlowACR_connection'
   resourceGroupName: 'AzurePhotoFlow-RG'
   location: 'eastus'
-  containerRegistry: 'azurephotoflowacr.azurecr.io'  # Ensure lowercase
+  containerRegistry: 'azurephotoflowacr.azurecr.io'
   storageAccountName: 'photoflowtfstatedev'
   containerName: 'tfstate'
   cognitiveAccountName: 'azurephotoflowvision'
@@ -266,11 +266,8 @@ stages:
 
           az webapp config container set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:latest --docker-registry-server-url https://$(containerRegistry)
 
-
-
         displayName: Set Environment Variables for App Services
         env:
           AZURE_BLOB_STORAGE: $(AzureBlobStorageConnectionString)
           VITE_APP_API_BASE_URL: $(Backend_base_url)
           CERTIFICATE_PASSWORD: $(Https_cert_password)
-
