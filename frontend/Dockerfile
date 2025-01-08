@@ -9,7 +9,7 @@ RUN npm install
 # Copy source files and build the app
 COPY . .
 ARG MODE=development
-RUN npm run build -- --mode $MODE
+RUN npm run build:$MODE
 
 # Use Nginx to serve the built app
 FROM nginx:alpine
