@@ -287,6 +287,22 @@ stages:
 
           echo "HTTPS enforced successfully."
 
+
+          echo "Add a health check endpoint"
+          az webapp config set \
+              --resource-group AzurePhotoFlow-RG \
+              --name AzurePhotoFlowFE \
+              --health-check-path "/health"
+          echo "Health check endpoint added successfully"
+
+          echo "Configuring CORS - allow All for testing"
+          az webapp cors add \
+              --name AzurePhotoFlowFE \
+              --resource-group AzurePhotoFlow-RG \
+              --allowed-origins "*"
+          echo "CORS configuration done"
+
+
           az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
 
         displayName: Set Environment Variables for App Services
