@@ -8,6 +8,8 @@ RUN dotnet restore
 
 # Copy and build the app
 COPY . .
+ARG AZURE_BLOB_STORAGE
+ENV AZURE_BLOB_STORAGE=$AZURE_BLOB_STORAGE
 RUN dotnet publish -c Release -o out
 
 # Use a runtime image for deployment
