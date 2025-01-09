@@ -86,7 +86,7 @@ stages:
           repository: $(containerRegistry)/azurephotoflow-frontend
           tags: |
             $(stableTag)
-          arguments: --build-arg MODE=production --no-cache
+          arguments: --build-arg VITE_API_BASE_URL=$(VITE_API_BASE_URL) --build-arg MODE=production --no-cache
 
       # Verify Images
       - script: |
