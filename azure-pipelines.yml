@@ -19,6 +19,10 @@ variables:
   backendAppServiceName: 'AzurePhotoFlowBE'
   frontendAppServiceName: 'AzurePhotoFlowFE'
   stableTag: "$(Build.BuildId)"
+  ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+  ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+  ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+  ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
 
 resources:
   repositories:
@@ -106,11 +110,6 @@ stages:
     steps:
     # Authenticate and apply Terraform
     - script: |
-        export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-        export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-        export ARM_TENANT_ID=$(ARM_TENANT_ID)
-        export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-
         cd $(Build.SourcesDirectory)/Infrastructure
         terraform init \
           -backend-config="storage_account_name=$(storageAccountName)" \
@@ -252,15 +251,20 @@ stages:
       # Configure Environment Variables for App Services
       - script: |
           echo "Configuring environment variables for App Services..."
-          echo "Connection string: $(AZURE_BLOB_STORAGE)"
-          az webapp config appsettings set --name $(backendAppServiceName) --resource-group $(resourceGroupName) --settings \
-              AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
-              CERTIFICATE_PASSWORD=$(Https_cert_password) \
-              NODE_ENV=production
+          az webapp config appsettings set \
+              --name $(backendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --settings \
+                AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
+                CERTIFICATE_PASSWORD=$(Https_cert_password) \
+                NODE_ENV=production
 
-          az webapp config appsettings set --name $(frontendAppServiceName) --resource-group $(resourceGroupName) --settings \
-              VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
-              NODE_ENV=production
+          az webapp config appsettings set \
+              --name $(frontendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --settings \
+                VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
+                NODE_ENV=production
 
           az webapp config container set \
               --name $(frontendAppServiceName) \
@@ -289,7 +293,6 @@ stages:
 
           echo "HTTPS enforced successfully."
 
-
           echo "Add a health check endpoint"
           az webapp config set \
               --resource-group AzurePhotoFlow-RG \
@@ -304,8 +307,15 @@ stages:
               --allowed-origins "*"
           echo "CORS configuration done"
 
+          echo "Restarting backend..."
+          az webapp restart \
+            --name $(backendAppServiceName) \
+            --resource-group $(resourceGroupName)
 
-          az webapp restart --name $(frontendAppServiceName) --resource-group $(resourceGroupName)
+          echo "Restarting frontend..."
+          az webapp restart \
+            --name $(frontendAppServiceName) \
+            --resource-group $(resourceGroupName)
 
         displayName: Set Environment Variables for App Services
         env:
