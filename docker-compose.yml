@@ -4,9 +4,9 @@ services:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
     environment:
-      - AZURE_BLOB_STORAGE
-      - CERTIFICATE_PATH
-      - CERTIFICATE_PASSWORD
+      - AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
+      - CERTIFICATE_PATH=${CERTIFICATE_PATH}
+      - CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
     volumes:
       - ./certs:/app/certs:ro
     ports:
@@ -29,7 +29,7 @@ services:
       args:
         MODE: ${MODE:-development}
     environment:
-      - VITE_API_BASE_URL
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     ports:
       - "3000:80"
     depends_on:
