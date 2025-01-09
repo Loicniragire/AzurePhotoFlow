@@ -118,7 +118,8 @@ stages:
           -backend-config="key=$(tfStateFile)" \
           -backend-config="resource_group_name=$(resourceGroupName)" \
           -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-        terraform apply -auto-approve
+        terraform plan -out=tfplan -lock-timeout=60s
+        terraform apply -auto-approve -lock-timeout=60s tfplan
       displayName: Authenticate and Apply Terraform
 
     # Assign AcrPull Role to Backend and Frontend App Services
