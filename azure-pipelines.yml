@@ -6,23 +6,41 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  azureSubscription: 'AZ_PhotoFlow_connection'
-  subscriptionId: 'ebe2acfb-f4a5-4f6b-8f30-252c571813f9'
-  containerRegistryConnection: 'AzurePhotoFlowACR_connection'
-  resourceGroupName: 'AzurePhotoFlow-RG'
-  location: 'eastus'
-  containerRegistry: 'azurephotoflowacr.azurecr.io'
-  storageAccountName: 'photoflowtfstatedev'
-  containerName: 'tfstate'
-  cognitiveAccountName: 'azurephotoflowvision'
-  tfStateFile: 'azurephotoflow.tfstate'
-  backendAppServiceName: 'AzurePhotoFlowBE'
-  frontendAppServiceName: 'AzurePhotoFlowFE'
-  stableTag: "$(Build.BuildId)"
-  ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-  ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-  ARM_TENANT_ID: "$(ARM_TENANT_ID)"
-  ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+  - group: 'PhotoFlow'
+  - name: azureSubscription
+    value: 'AZ_PhotoFlow_connection'
+  - name: subscriptionId
+    value: 'ebe2acfb-f4a5-4f6b-8f30-252c571813f9'
+  - name: containerRegistryConnection
+    value: 'AzurePhotoFlowACR_connection'
+  - name: resourceGroupName
+    value: 'AzurePhotoFlow-RG'
+  - name: location
+    value: 'eastus'
+  - name: containerRegistry
+    value: 'azurephotoflowacr.azurecr.io'
+  - name: storageAccountName
+    value: 'photoflowtfstatedev'
+  - name: containerName
+    value: 'tfstate'
+  - name: cognitiveAccountName
+    value: 'azurephotoflowvision'
+  - name: tfStateFile
+    value: 'azurephotoflow.tfstate'
+  - name: backendAppServiceName
+    value: 'AzurePhotoFlowBE'
+  - name: frontendAppServiceName
+    value: 'AzurePhotoFlowFE'
+  - name: stableTag
+    value: "$(Build.BuildId)"
+  - name: ARM_CLIENT_ID
+    value: "$(ARM_CLIENT_ID)"
+  - name: ARM_CLIENT_SECRET
+    value: "$(ARM_CLIENT_SECRET)"
+  - name: ARM_TENANT_ID
+    value: "$(ARM_TENANT_ID)"
+  - name: ARM_SUBSCRIPTION_ID
+    value: "$(ARM_SUBSCRIPTION_ID)"
 
 resources:
   repositories:
@@ -304,6 +322,11 @@ stages:
           echo "Configuring CORS - allow All for testing"
           az webapp cors add \
               --name AzurePhotoFlowFE \
+              --resource-group AzurePhotoFlow-RG \
+              --allowed-origins "*"
+
+          az webapp cors add \
+              --name AzurePhotoFlowBE \
               --resource-group AzurePhotoFlow-RG \
               --allowed-origins "*"
           echo "CORS configuration done"
