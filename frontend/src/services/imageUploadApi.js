@@ -67,4 +67,3 @@ export const getProjects = async (year = null, projectName = null, timestamp = n
     throw error;
   }
 };
-
