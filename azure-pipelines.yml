@@ -344,5 +344,5 @@ stages:
         displayName: Set Environment Variables for App Services
         env:
           AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)
-          VITE_APP_API_BASE_URL: $(VITE_API_BASE_URL)
+          VITE_API_BASE_URL: $(VITE_API_BASE_URL)
           CERTIFICATE_PASSWORD: $(Https_cert_password)
