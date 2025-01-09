@@ -288,8 +288,8 @@ stages:
           az webapp config container set \
               --name $(frontendAppServiceName) \
               --resource-group $(resourceGroupName) \
-              --docker-custom-image-name $(containerRegistry)/azurephotoflow-frontend:$(stableTag) \
-              --docker-registry-server-url https://$(containerRegistry)
+              --container-image-name $(containerRegistry)/azurephotoflow-frontend:$(stableTag) \
+              --container-registry-url "https://$(containerRegistry)"
 
           az webapp log config \
               --name $(frontendAppServiceName) \
@@ -316,7 +316,7 @@ stages:
           az webapp config set \
               --resource-group AzurePhotoFlow-RG \
               --name AzurePhotoFlowFE \
-              --health-check-path "/health"
+              --generic-configurations '{"healthCheckPath":"/health"}'
           echo "Health check endpoint added successfully"
 
           echo "Configuring CORS - allow All for testing"
