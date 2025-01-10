@@ -305,6 +305,14 @@ stages:
               --failed-request-tracing true \
               --web-server-logging filesystem
 
+          az webapp log config \
+              --name $(backendAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --application-logging filesystem \
+              --detailed-error-messages true \
+              --failed-request-tracing true \
+              --web-server-logging filesystem
+
           echo "Enforcing HTTPS for Azure Web App..."
           az webapp update \
               --name $(backendAppServiceName) \
