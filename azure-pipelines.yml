@@ -342,7 +342,7 @@ stages:
           az webapp cors add \
               --name AzurePhotoFlowBE \
               --resource-group AzurePhotoFlow-RG \
-              --allowed-origins "*"
+              --allowed-origins "https://azurephotoflowfe.azurewebsites.net,http://localhost:3000"
           echo "CORS configuration done"
 
           echo "Restarting backend..."
