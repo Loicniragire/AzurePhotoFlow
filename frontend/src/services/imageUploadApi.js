@@ -21,9 +21,16 @@ export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) 
     });
     return response.data; // Returns the extracted files or success message
   } catch (error) {
-    console.error('Error uploading raw directory:', error);
-    throw error;
-  }
+	  if (error.response) {
+		console.error('Error response:', error.response);
+		console.error('Error response data:', error.response.data);
+		console.error('Error status:', error.response.status);
+	  } else if (error.request) {
+		console.error('Error request:', error.request);
+	  } else {
+		console.error('Error message:', error.message);
+	  }
+  throw error;}
 };
 
 // Upload processed image directory as a zip file

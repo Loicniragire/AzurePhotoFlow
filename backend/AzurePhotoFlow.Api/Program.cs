@@ -52,7 +52,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", builder =>
     {
-        builder.WithOrigins("http://localhost:3000") // Add your frontend's origin here
+        builder.WithOrigins(
+				"http://localhost:3000", // local development
+				"https://azurephotoflowfe.azurewebsites.net" // production
+				) 
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials(); // Required for cookies/auth headers
