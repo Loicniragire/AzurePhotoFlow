@@ -12,19 +12,19 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
-    depends_on:
-      - backend-functions
+    # depends_on:
+    #   - backend-functions
     networks:
       - app-network
 
-  backend-functions:
-    build:
-      context: ./backend/AzurePhotoFlow.Functions
-      dockerfile: Dockerfile
-    ports:
-      - "5001:80"
-    networks:
-      - app-network
+  # backend-functions:
+  #   build:
+  #     context: ./backend/AzurePhotoFlow.Functions
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "5001:80"
+  #   networks:
+  #     - app-network
 
   frontend:
     build:
@@ -38,19 +38,6 @@ services:
       - "3000:80"
     depends_on:
       - backend-api
-    networks:
-      - app-network
-
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    ports:
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend-api
-      - backend-functions
     networks:
       - app-network
 

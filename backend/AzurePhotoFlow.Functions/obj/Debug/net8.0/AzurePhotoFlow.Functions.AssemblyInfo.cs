@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AzurePhotoFlow.Functions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+38377bfe3836900c8f66a2d1be80fa35b2e24fcc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+377f81244c7b94f0a1d0011c8a6c571c6eef58ae")]
 [assembly: System.Reflection.AssemblyProductAttribute("AzurePhotoFlow.Functions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AzurePhotoFlow.Functions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
