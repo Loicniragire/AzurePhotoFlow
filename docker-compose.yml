@@ -35,6 +35,19 @@ services:
     depends_on:
       - backend-api
 
+  nginx:
+      image: nginx:latest
+      volumes:
+        - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      ports:
+        - "80:80"
+      depends_on:
+        - frontend
+        - backend-api
+        - backend-functions
+      networks:
+        - app-network
+
   terraform:
     build:
       context: ./infrastructure
@@ -42,3 +55,7 @@ services:
     volumes:
       - "./infrastructure:/terraform"
     working_dir: /terraform
+
+networks:
+  app-network:
+    driver: bridge
