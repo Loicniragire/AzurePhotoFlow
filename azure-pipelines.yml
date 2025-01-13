@@ -262,7 +262,7 @@ stages:
       - script: |
           docker stop azurephotoflow-backend || true
           docker rm azurephotoflow-backend || true
-          docker run -d --name azurephotoflow-backend -p 8080:8080 $(containerRegistry)/azurephotoflow-backend:$(stableTag)
+          docker run -d --name azurephotoflow-backend -p 8443:8443 $(containerRegistry)/azurephotoflow-backend:$(stableTag)
         displayName: Run Backend Container Locally
 
       # Run Frontend Container Locally
