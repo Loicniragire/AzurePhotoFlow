@@ -275,7 +275,7 @@ stages:
       # Configure Environment Variables for App Services
       - script: |
           echo "Configuring environment variables for App Services..."
-          echo "Azure blob storage: $(AZURE_BLOB_STORAGE)"
+          echo "Azure blob storage: $(AZURE_BLOB_STORAGE) "
           az webapp config appsettings set \
               --name $(backendAppServiceName) \
               --resource-group $(resourceGroupName) \
