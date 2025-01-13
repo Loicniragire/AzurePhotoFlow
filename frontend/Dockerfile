@@ -10,7 +10,7 @@ RUN npm install
 COPY . .
 ARG MODE=development
 ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN npm run build -- --mode $MODE
 
 # Use Nginx to serve the built app
