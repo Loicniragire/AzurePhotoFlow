@@ -80,9 +80,6 @@ stages:
             --build-arg MODE=production
             --build-arg AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)
             --no-cache
-          env:
-            AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)
-            MODE: $(MODE)
 
       # Build Frontend Docker Image
       - task: Docker@2
@@ -97,9 +94,6 @@ stages:
             --build-arg VITE_API_BASE_URL=$(VITE_API_BASE_URL) 
             --build-arg MODE=production 
             --no-cache
-          env:
-            VITE_API_BASE_URL: $(VITE_API_BASE_URL)
-            MODE: $(MODE)
 
       # Verify Images
       - script: |
