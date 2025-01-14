@@ -270,7 +270,7 @@ stages:
       - script: |
           docker stop azurephotoflow-backend || true
           docker rm azurephotoflow-backend || true
-          docker run -d --name azurephotoflow-backend \
+          docker run -d --name app \
             -p 8443:8443 \
             $(containerRegistry)/azurephotoflow-backend:$(stableTag)
         displayName: Run Backend Container Locally
@@ -279,7 +279,7 @@ stages:
       - script: |
           docker stop azurephotoflow-frontend || true
           docker rm azurephotoflow-frontend || true
-          docker run -d --name azurephotoflow-frontend \
+          docker run -d --name web \
             -p 3000:3000 \
             $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
         displayName: Run Frontend Container Locally

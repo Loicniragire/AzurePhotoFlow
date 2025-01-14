@@ -26,7 +26,7 @@ builder.WebHost.ConfigureKestrel(options =>
         throw new FileNotFoundException("Certificate file not found", certFile);
     }
 
-    options.ListenAnyIP(8080); // HTTP
+    options.ListenAnyIP(80); // HTTP
     options.ListenAnyIP(443, listenOptions =>
     {
         string certPassword = Environment.GetEnvironmentVariable("CERTIFICATE_PASSWORD");
