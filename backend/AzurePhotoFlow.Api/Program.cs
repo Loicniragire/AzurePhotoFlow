@@ -11,21 +11,6 @@ DotNetEnv.Env.Load();
 // Configure Kestrel for HTTP and HTTPS
 builder.WebHost.ConfigureKestrel(options =>
 {
-    string certDirectory = Directory.GetCurrentDirectory();
-
-    // Check if running in Docker
-    bool isInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-
-    // Determine certificate path
-    string certFile = isInDocker
-        ? Environment.GetEnvironmentVariable("CERTIFICATE_PATH")
-		:Path.Combine(certDirectory, "..", "..", "certs", "https", "aspnetapp.pfx");
-
-    if (!File.Exists(certFile))
-    {
-        throw new FileNotFoundException("Certificate file not found", certFile);
-    }
-
     options.ListenAnyIP(8080); // HTTP
 });
 
