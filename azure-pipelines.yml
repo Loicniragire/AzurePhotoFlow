@@ -7,6 +7,7 @@ pool:
 
 variables:
   - group: 'PhotoFlow'
+
   - name: azureSubscription
     value: 'AZ_PhotoFlow_connection'
   - name: subscriptionId
@@ -79,6 +80,9 @@ stages:
             --build-arg MODE=production
             --build-arg AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)
             --no-cache
+          env:
+            AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)
+            MODE: $(MODE)
 
       # Build Frontend Docker Image
       - task: Docker@2
@@ -93,6 +97,9 @@ stages:
             --build-arg VITE_API_BASE_URL=$(VITE_API_BASE_URL) 
             --build-arg MODE=production 
             --no-cache
+          env:
+            VITE_API_BASE_URL: $(VITE_API_BASE_URL)
+            MODE: $(MODE)
 
       # Verify Images
       - script: |
@@ -144,6 +151,11 @@ stages:
         terraform plan -out=tfplan -lock-timeout=60s
         terraform apply -auto-approve -lock-timeout=60s tfplan
       displayName: Authenticate and Apply Terraform
+      env:
+          ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+          ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+          ARM_TENANT_ID: $(ARM_TENANT_ID)
+          ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
 
     # Assign AcrPull Role to Backend and Frontend App Services
     - script: |
