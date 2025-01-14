@@ -266,17 +266,11 @@ stages:
           docker pull $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
         displayName: Pull Frontend Docker Image Locally
 
-        # Create Network
-      - script: |
-          docker network create azurephotoflow-network || true
-        displayName: Create network
-
       # # Run Backend Container Locally
       - script: |
           docker stop azurephotoflow-backend || true
           docker rm azurephotoflow-backend || true
           docker run -d --name azurephotoflow-backend \
-            --network azurephotoflow-network \
             -p 8443:8443 \
             $(containerRegistry)/azurephotoflow-backend:$(stableTag)
         displayName: Run Backend Container Locally
@@ -286,7 +280,6 @@ stages:
           docker stop azurephotoflow-frontend || true
           docker rm azurephotoflow-frontend || true
           docker run -d --name azurephotoflow-frontend \
-            --network azurephotoflow-network \
             -p 3000:3000 \
             $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
         displayName: Run Frontend Container Locally
