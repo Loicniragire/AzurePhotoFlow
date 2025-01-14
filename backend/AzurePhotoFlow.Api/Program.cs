@@ -27,12 +27,6 @@ builder.WebHost.ConfigureKestrel(options =>
     }
 
     options.ListenAnyIP(8080); // HTTP
-    options.ListenAnyIP(443, listenOptions =>
-    {
-        string certPassword = Environment.GetEnvironmentVariable("CERTIFICATE_PASSWORD");
-		Console.WriteLine($"Certificate Password: {certPassword}");
-        listenOptions.UseHttps(certFile, certPassword);
-    }); // HTTPS
 });
 
 
