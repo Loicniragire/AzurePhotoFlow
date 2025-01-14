@@ -79,6 +79,8 @@ stages:
           arguments: |
             --build-arg MODE=production
             --build-arg AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)
+            --build-arg CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)
+            --build-arg CERTIFICATE_PATH=$(CERTIFICATE_PATH)
             --no-cache
 
       # Build Frontend Docker Image
