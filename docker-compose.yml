@@ -1,5 +1,5 @@
 services:
-  backend-api:
+  azurephotoflow-backend:
     build:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
@@ -26,7 +26,7 @@ services:
   #   networks:
   #     - app-network
 
-  frontend:
+  azurephotoflow-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -42,7 +42,7 @@ services:
         soft: 65536
         hard: 65536
     depends_on:
-      - backend-api
+      - azurephotoflow-backend
     networks:
       - app-network
 
