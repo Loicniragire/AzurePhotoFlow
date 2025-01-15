@@ -373,3 +373,4 @@ stages:
           AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)
           VITE_API_BASE_URL: $(VITE_API_BASE_URL)
           CERTIFICATE_PASSWORD: $(Https_cert_password)
+          CERTIFICATE_PATH: $(CERTIFICATE_PATH)
