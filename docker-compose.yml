@@ -5,9 +5,9 @@ services:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
       args:
-        CERTIFICATE_PASSWORD: $(CERTIFICATE_PASSWORD)
+        CERTIFICATE_PASSWORD: ${CERTIFICATE_PASSWORD}
         AZURE_BLOB_STORAGE: ${AZURE_BLOB_STORAGE}
-        CERTIFICATE_PATH: $(CERTIFICATE_PATH)
+        CERTIFICATE_PATH: ${CERTIFICATE_PATH}
     environment:
       - AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
