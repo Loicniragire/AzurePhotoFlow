@@ -13,7 +13,7 @@ services:
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
       - CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
     volumes:
-      - ./backend/AzurePhotoFlow.Api/certs:/app/certs:ro
+      - ./backend/AzurePhotoFlow.Api/certs/https:/app/certs/https:ro
     ports:
       - "8080:80"
       - "8443:443"
