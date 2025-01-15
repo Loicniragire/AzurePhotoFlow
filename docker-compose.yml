@@ -1,8 +1,13 @@
 services:
   app:
+    image: "${containerRegistry}/azurephotoflow-backend:${stableTag}"
     build:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
+      args:
+        CERTIFICATE_PASSWORD: $(CERTIFICATE_PASSWORD)
+        AZURE_BLOB_STORAGE: ${AZURE_BLOB_STORAGE}
+        CERTIFICATE_PATH: $(CERTIFICATE_PATH)
     environment:
       - AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
@@ -27,6 +32,7 @@ services:
   #     - app-network
 
   web:
+    image: "${containerRegistry}/azurephotoflow-frontend:${stableTag}"
     build:
       context: ./frontend
       dockerfile: Dockerfile
