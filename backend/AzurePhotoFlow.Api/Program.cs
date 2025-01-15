@@ -20,7 +20,7 @@ builder.WebHost.ConfigureKestrel(options =>
     // Determine certificate path
     string certFile = isInDocker
         ? Environment.GetEnvironmentVariable("CERTIFICATE_PATH")
-		:Path.Combine(certDirectory, "..", "..", "certs", "https", "aspnetapp.pfx");
+		:Path.Combine(certDirectory, "certs", "https", "aspnetapp.pfx");
     if (!File.Exists(certFile))
     {
         throw new FileNotFoundException("Certificate file not found", certFile);
