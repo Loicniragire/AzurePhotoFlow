@@ -268,8 +268,8 @@ stages:
 
       # # Run Backend Container Locally
       - script: |
-          docker stop azurephotoflow-backend || true
-          docker rm azurephotoflow-backend || true
+          docker stop app || true
+          docker rm app || true
           docker run -d --name app \
             -p 8443:8443 \
             $(containerRegistry)/azurephotoflow-backend:$(stableTag)
@@ -277,8 +277,8 @@ stages:
 
       # Run Frontend Container Locally
       - script: |
-          docker stop azurephotoflow-frontend || true
-          docker rm azurephotoflow-frontend || true
+          docker stop web || true
+          docker rm web || true
           docker run -d --name web \
             -p 3000:3000 \
             $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
@@ -294,6 +294,7 @@ stages:
               --settings \
                 AZURE_BLOB_STORAGE='$(AZURE_BLOB_STORAGE)' \
                 CERTIFICATE_PASSWORD=$(Https_cert_password) \
+                CERTIFICATE_PATH=$(CERTIFICATE_PATH) \
                 NODE_ENV=production
 
           az webapp config appsettings set \
