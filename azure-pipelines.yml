@@ -53,23 +53,22 @@ stages:
       # Checkout source code
       - checkout: github_repo
 
-      - script: |
-          echo "ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)"
-          echo "ARM_CLIENT_SECRET: [SECRET]"
-          echo "ARM_CLIENT_ID: $(ARM_CLIENT_ID)"
-          echo "ARM_TENANT_ID: $(ARM_TENANT_ID)"
-          echo "AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)"
-        displayName: Debug Variables
-
       # Set Docker Context
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
           docker context use desktop-linux
         displayName: 'Set Docker Context'
 
+      - script: |
+          echo "AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)" > .env
+          echo "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" >> .env
+          echo "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" >> .env
+          echo "MODE=$(MODE)" >> .env
+        displayName: Create .env file for Docker Compose
+
       # Build Docker Images
       - script: |
-          docker compose -f docker-compose.yml build
+          docker compose --env-file .env -f docker-compose.yml build
         displayName: Build Docker Images using Compose
 
 # Test Stage
