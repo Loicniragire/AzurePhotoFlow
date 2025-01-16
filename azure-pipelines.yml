@@ -67,40 +67,10 @@ stages:
           docker context use desktop-linux
         displayName: 'Set Docker Context'
 
-      # Build Backend Docker Image
-      - task: Docker@2
-        displayName: Build Backend Docker Image
-        inputs:
-          command: build
-          dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
-          repository: $(containerRegistry)/azurephotoflow-backend
-          tags: |
-            $(stableTag)
-          arguments: |
-            --build-arg MODE=production
-            --build-arg AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)
-            --build-arg CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)
-            --build-arg CERTIFICATE_PATH=$(CERTIFICATE_PATH)
-            --no-cache
-
-      # Build Frontend Docker Image
-      - task: Docker@2
-        displayName: Build Frontend Docker Image
-        inputs:
-          command: build
-          dockerfile: frontend/Dockerfile
-          repository: $(containerRegistry)/azurephotoflow-frontend
-          tags: |
-            $(stableTag)
-          arguments: |
-            --build-arg VITE_API_BASE_URL=$(VITE_API_BASE_URL) 
-            --build-arg MODE=production 
-            --no-cache
-
-      # Verify Images
+      # Build Docker Images
       - script: |
-          docker images
-        displayName: 'List Built Docker Images'
+          docker compose -f docker-compose.yml build
+        displayName: Build Docker Images using Compose
 
 # Test Stage
 - stage: Test
@@ -108,22 +78,29 @@ stages:
   dependsOn: Build
   jobs:
   - job: RunTests
-    displayName: Run Unit and Integration Tests
+    displayName: Run Tests
     steps:
       - checkout: self
+
+      # Start services
+      - script: |
+          docker compose -f docker-compose.yml up -d
+        displayName: Start Containers for Testing
+
       # Run backend tests
       - script: |
-          cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
-          dotnet restore
-          dotnet test
-        displayName: Run Backend Tests
+          docker exec app dotnet test /app/tests/backend/AzurePhotoFlow.Api.Tests
+        displayName: Run Backend Tests in Container
 
       # Run frontend tests
       - script: |
-          cd $(Build.SourcesDirectory)/tests/frontend
-          npm install
-          npm test
-        displayName: Run Frontend Tests
+          docker exec web npm test
+        displayName: Run Frontend Tests in Container
+
+      # Stop services after testing
+      - script: |
+          docker compose -f docker-compose.yml down
+        displayName: Tear Down Containers
 
 # Deploy Infrastructure Stage
 - stage: DeployInfrastructure
@@ -221,13 +198,8 @@ stages:
 
       # Push Backend Docker Image
       - script: |
-          docker push $(containerRegistry)/azurephotoflow-backend:$(stableTag)
-        displayName: Push Backend Docker Image
-
-      # Push Frontend Docker Image
-      - script: |
-          docker push $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
-        displayName: Push Frontend Docker Image
+          docker compose -f docker-compose.yml push
+        displayName: Push docker images to ACR
 
   - job: DeployContainers
     displayName: Deploy Containers to Azure and Local Docker
@@ -255,34 +227,10 @@ stages:
           export DOCKER_HOST=$(docker_host)
           docker ps
         displayName: 'Test Docker Connection'
-
-      # Pull Backend Docker Image Locally
       - script: |
-          docker pull $(containerRegistry)/azurephotoflow-backend:$(stableTag)
-        displayName: Pull Backend Docker Image Locally
-
-      # Pull Frontend Docker Image Locally
-      - script: |
-          docker pull $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
-        displayName: Pull Frontend Docker Image Locally
-
-      # # Run Backend Container Locally
-      - script: |
-          docker stop app || true
-          docker rm app || true
-          docker run -d --name app \
-            -p 8443:8443 \
-            $(containerRegistry)/azurephotoflow-backend:$(stableTag)
-        displayName: Run Backend Container Locally
-
-      # Run Frontend Container Locally
-      - script: |
-          docker stop web || true
-          docker rm web || true
-          docker run -d --name web \
-            -p 3000:3000 \
-            $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
-        displayName: Run Frontend Container Locally
+          docker compose -f docker-compose.yml pull
+          docker compose -f docker-compose.yml up -d
+        displayName: Deploy services using compose
 
       # Configure Environment Variables for App Services
       - script: |
