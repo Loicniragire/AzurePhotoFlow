@@ -1,6 +1,6 @@
 services:
   app:
-    image: "${containerRegistry}/azurephotoflow-backend:${stableTag:-latest}"
+    image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
     build:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
@@ -34,7 +34,7 @@ services:
   #     - app-network
 
   web:
-    image: "${containerRegistry}/azurephotoflow-frontend:${stableTag:-latest}"
+    image: "${CONTAINER_REGISTRY}/azurephotoflow-frontend:${stableTag:-latest}"
     build:
       context: ./frontend
       dockerfile: Dockerfile
