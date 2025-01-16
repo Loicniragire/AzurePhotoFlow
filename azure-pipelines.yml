@@ -34,16 +34,6 @@ variables:
     value: 'AzurePhotoFlowFE'
   - name: stableTag
     value: "$(Build.BuildId)"
-  - name: ARM_CLIENT_ID
-    value: "$(ARM_CLIENT_ID)"
-  - name: ARM_CLIENT_SECRET
-    value: "$(ARM_CLIENT_SECRET)"
-  - name: ARM_TENANT_ID
-    value: "$(ARM_TENANT_ID)"
-  - name: ARM_SUBSCRIPTION_ID
-    value: "$(ARM_SUBSCRIPTION_ID)"
-  - name: AZURE_BLOB_STORAGE
-    value: "$(AZURE_BLOB_STORAGE)"
 
 resources:
   repositories:
@@ -62,6 +52,14 @@ stages:
     steps:
       # Checkout source code
       - checkout: github_repo
+
+      - script: |
+          echo "ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)"
+          echo "ARM_CLIENT_SECRET: [SECRET]"
+          echo "ARM_CLIENT_ID: $(ARM_CLIENT_ID)"
+          echo "ARM_TENANT_ID: $(ARM_TENANT_ID)"
+          echo "AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)"
+        displayName: Debug Variables
 
       # Set Docker Context
       - script: |
