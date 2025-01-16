@@ -200,14 +200,16 @@ stages:
           docker ps
         displayName: 'Test Docker Connection'
 
+
       # Download the .env file artifact from previous stage
       - download: current
         artifact: env-artifact
 
       # Push Backend Docker Image
       - script: |
-          cat .env  # Confirm that the .env file is available
-          docker compose --env-file .env -f docker-compose.yml push 
+          ls -l $(Pipeline.Workspace)/env-artifact/.env
+          cat $(Pipeline.Workspace)/env-artifact/.env  
+          docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml push
         displayName: Push docker images to ACR
 
   - job: DeployContainers
