@@ -83,24 +83,22 @@ stages:
   dependsOn: Build
   jobs:
   - job: RunTests
-    displayName: Run Tests
+    displayName: Run Unit and Integration Tests
     steps:
       - checkout: self
-
       # Run backend tests
       - script: |
-          docker exec app dotnet test /app/tests/backend/AzurePhotoFlow.Api.Tests
-        displayName: Run Backend Tests in Container
+          cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
+          dotnet restore
+          dotnet test
+        displayName: Run Backend Tests
 
       # Run frontend tests
       - script: |
-          docker exec web npm test
-        displayName: Run Frontend Tests in Container
-
-      # Stop services after testing
-      # - script: |
-      #     docker compose -f docker-compose.yml down
-      #   displayName: Tear Down Containers
+          cd $(Build.SourcesDirectory)/tests/frontend
+          npm install
+          npm test
+        displayName: Run Frontend Tests
 
 # Deploy Infrastructure Stage
 - stage: DeployInfrastructure
