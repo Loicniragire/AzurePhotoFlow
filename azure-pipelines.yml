@@ -65,8 +65,13 @@ stages:
           echo "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" >> .env
           echo "MODE=$(MODE)" >> .env
           echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)"  >> .env
-          echo "stableTag=$(Build.BuildId)" >> .env
+          echo "stableTag=$(stableTag:-latest)" >> .env
         displayName: Create .env file for Docker Compose
+
+        # Publish .env file as an artifact
+      - publish: $(Build.SourcesDirectory)/.env
+        artifact: env-artifact
+        displayName: Publish .env file artifact
 
       - script: |
           echo "Printing .env file content for debugging:"
@@ -195,9 +200,14 @@ stages:
           docker ps
         displayName: 'Test Docker Connection'
 
+      # Download the .env file artifact from previous stage
+      - download: current
+        artifact: env-artifact
+
       # Push Backend Docker Image
       - script: |
-          docker compose -f docker-compose.yml push 
+          cat .env  # Confirm that the .env file is available
+          docker compose --env-file .env -f docker-compose.yml push 
         displayName: Push docker images to ACR
 
   - job: DeployContainers
