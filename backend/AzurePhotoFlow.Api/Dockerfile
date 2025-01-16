@@ -18,8 +18,7 @@ ENV AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
 ENV CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
 ENV CERTIFICATE_PATH=${CERTIFICATE_PATH}
 
-RUN echo "AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}" && \
-    dotnet publish -c Release -o out
+RUN dotnet publish -c Release -o out
 
 # Use a runtime image for deployment
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
