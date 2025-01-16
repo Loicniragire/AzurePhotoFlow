@@ -64,6 +64,11 @@ services:
     working_dir: /terraform
     command: ["terraform", "init"]
 
+  nginx:
+    image: nginx:latest
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
