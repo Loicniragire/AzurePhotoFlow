@@ -72,9 +72,9 @@ stages:
           cat .env
         displayName: Print .env file content for debugging
 
-      # Build Docker Images
+      # Build and start Docker Images
       - script: |
-          docker compose --env-file .env -f docker-compose.yml build
+          docker compose --env-file .env -f docker-compose.yml up -d --build
         displayName: Build Docker Images using Compose
 
 # Test Stage
@@ -87,11 +87,6 @@ stages:
     steps:
       - checkout: self
 
-      # Start services
-      - script: |
-          docker compose -f docker-compose.yml up -d
-        displayName: Start Containers for Testing
-
       # Run backend tests
       - script: |
           docker exec app dotnet test /app/tests/backend/AzurePhotoFlow.Api.Tests
@@ -103,9 +98,9 @@ stages:
         displayName: Run Frontend Tests in Container
 
       # Stop services after testing
-      - script: |
-          docker compose -f docker-compose.yml down
-        displayName: Tear Down Containers
+      # - script: |
+      #     docker compose -f docker-compose.yml down
+      #   displayName: Tear Down Containers
 
 # Deploy Infrastructure Stage
 - stage: DeployInfrastructure
