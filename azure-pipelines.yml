@@ -60,11 +60,21 @@ stages:
         displayName: 'Set Docker Context'
 
       - script: |
-          docker compose -f docker-compose.yml build \
-            --build-arg AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
-            --build-arg CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD) \
-            --build-arg CERTIFICATE_PATH=$(CERTIFICATE_PATH) \
-            --build-arg MODE=$(MODE)
+          echo "AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)" > .env
+          echo "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" >> .env
+          echo "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" >> .env
+          echo "MODE=$(MODE)" >> .env
+          echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)"  >> .env
+        displayName: Create .env file for Docker Compose
+
+      - script: |
+          echo "Printing .env file content for debugging:"
+          cat .env
+        displayName: Print .env file content for debugging
+
+      # Build Docker Images
+      - script: |
+          docker compose --env-file .env -f docker-compose.yml build
         displayName: Build Docker Images using Compose
 
 # Test Stage
