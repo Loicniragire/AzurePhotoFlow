@@ -65,6 +65,7 @@ stages:
           echo "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" >> .env
           echo "MODE=$(MODE)" >> .env
           echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)"  >> .env
+          echo "stableTag=$(stableTag:-latest)" >> .env
         displayName: Create .env file for Docker Compose
 
       - script: |
@@ -196,7 +197,7 @@ stages:
 
       # Push Backend Docker Image
       - script: |
-          docker compose -f docker-compose.yml push
+          docker compose -f docker-compose.yml push 
         displayName: Push docker images to ACR
 
   - job: DeployContainers
