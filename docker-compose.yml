@@ -19,19 +19,8 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
-    # depends_on:
-    #   - backend-functions
     networks:
       - app-network
-
-  # backend-functions:
-  #   build:
-  #     context: ./backend/AzurePhotoFlow.Functions
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "5001:80"
-  #   networks:
-  #     - app-network
 
   web:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-frontend:${stableTag:-latest}"
@@ -46,14 +35,25 @@ services:
       - MODE=${MODE}
     ports:
       - "3000:80"
-    ulimits:
-      nofile:
-        soft: 65536
-        hard: 65536
+    volumes:
+      - react-app-build:/app/build
     depends_on:
       - app
     networks:
       - app-network
+  nginx:
+    build:
+      context: ./frontend # Use frontend context to build the same Dockerfile
+      dockerfile: Dockerfile
+    volumes:
+      - react-app-build:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+    depends_on:
+      - web
 
   terraform:
     build:
@@ -64,11 +64,11 @@ services:
     working_dir: /terraform
     command: ["terraform", "init"]
 
-  nginx:
-    image: nginx:latest
-    networks:
-      - app-network
-
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  react-app-build:
+    driver: local
+
