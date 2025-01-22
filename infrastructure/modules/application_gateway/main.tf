@@ -83,8 +83,7 @@ resource "azurerm_application_gateway" "this" {
   waf_configuration {
     enabled            = true
     firewall_mode      = "Prevention"
-    policy_link_id     = azurerm_web_application_firewall_policy.waf_policy.id
+    rule_set_type      = "OWASP"
+    rule_set_version   = "3.2" # Specify the desired OWASP rule set version
   }
-
-  tags = var.tags
 }
