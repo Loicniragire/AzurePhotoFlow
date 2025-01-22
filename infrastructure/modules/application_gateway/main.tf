@@ -44,11 +44,11 @@ resource "azurerm_application_gateway" "this" {
   }
 
   backend_address_pool {
-    count = length(var.backend_services)
-    name  = "backend_pool_${count.index}"
+    for_each = var.backend_services
+    name     = "backend_pool_${each.key}"
 
     backend_addresses {
-      fqdn = var.backend_services[count.index].fqdn
+      fqdn = each.value.fqdn
     }
   }
 
@@ -81,19 +81,5 @@ resource "azurerm_application_gateway" "this" {
   }
 
   tags = var.tags
-}
-
-resource "azurerm_public_ip" "public_ip" {
-  name                = var.public_ip_name
-  location            = var.public_ip_location
-  resource_group_name = var.resource_group_name
-  allocation_method   = "Dynamic"
-}
-
-resource "azurerm_subnet" "subnet" {
-  name                 = var.subnet_name
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = var.vnet_name
-  address_prefixes     = var.subnet_prefix
 }
 
