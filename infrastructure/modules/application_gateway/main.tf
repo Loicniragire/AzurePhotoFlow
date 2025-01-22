@@ -4,10 +4,7 @@ resource "azurerm_virtual_network" "vnet" {
   location            = var.location
   resource_group_name = var.resource_group_name
   address_space       = ["10.0.0.0/16"]
-
-  tags = {
-    environment = var.environment
-  }
+}
 
 resource "azurerm_public_ip" "pip" {
   name                = var.public_ip
