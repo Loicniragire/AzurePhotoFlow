@@ -28,3 +28,18 @@ variable "backend_services" {
 }
 
 
+
+variable "vnet_name" {
+  description = "The name of the Virtual Network"
+  default     = "AzurePhotoFlowVNet"
+}
+
+variable "public_ip" {
+  description = "The name of the public Ip"
+  default     = "AzurePhotoFlowPip"
+}
+
+variable "subnet" {
+  description = "The name of the public Ip"
+  default     = "AzurePhotoFlowSubNet"
+}

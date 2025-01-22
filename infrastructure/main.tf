@@ -72,30 +72,6 @@ module "application_gateway" {
 
 # Add other modules as needed, such as ML Workspace and Function Apps
 
-resource "azurerm_virtual_network" "vnet" {
-  name                = var.vnet_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  address_space       = ["10.0.0.0/16"]
-
-  tags = {
-    environment = var.environment
-  }
-}
-
-resource "azurerm_public_ip" "pip" {
-  name                = var.public_ip
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  allocation_method   = "Static"
-}
-
-resource "azurerm_subnet" "subnet" {
-  name                 = var.subnet
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.254.0.0/24"]
-}
 
 # Container Registry
 resource "azurerm_container_registry" "acr" {
