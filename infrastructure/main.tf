@@ -62,6 +62,20 @@ module "application_gateway" {
   }
 }
 
+# Shared service plan for all App Services
+resource "azurerm_service_plan" "service_plan" {
+  name                = var.service_plan_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  os_type             = "Linux"
+  sku_name            = "F1" # Free tier for development and testing
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
 # Backend App Service
 resource "azurerm_linux_web_app" "backend" {
   name                = var.backend_app_name
