@@ -80,5 +80,11 @@ resource "azurerm_application_gateway" "this" {
 	priority                   = 100 # Ensure a unique priority
   }
 
+  waf_configuration {
+    enabled            = true
+    firewall_mode      = "Prevention"
+    policy_link_id     = azurerm_web_application_firewall_policy.waf_policy.id
+  }
+
   tags = var.tags
 }

@@ -75,3 +75,8 @@ variable "public_ip_name" {
   default     = "AzurePhotoFlowPip"
 }
 
+variable "firewallname" {
+  description = "Firewall name"
+  default     = "AzurePhotoFlowFirewall"
+}
+

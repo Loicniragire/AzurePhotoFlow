@@ -38,6 +38,41 @@ resource "azurerm_public_ip" "pip" {
   allocation_method   = "Static"
 }
 
+
+resource "azurerm_web_application_firewall_policy" "waf_policy" {
+  name                = "${var.firewallname}-waf-policy"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+
+  custom_rules {
+    name      = "AllowAll"
+    priority  = 100
+    rule_type = "MatchRule"
+
+    match_conditions {
+      match_variables {
+        variable_name = "RequestHeaders"
+        selector      = "User-Agent"
+      }
+
+      operator = "Contains"
+      values   = ["*"]
+    }
+
+    action = "Allow"
+  }
+
+  managed_rules {
+    managed_rule_set {
+      type    = "OWASP"
+      version = "3.2"
+    }
+  }
+
+  tags = var.tags
+}
+
+
 # Application Gateway Module
 module "application_gateway" {
   source              = "./modules/application_gateway"
