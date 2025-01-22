@@ -20,9 +20,6 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["10.254.0.0/24"]
 }
 
-
-
-
 resource "azurerm_application_gateway" "this" {
   name                = var.name
   location            = var.location

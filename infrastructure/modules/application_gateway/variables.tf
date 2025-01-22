@@ -7,7 +7,6 @@ variable "subnet_name" {}
 variable "subnet_prefix" {
   type = list(string)
 }
-variable "vnet_name" {}
 
 variable "ssl_certificate" {
   type = object({
