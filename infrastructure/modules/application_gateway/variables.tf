@@ -1,14 +1,30 @@
-variable "name" {}
-variable "location" {}
-variable "resource_group_name" {}
-variable "public_ip_name" {}
-variable "public_ip_location" {}
-variable "subnet_name" {}
-variable "subnet_prefix" {
-  type = list(string)
+variable "name" {
+  description = "The name of the Application Gateway"
+  type        = string
+}
+
+variable "location" {
+  description = "The location/region of the resources"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "The name of the Resource Group where the Application Gateway will be deployed"
+  type        = string
+}
+
+variable "public_ip_name" {
+  description = "The ID of the Public IP resource for the Application Gateway"
+  type        = string
+}
+
+variable "subnet_id" {
+  description = "The ID of the subnet where the Application Gateway will be deployed"
+  type        = string
 }
 
 variable "ssl_certificate" {
+  description = "SSL certificate details (path and password)"
   type = object({
     path     = string
     password = string
@@ -16,29 +32,14 @@ variable "ssl_certificate" {
 }
 
 variable "tags" {
-  type = map(string)
+  description = "A map of tags to assign to the resources"
+  type        = map(string)
 }
 
 variable "backend_services" {
-  description = "List of backend services with FQDNs"
+  description = "A list of backend services with their FQDNs"
   type = list(object({
     fqdn = string
   }))
 }
 
-
-
-variable "vnet_name" {
-  description = "The name of the Virtual Network"
-  default     = "AzurePhotoFlowVNet"
-}
-
-variable "public_ip" {
-  description = "The name of the public Ip"
-  default     = "AzurePhotoFlowPip"
-}
-
-variable "subnet" {
-  description = "The name of the public Ip"
-  default     = "AzurePhotoFlowSubNet"
-}
