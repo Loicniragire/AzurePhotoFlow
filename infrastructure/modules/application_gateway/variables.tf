@@ -8,17 +8,14 @@ variable "subnet_prefix" {
   type = list(string)
 }
 variable "vnet_name" {}
-variable "backend_services" {
-  type = list(object({
-    fqdn = string
-  }))
-}
+
 variable "ssl_certificate" {
   type = object({
     path     = string
     password = string
   })
 }
+
 variable "tags" {
   type = map(string)
 }
