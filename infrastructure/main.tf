@@ -68,8 +68,6 @@ resource "azurerm_web_application_firewall_policy" "waf_policy" {
       version = "3.2"
     }
   }
-
-  tags = var.tags
 }
 
 
