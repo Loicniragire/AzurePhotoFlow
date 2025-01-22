@@ -3,6 +3,7 @@ output "application_gateway_id" {
 }
 
 output "public_ip" {
-  value = azurerm_public_ip.public_ip.ip_address
+  value       = var.public_ip_name
+  description = "The Public IP address for the Application Gateway."
 }
 

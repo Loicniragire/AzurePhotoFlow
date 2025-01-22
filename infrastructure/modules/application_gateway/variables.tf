@@ -42,4 +42,3 @@ variable "backend_services" {
     fqdn = string
   }))
 }
-

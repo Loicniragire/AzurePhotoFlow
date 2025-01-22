@@ -44,14 +44,14 @@ resource "azurerm_application_gateway" "this" {
   }
 
   dynamic "backend_address_pool" {
-    for_each = var.backend_services
-    content {
-      name = "backend_pool_${index + 1}"
+	for_each = var.backend_services
+	content {
+	  name = "backend_pool_${backend_address_pool.key}"
 
-      backend_addresses {
-        fqdn = backend_address_pool.value.fqdn
-      }
-    }
+	  backend_addresses = [{
+		fqdn = backend_address_pool.value.fqdn
+	  }]
+	}
   }
 
   backend_http_settings {
