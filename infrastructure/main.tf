@@ -54,7 +54,7 @@ module "application_gateway" {
 	]
 
   ssl_certificate = {
-    path     = "../../../backend/AzurePhotoFlow.Api/certs/https/aspnetapp.pfx"
+    path     = "./certs/https/aspnetapp.pfx"
     password = var.ssl_certificate_password
   }
 
