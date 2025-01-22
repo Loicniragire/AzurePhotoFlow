@@ -53,10 +53,10 @@ module "application_gateway" {
 
   backend_services = [
     {
-      fqdn = azurerm_linux_web_app.backend.default_site_hostname
+      fqdn = azurerm_linux_web_app.backend.default_hostname
     },
     {
-      fqdn = azurerm_linux_web_app.frontend.default_site_hostname
+      fqdn = azurerm_linux_web_app.frontend.default_hostname
     }
   ]
 
@@ -70,6 +70,17 @@ module "application_gateway" {
   }
 }
 
+
+resource "azurerm_virtual_network" "vnet" {
+  name                = "AzurePhotoFlowVNet"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  address_space       = ["10.0.0.0/16"]
+
+  tags = {
+    environment = var.environment
+  }
+}
 
 
 
