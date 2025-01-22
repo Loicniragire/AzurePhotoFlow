@@ -37,6 +37,45 @@ module "cognitive_search" {
   sku_name             = "S0"
 }
 
+# Module: Application Gateway
+module "application_gateway" {
+  source              = "./modules/application_gateway"
+  name                = "AzurePhotoFlowAG"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  public_ip_name      = "app_gateway_public_ip"
+  public_ip_location  = var.location
+
+  subnet_name         = "app_gateway_subnet"
+  subnet_prefix       = ["10.0.2.0/24"]
+  vnet_name           = azurerm_virtual_network.vnet.name
+
+  backend_services = [
+    {
+      fqdn = azurerm_linux_web_app.backend.default_site_hostname
+    },
+    {
+      fqdn = azurerm_linux_web_app.frontend.default_site_hostname
+    }
+  ]
+
+  ssl_certificate = {
+    path     = "../../../backend/AzurePhotoFlow.Api/certs/https/aspnetapp.pfx"
+    password = var.ssl_certificate_password
+  }
+
+  tags = {
+    environment = var.environment
+  }
+}
+
+
+
+
+
+
+
 # Add other modules as needed, such as ML Workspace and Function Apps
 
 # Container Registry

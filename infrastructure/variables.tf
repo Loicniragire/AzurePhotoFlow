@@ -52,3 +52,9 @@ variable "frontend_app_name" {
   description = "The name of the frontend app"
   default     = "AzurePhotoFlowFE"
 }
+
+variable "ssl_certificate_password" {
+  description = "The password for the SSL certificate used by the Application Gateway"
+  type        = string
+  sensitive   = true
+}
