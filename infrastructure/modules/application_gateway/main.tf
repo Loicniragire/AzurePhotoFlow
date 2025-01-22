@@ -77,6 +77,7 @@ resource "azurerm_application_gateway" "this" {
     rule_type                  = "PathBasedRouting"
     http_listener_name         = "listener_https"
     url_path_map_name          = "url_path_map"
+	priority                   = 100 # Ensure a unique priority
   }
 
   tags = var.tags
