@@ -1,3 +1,10 @@
+resource "azurerm_public_ip" "example" {
+  name                = "public_ip"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  allocation_method   = "Static"
+}
+
 resource "azurerm_application_gateway" "this" {
   name                = var.name
   location            = var.location
@@ -43,12 +50,15 @@ resource "azurerm_application_gateway" "this" {
     ssl_certificate_name           = "ssl_cert"
   }
 
-  backend_address_pool {
+  # Dynamically generate backend pools with backend addresses
+  dynamic "backend_address_pool" {
     for_each = var.backend_services
-    name     = "backend_pool_${each.key}"
+    content {
+      name = "backend_pool_${backend_address_pool.key}"
 
-    backend_addresses {
-      fqdn = each.value.fqdn
+      backend_addresses {
+        fqdn = backend_address_pool.value.fqdn
+      }
     }
   }
 
@@ -62,13 +72,13 @@ resource "azurerm_application_gateway" "this" {
 
   url_path_map {
     name                           = "url_path_map"
-    default_backend_address_pool_name = "backend_pool_0"
+    default_backend_address_pool_name = "backend_pool_1"
     default_backend_http_settings_name = "http_settings"
 
     path_rule {
       name                       = "api_path"
       paths                      = ["/api/*"]
-      backend_address_pool_name  = "backend_pool_0"
+      backend_address_pool_name  = "backend_pool_1"
       backend_http_settings_name = "http_settings"
     }
   }
@@ -82,4 +92,3 @@ resource "azurerm_application_gateway" "this" {
 
   tags = var.tags
 }
-

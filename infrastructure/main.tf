@@ -51,14 +51,14 @@ module "application_gateway" {
   subnet_prefix       = ["10.0.2.0/24"]
   vnet_name           = azurerm_virtual_network.vnet.name
 
-  backend_services = {
-    backend = {
+  backend_services = [
+    {
       fqdn = azurerm_linux_web_app.backend.default_hostname
-    }
-    frontend = {
+    },
+    {
       fqdn = azurerm_linux_web_app.frontend.default_hostname
     }
-  }
+  ]
 
   ssl_certificate = {
     path     = "../../../backend/AzurePhotoFlow.Api/certs/https/aspnetapp.pfx"

@@ -23,3 +23,11 @@ variable "tags" {
   type = map(string)
 }
 
+variable "backend_services" {
+  description = "List of backend services with FQDNs"
+  type = list(object({
+    fqdn = string
+  }))
+}
+
+
