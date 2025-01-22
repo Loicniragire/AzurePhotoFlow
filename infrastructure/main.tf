@@ -47,10 +47,11 @@ module "application_gateway" {
   public_ip_name      = azurerm_public_ip.pip.id
   subnet_id           = azurerm_subnet.subnet.id
 
-  backend_services = [
-    { fqdn = azurerm_linux_web_app.backend.default_hostname },
-    { fqdn = azurerm_linux_web_app.frontend.default_hostname }
-  ]
+
+	backend_services = [
+	  { fqdn = "backend-app.azurewebsites.net" },
+	  { fqdn = "frontend-app.azurewebsites.net" }
+	]
 
   ssl_certificate = {
     path     = "../../../backend/AzurePhotoFlow.Api/certs/https/aspnetapp.pfx"

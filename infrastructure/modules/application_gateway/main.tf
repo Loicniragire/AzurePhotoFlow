@@ -43,42 +43,32 @@ resource "azurerm_application_gateway" "this" {
     ssl_certificate_name           = "ssl_cert"
   }
 
-  # Dynamically generate backend address pools
+  # Dynamically generate backend pools without backend_addresses
   dynamic "backend_address_pool" {
     for_each = var.backend_services
     content {
       name = "backend_pool_${backend_address_pool.key}"
-
-      # Use static backend addresses
-      backend_addresses {
-        fqdn = backend_address_pool.value.fqdn
-      }
     }
   }
 
-  # Create backend HTTP settings
-  dynamic "backend_http_settings" {
-    for_each = var.backend_services
-    content {
-      name                  = "http_setting_${backend_http_settings.key}"
-      cookie_based_affinity = "Enabled"
-      port                  = 80
-      protocol              = "Http"
-      request_timeout       = 20
-    }
+  backend_http_settings {
+    name                  = "http_settings"
+    cookie_based_affinity = "Enabled"
+    port                  = 80
+    protocol              = "Http"
+    request_timeout       = 20
   }
 
-  # URL Path Map for Routing
   url_path_map {
     name                           = "url_path_map"
     default_backend_address_pool_name = "backend_pool_1"
-    default_backend_http_settings_name = "http_setting_1"
+    default_backend_http_settings_name = "http_settings"
 
     path_rule {
       name                       = "api_path"
       paths                      = ["/api/*"]
       backend_address_pool_name  = "backend_pool_1"
-      backend_http_settings_name = "http_setting_1"
+      backend_http_settings_name = "http_settings"
     }
   }
 
@@ -91,4 +81,3 @@ resource "azurerm_application_gateway" "this" {
 
   tags = var.tags
 }
-
