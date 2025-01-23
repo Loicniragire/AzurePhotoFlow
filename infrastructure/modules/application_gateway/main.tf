@@ -47,13 +47,14 @@ resource "azurerm_application_gateway" "this" {
 dynamic "backend_address_pool" {
   for_each = var.backend_services
   content {
-    name = "backend_pool_${index(backend_address_pool, backend_address_pool.value)}"
+    name = "backend_pool_${index(var.backend_services, backend_address_pool.value)}"
 
-    backend_addresses = [
-      {
-        fqdn = backend_address_pool.value.fqdn
+    dynamic "backend_addresses" {
+      for_each = [backend_address_pool.value]
+      content {
+        fqdn = backend_addresses.value.fqdn
       }
-    ]
+    }
   }
 }
 
