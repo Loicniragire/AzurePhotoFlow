@@ -56,7 +56,7 @@ resource "azurerm_web_application_firewall_policy" "waf_policy" {
       }
 
       operator = "Contains"
-      values   = ["*"]
+      match_values   = ["*"]
     }
 
     action = "Allow"
