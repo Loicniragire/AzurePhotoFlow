@@ -82,8 +82,8 @@ module "application_gateway" {
 
 
 	backend_services = [
-	  { fqdn = "backend-app.azurewebsites.net" },
-	  { fqdn = "frontend-app.azurewebsites.net" }
+	  { fqdn = "azurephotoflowfe.azurewebsites.net" },
+	  { fqdn = "azurephotoflowbe.azurewebsites.net" }
 	]
 
   ssl_certificate = {
