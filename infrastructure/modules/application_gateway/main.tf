@@ -43,13 +43,20 @@ resource "azurerm_application_gateway" "this" {
     ssl_certificate_name           = "ssl_cert"
   }
 
-  # Dynamically generate backend pools without backend_addresses
-  dynamic "backend_address_pool" {
-    for_each = var.backend_services
-    content {
-      name = "backend_pool_${backend_address_pool.key}"
-    }
+
+dynamic "backend_address_pool" {
+  for_each = var.backend_services
+  content {
+    name = "backend_pool_${index(backend_address_pool, backend_address_pool.value)}"
+
+    backend_addresses = [
+      {
+        fqdn = backend_address_pool.value.fqdn
+      }
+    ]
   }
+}
+
 
   backend_http_settings {
     name                  = "http_settings"
