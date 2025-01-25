@@ -43,6 +43,18 @@ resources:
       endpoint: 'github.com_Loicniragire' 
 
 stages:
+# Update CLI
+- stage: UpdateAzureCLI
+  displayName: Update Azure CLI
+  jobs:
+  - job: UpdateCLI
+    displayName: Install/Update Azure CLI
+    steps:
+      - script: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az version
+        displayName: Install Latest Azure CLI
+
 # Build Stage
 - stage: Build
   displayName: Build Stage
@@ -52,10 +64,6 @@ stages:
     steps:
       # Checkout source code
       - checkout: github_repo
-
-      - script: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-        displayName: Update Azure CLI
 
       # Set Docker Context
       - script: |
