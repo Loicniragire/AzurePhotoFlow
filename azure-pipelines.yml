@@ -122,18 +122,17 @@ stages:
     - group: 'PhotoFlow'
     steps:
     # Authenticate and apply Terraform
-    - script: |
-        cd $(Build.SourcesDirectory)/Infrastructure
-        terraform init \
-          -reconfigure \
-          -backend-config="storage_account_name=$(storageAccountName)" \
-          -backend-config="container_name=$(containerName)" \
-          -backend-config="key=$(tfStateFile)" \
-          -backend-config="resource_group_name=$(resourceGroupName)" \
-          -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-        terraform plan -out=tfplan
-        terraform apply -auto-approve tfplan
-      displayName: Authenticate and Apply Terraform
+      - script: |
+          cd $(Build.SourcesDirectory)/Infrastructure
+          terraform init \
+            -backend-config="storage_account_name=$(storageAccountName)" \
+            -backend-config="container_name=$(containerName)" \
+            -backend-config="key=$(tfStateFile)" \
+            -backend-config="resource_group_name=$(resourceGroupName)" \
+            -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
+          terraform plan -out=tfplan
+          terraform apply -auto-approve -parallelism=5 -lock-timeout=60s tfplan || exit 1
+        displayName: Authenticate and Apply Terraform with Optimizations
 
 # Deploy Applications Stage
 - stage: DeployApplications
