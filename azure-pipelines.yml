@@ -48,12 +48,11 @@ stages:
   displayName: Update Azure CLI
   jobs:
   - job: UpdateCLI
-    displayName: Install/Update Azure CLI
+    displayName: Use Azure CLI via Docker
     steps:
       - script: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az version
-        displayName: Install Latest Azure CLI
+          docker run --rm mcr.microsoft.com/azure-cli:latest az version
+        displayName: Use Azure CLI Docker Image
 
 # Build Stage
 - stage: Build
@@ -61,6 +60,7 @@ stages:
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images
+    dependsOn: UpdateAzureCLI
     steps:
       # Checkout source code
       - checkout: github_repo
