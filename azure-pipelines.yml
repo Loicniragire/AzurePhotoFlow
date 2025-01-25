@@ -207,6 +207,12 @@ stages:
         artifact: compose-artifact
         displayName: Download docker-compose.yml Artifact
 
+      # Download the .env file artifact from previous stage
+      - download: current
+        artifact: env-artifact
+        displayName: Download .env file artifact
+
+
       # Verify Docker Contexts
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
@@ -216,12 +222,12 @@ stages:
 
       # Pull images using the downloaded docker-compose.yml
       - script: |
-          docker compose -f $(Pipeline.Workspace)/compose-artifact/docker-compose.yml pull
+          docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml pull
         displayName: Pull Docker Images
 
       # Start containers using the downloaded docker-compose.yml
       - script: |
-          docker compose -f $(Pipeline.Workspace)/compose-artifact/docker-compose.yml up -d
+          docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml up -d
         displayName: Deploy Services Using Docker Compose
 
       # Deploy the multi-container configuration to Azure App Service
