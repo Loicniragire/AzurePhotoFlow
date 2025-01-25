@@ -53,6 +53,10 @@ stages:
       # Checkout source code
       - checkout: github_repo
 
+      - script: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        displayName: Update Azure CLI
+
       # Set Docker Context
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
@@ -229,6 +233,11 @@ stages:
       - script: |
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml up -d
         displayName: Deploy Services Using Docker Compose
+
+      - script: |
+          az version
+          az webapp list --output table
+        displayName: Validate Azure CLI Version
 
       # Deploy the multi-container configuration to Azure App Service
       - script: |
