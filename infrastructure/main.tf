@@ -80,10 +80,7 @@ module "application_gateway" {
   public_ip_name      = azurerm_public_ip.pip.id
   subnet_id           = azurerm_subnet.subnet.id
 
-
-	backend_services = [
-		{ fqdn = azurerm_linux_web_app.web_app.default_hostname }
-	]
+  app_service_fqdn = azurerm_linux_web_app.web_app.default_hostname
 
   ssl_certificate = {
     path     = "./certs/https/aspnetapp.pfx"

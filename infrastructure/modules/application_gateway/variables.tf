@@ -36,9 +36,7 @@ variable "tags" {
   type        = map(string)
 }
 
-variable "backend_services" {
-  description = "A list of backend services with their FQDNs"
-  type = list(object({
-    fqdn = string
-  }))
+variable "app_service_fqdn" {
+  description = "The FQDN of the App Service to use as the backend pool"
+  type        = string
 }
