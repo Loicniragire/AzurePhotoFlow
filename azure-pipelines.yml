@@ -130,8 +130,12 @@ stages:
             -backend-config="key=$(tfStateFile)" \
             -backend-config="resource_group_name=$(resourceGroupName)" \
             -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-          terraform plan -out=tfplan
-          terraform apply -auto-approve -parallelism=5 -lock-timeout=60s tfplan || exit 1
+          terraform plan -var="ssl_certificate_password=$(ssl_certificate_password)" -out=tfplan
+          terraform apply \
+            -auto-approve \
+            -var="ssl_certificate_password=$(ssl_certificate_password)" \
+            -parallelism=5 \
+            -lock-timeout=60s tfplan || exit 1
         displayName: Authenticate and Apply Terraform with Optimizations
 
 # Deploy Applications Stage
