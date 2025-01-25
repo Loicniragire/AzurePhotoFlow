@@ -13,12 +13,3 @@ output "container_registry_login_server" {
   value       = azurerm_container_registry.acr.login_server
 }
 
-output "backend_app_service_url" {
-  description = "The URL of the backend App Service"
-  value       = azurerm_linux_web_app.backend.default_hostname
-}
-
-output "frontend_app_service_url" {
-  description = "The URL of the frontend App Service"
-  value       = azurerm_linux_web_app.frontend.default_hostname
-}

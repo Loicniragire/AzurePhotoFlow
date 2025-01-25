@@ -15,11 +15,6 @@ resource "azurerm_application_gateway" "this" {
   }
 
   frontend_port {
-    name = "http_port"
-    port = 80
-  }
-
-  frontend_port {
     name = "https_port"
     port = 443
   }
@@ -43,39 +38,36 @@ resource "azurerm_application_gateway" "this" {
     ssl_certificate_name           = "ssl_cert"
   }
 
+  backend_address_pool {
+    name = "backend_pool"
 
-dynamic "backend_address_pool" {
-  for_each = var.backend_services
-  content {
-    name = "backend_pool_${index(var.backend_services, backend_address_pool.value)}"
-
-    dynamic "backend_addresses" {
-      for_each = [backend_address_pool.value]
-      content {
-        fqdn = backend_addresses.value.fqdn
-      }
-    }
+    fqdns = [ var.app_service_fqdn ]
   }
-}
-
 
   backend_http_settings {
     name                  = "http_settings"
     cookie_based_affinity = "Enabled"
-    port                  = 80
-    protocol              = "Http"
+    port                  = 443
+    protocol              = "Https"
     request_timeout       = 20
   }
 
   url_path_map {
-    name                           = "url_path_map"
-    default_backend_address_pool_name = "backend_pool_1"
+    name                            = "url_path_map"
+    default_backend_address_pool_name = "backend_pool"
     default_backend_http_settings_name = "http_settings"
 
     path_rule {
       name                       = "api_path"
       paths                      = ["/api/*"]
-      backend_address_pool_name  = "backend_pool_1"
+      backend_address_pool_name  = "backend_pool"
+      backend_http_settings_name = "http_settings"
+    }
+
+    path_rule {
+      name                       = "frontend_path"
+      paths                      = ["/*"]
+      backend_address_pool_name  = "backend_pool"
       backend_http_settings_name = "http_settings"
     }
   }
@@ -85,13 +77,14 @@ dynamic "backend_address_pool" {
     rule_type                  = "PathBasedRouting"
     http_listener_name         = "listener_https"
     url_path_map_name          = "url_path_map"
-	priority                   = 100 # Ensure a unique priority
+    priority                   = 100
   }
 
   waf_configuration {
     enabled            = true
     firewall_mode      = "Prevention"
     rule_set_type      = "OWASP"
-    rule_set_version   = "3.2" # Specify the desired OWASP rule set version
+    rule_set_version   = "3.2"
   }
 }
+
