@@ -75,3 +75,7 @@ variable "firewallname" {
   default     = "AzurePhotoFlowFirewall"
 }
 
+variable "app_service_fqdn" {
+  description = "The FQDN of the App Service to use as the backend pool"
+  type        = string
+}
