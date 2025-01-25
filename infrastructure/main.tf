@@ -98,7 +98,8 @@ resource "azurerm_service_plan" "service_plan" {
   location            = var.location
   resource_group_name = var.resource_group_name
   os_type             = "Linux"
-  sku_name            = "B1" # Multi-container support
+  # sku_name            = "B1" # Multi-container support
+  sku_name            = "F1" # Free tier
 
   tags = {
     environment = var.environment
