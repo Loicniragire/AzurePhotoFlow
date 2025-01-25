@@ -233,7 +233,7 @@ stages:
       # Deploy the multi-container configuration to Azure App Service
       - script: |
           az webapp config container set \
-              --name $(webAppServiceName) \
+              --name AzurePhotoFlowWebApp \
               --resource-group $(resourceGroupName) \
               --multi-container-config-type "compose" \
               --multi-container-config-file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml
@@ -242,7 +242,7 @@ stages:
       # Configure App Service environment variables
       - script: |
           az webapp config appsettings set \
-              --name $(webAppServiceName) \
+              --name AzurePhotoFlowWebApp \
               --resource-group $(resourceGroupName) \
               --settings \
                 AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
