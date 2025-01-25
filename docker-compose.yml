@@ -1,5 +1,5 @@
 services:
-  app:
+  backend:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
     build:
       context: ./backend/AzurePhotoFlow.Api
@@ -14,15 +14,12 @@ services:
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
       - CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
       - MODE=${MODE}
-    volumes:
-      - ./backend/AzurePhotoFlow.Api/certs/https:/app/certs/https:ro
     ports:
       - "8080:80"
-      - "8443:443"
     networks:
       - app-network
 
-  web:
+  frontend:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-frontend:${stableTag:-latest}"
     build:
       context: ./frontend
@@ -35,40 +32,10 @@ services:
       - MODE=${MODE}
     ports:
       - "3000:80"
-    volumes:
-      - react-app-build:/app/build
-    depends_on:
-      - app
     networks:
       - app-network
-  nginx:
-    build:
-      context: ./frontend # Use frontend context to build the same Dockerfile
-      dockerfile: Dockerfile
-    volumes:
-      - react-app-build:/usr/share/nginx/html:ro
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - app-network
-    depends_on:
-      - web
-
-  terraform:
-    build:
-      context: ./infrastructure
-      dockerfile: Dockerfile
-    volumes:
-      - "./infrastructure:/terraform"
-    working_dir: /terraform
-    command: ["terraform", "init"]
 
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  react-app-build:
-    driver: local
 

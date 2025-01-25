@@ -8,6 +8,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 console.log('API_BASE_URL:', API_BASE_URL);
 
 // Upload raw image directory as a zip file
+// Endpoint: POST /api/image/raw
+// Parameters: timeStamp, projectName, directoryFile
 export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) => {
   const formData = new FormData();
   formData.append('directoryFile', directoryFile);
@@ -34,6 +36,11 @@ export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) 
 };
 
 // Upload processed image directory as a zip file
+// Endpoint: POST /api/image/processed
+// Parameters: timeStamp, projectName, rawfileDirectoryName, directoryFile
+// rawfileDirectoryName is the name of the raw file directory that was uploaded
+// directoryFile is the zip file containing the processed images
+// The processed images will be stored in the directory with the same name as the raw file directory
 export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDirectoryName, directoryFile) => {
   const formData = new FormData();
   formData.append('directoryFile', directoryFile);
@@ -53,6 +60,12 @@ export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDi
 };
 
 // Delete a project and its associated files
+// Endpoint: DELETE /api/image/projects
+// Parameters: projectName, timestamp
+// projectName is the name of the project to delete
+// timestamp is the timestamp of the project to delete
+// The project directory and all associated files will be deleted
+// Returns a success message
 export const deleteProject = async (projectName, timestamp) => {
   try {
     const response = await axios.delete(`${API_BASE_URL}/api/image/projects`, {
@@ -66,6 +79,12 @@ export const deleteProject = async (projectName, timestamp) => {
 };
 
 // Get a list of projects
+// Endpoint: GET /api/image/projects
+// Parameters: year, projectName, timestamp
+// year is the year of the project
+// projectName is the name of the project
+// timestamp is the timestamp of the project
+// Returns a list of projects
 export const getProjects = async (year = null, projectName = null, timestamp = null) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/api/image/projects`, {

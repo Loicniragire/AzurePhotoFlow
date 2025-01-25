@@ -83,6 +83,11 @@ stages:
           docker compose --env-file .env -f docker-compose.yml up -d --build
         displayName: Build Docker Images using Compose
 
+       # Publish docker compose
+      - publish: $(Build.SourcesDirectory)/docker-compose.yml
+        artifact: compose-artifact
+        displayName: Publish docker-compose.yml Artifact
+
 # Test Stage
 - stage: Test
   displayName: Test Stage
@@ -119,50 +124,16 @@ stages:
     # Authenticate and apply Terraform
     - script: |
         cd $(Build.SourcesDirectory)/Infrastructure
+        terraform refresh
         terraform init \
           -backend-config="storage_account_name=$(storageAccountName)" \
           -backend-config="container_name=$(containerName)" \
           -backend-config="key=$(tfStateFile)" \
           -backend-config="resource_group_name=$(resourceGroupName)" \
           -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-        terraform plan -out=tfplan -lock-timeout=60s
-        terraform apply -auto-approve -lock-timeout=60s tfplan
+        terraform plan -out=tfplan
+        terraform apply -auto-approve tfplan
       displayName: Authenticate and Apply Terraform
-      env:
-          ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-          ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-          ARM_TENANT_ID: $(ARM_TENANT_ID)
-          ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-          TF_VAR_ssl_certificate_password: $(CERTIFICATE_PASSWORD)
-
-    # Assign AcrPull Role to Backend and Frontend App Services
-    - script: |
-        echo "Assigning AcrPull role to App Services..."
-        
-        # Retrieve the Principal ID for the Backend App Service
-        BACKEND_PRINCIPAL_ID=$(az webapp identity show \
-          --name $(backendAppServiceName) \
-          --resource-group $(resourceGroupName) \
-          --query principalId -o tsv)
-        
-        # Assign AcrPull role to Backend App Service
-        az role assignment create \
-          --assignee $BACKEND_PRINCIPAL_ID \
-          --role "AcrPull" \
-          --scope "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/azurephotoflowacr"
-
-        # Retrieve the Principal ID for the Frontend App Service
-        FRONTEND_PRINCIPAL_ID=$(az webapp identity show \
-          --name $(frontendAppServiceName) \
-          --resource-group $(resourceGroupName) \
-          --query principalId -o tsv)
-        
-        # Assign AcrPull role to Frontend App Service
-        az role assignment create \
-          --assignee $FRONTEND_PRINCIPAL_ID \
-          --role "AcrPull" \
-          --scope "/subscriptions/$(subscriptionId)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/azurephotoflowacr"
-      displayName: Assign AcrPull Role to App Services
 
 # Deploy Applications Stage
 - stage: DeployApplications
@@ -213,11 +184,8 @@ stages:
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml push
         displayName: Push docker images to ACR
 
-  - job: DeployContainers
-    displayName: Deploy Containers to Azure and Local Docker
-    variables:
-      - group: 'PhotoFlow'
-    dependsOn: PushDockerImages
+  - job: DeployMultiContainers
+    displayName: Deploy Multi-Container App Service
     steps:
       # Login to Azure Container Registry
       - task: Docker@2
@@ -226,111 +194,55 @@ stages:
           command: login
           containerRegistry: $(containerRegistryConnection)
 
+      # Download the docker-compose.yml artifact
+      - download: current
+        artifact: compose-artifact
+        displayName: Download docker-compose.yml Artifact
+
+      # Verify Docker Contexts
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
           docker context use desktop-linux
-        displayName: 'Set Docker Context with Config'
-
-      - script: |
           docker context ls
-        displayName: 'Verify Docker Contexts'
+        displayName: 'Set and Verify Docker Contexts'
 
+      # Pull images using the downloaded docker-compose.yml
       - script: |
-          export DOCKER_HOST=$(docker_host)
-          docker ps
-        displayName: 'Test Docker Connection'
-      - script: |
-          docker compose -f docker-compose.yml pull
-          docker compose -f docker-compose.yml up -d
-        displayName: Deploy services using compose
+          docker compose -f $(Pipeline.Workspace)/compose-artifact/docker-compose.yml pull
+        displayName: Pull Docker Images
 
-      # Configure Environment Variables for App Services
+      # Start containers using the downloaded docker-compose.yml
       - script: |
-          echo "Configuring environment variables for App Services..."
-          echo "Azure blob storage: $(AZURE_BLOB_STORAGE) "
+          docker compose -f $(Pipeline.Workspace)/compose-artifact/docker-compose.yml up -d
+        displayName: Deploy Services Using Docker Compose
+
+      # Deploy the multi-container configuration to Azure App Service
+      - script: |
+          az webapp config container set \
+              --name $(webAppServiceName) \
+              --resource-group $(resourceGroupName) \
+              --multi-container-config-type "compose" \
+              --multi-container-config-file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml
+        displayName: Deploy Multi-Container Configuration to Azure App Service
+
+      # Configure App Service environment variables
+      - script: |
           az webapp config appsettings set \
-              --name $(backendAppServiceName) \
+              --name $(webAppServiceName) \
               --resource-group $(resourceGroupName) \
               --settings \
-                AZURE_BLOB_STORAGE='$(AZURE_BLOB_STORAGE)' \
-                CERTIFICATE_PASSWORD=$(Https_cert_password) \
+                AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
+                VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
+                CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD) \
                 CERTIFICATE_PATH=$(CERTIFICATE_PATH) \
                 NODE_ENV=production
+        displayName: Configure App Service Environment Variables
 
-          az webapp config appsettings set \
-              --name $(frontendAppServiceName) \
-              --resource-group $(resourceGroupName) \
-              --settings \
-                VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
-                NODE_ENV=production
-
-          az webapp config container set \
-              --name $(frontendAppServiceName) \
-              --resource-group $(resourceGroupName) \
-              --container-image-name $(containerRegistry)/azurephotoflow-frontend:$(stableTag) \
-              --container-registry-url "https://$(containerRegistry)"
-
-          az webapp log config \
-              --name $(frontendAppServiceName) \
-              --resource-group $(resourceGroupName) \
-              --application-logging filesystem \
-              --detailed-error-messages true \
-              --failed-request-tracing true \
-              --web-server-logging filesystem
-
-          az webapp log config \
-              --name $(backendAppServiceName) \
-              --resource-group $(resourceGroupName) \
-              --application-logging filesystem \
-              --detailed-error-messages true \
-              --failed-request-tracing true \
-              --web-server-logging filesystem
-
-          echo "Enforcing HTTPS for Azure Web App..."
-          az webapp update \
-              --name $(backendAppServiceName) \
-              --resource-group $(resourceGroupName) \
-              --set httpsOnly=true
-
-          az webapp update \
-              --name $(frontendAppServiceName) \
-              --resource-group $(resourceGroupName) \
-              --set httpsOnly=true
-
-          echo "HTTPS enforced successfully."
-
-          echo "Add a health check endpoint"
-          az webapp config set \
-              --resource-group AzurePhotoFlow-RG \
-              --name AzurePhotoFlowFE \
-              --generic-configurations '{"healthCheckPath":"/health"}'
-          echo "Health check endpoint added successfully"
-
-          echo "Configuring CORS - allow All for testing"
-          az webapp cors add \
-              --name AzurePhotoFlowFE \
-              --resource-group AzurePhotoFlow-RG \
-              --allowed-origins "*"
-
-          az webapp cors add \
-              --name AzurePhotoFlowBE \
-              --resource-group AzurePhotoFlow-RG \
-              --allowed-origins "https://azurephotoflowfe.azurewebsites.net,http://localhost:3000"
-          echo "CORS configuration done"
-
-          echo "Restarting backend..."
-          az webapp restart \
-            --name $(backendAppServiceName) \
-            --resource-group $(resourceGroupName)
-
-          echo "Restarting frontend..."
-          az webapp restart \
-            --name $(frontendAppServiceName) \
-            --resource-group $(resourceGroupName)
-
-        displayName: Set Environment Variables for App Services
-        env:
-          AZURE_BLOB_STORAGE: $(AZURE_BLOB_STORAGE)
-          VITE_API_BASE_URL: $(VITE_API_BASE_URL)
-          CERTIFICATE_PASSWORD: $(Https_cert_password)
-          CERTIFICATE_PATH: $(CERTIFICATE_PATH)
+       # Add a Health check endpoint
+      - script: |
+          curl -I https://$(webAppServiceName).azurewebsites.net/health
+          if [ $? -ne 0 ]; then
+            echo "Health check failed!"
+            exit 1
+          fi
+        displayName: Perform Health Check

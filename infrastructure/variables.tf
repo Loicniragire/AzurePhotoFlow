@@ -44,14 +44,9 @@ variable "service_plan_name" {
   default     = "AzurePhotoFlowSP"
 }
 
-variable "backend_app_name" {
+variable "web_app_name" {
   description = "The name of the Azure App Service hosting the backend API"
-  default     = "AzurePhotoFlowBE"
-}
-
-variable "frontend_app_name" {
-  description = "The name of the Azure App Service hosting the frontend application"
-  default     = "AzurePhotoFlowFE"
+  default     = "AzurePhotoFlowWebApp"
 }
 
 variable "ssl_certificate_password" {

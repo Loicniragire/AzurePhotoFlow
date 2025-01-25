@@ -82,8 +82,7 @@ module "application_gateway" {
 
 
 	backend_services = [
-	  { fqdn = "azurephotoflowfe.azurewebsites.net" },
-	  { fqdn = "azurephotoflowbe.azurewebsites.net" }
+		{ fqdn = azurerm_linux_web_app.web_app.default_hostname }
 	]
 
   ssl_certificate = {
@@ -123,9 +122,9 @@ resource "azurerm_container_registry" "acr" {
   }
 }
 
-# Backend App Service
-resource "azurerm_linux_web_app" "backend" {
-  name                = var.backend_app_name
+# Unified App Service for Frontend and Backend
+resource "azurerm_linux_web_app" "web_app" {
+  name                = var.web_app_name
   location            = var.location
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.service_plan.id
@@ -141,35 +140,14 @@ resource "azurerm_linux_web_app" "backend" {
 
   app_settings = {
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    # Additional settings for both frontend and backend
+    BACKEND_API_BASE_URL  = "/api"       # Example: Adjust API path
+    FRONTEND_PUBLIC_PATH  = "/static"   # Example: Adjust public path
   }
 
   tags = {
     environment = var.environment
-  }
-}
-
-# Frontend App Service
-resource "azurerm_linux_web_app" "frontend" {
-  name                = var.frontend_app_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  service_plan_id     = azurerm_service_plan.service_plan.id
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  site_config {
-    app_command_line = ""
-    always_on        = false
-  }
-
-  app_settings = {
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
-  }
-
-  tags = {
-    environment = var.environment
+    project     = "AzurePhotoFlow"
   }
 }
 
