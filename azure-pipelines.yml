@@ -60,7 +60,6 @@ stages:
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images
-    dependsOn: UpdateAzureCLI
     steps:
       # Checkout source code
       - checkout: github_repo
