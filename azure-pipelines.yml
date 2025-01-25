@@ -135,8 +135,6 @@ stages:
             -out=tfplan
           terraform apply \
             -auto-approve \
-            -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)" \
-            -var="app_service_fqdn=$(appServiceFqdn)" \
             -parallelism=5 \
             -lock-timeout=60s tfplan || exit 1
         displayName: Authenticate and Apply Terraform with Optimizations
