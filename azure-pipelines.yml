@@ -279,7 +279,7 @@ stages:
 
        # Add a Health check endpoint
       - script: |
-          curl -I https://$(webAppServiceName).azurewebsites.net/health
+          curl -I https://$(AzurePhotoFlowWebApp).azurewebsites.net/health
           if [ $? -ne 0 ]; then
             echo "Health check failed!"
             exit 1

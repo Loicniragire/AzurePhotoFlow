@@ -26,3 +26,7 @@ December 28, 2024
 January 5, 2025
 - When you run the entire APP in Docker containers, the frontend uses .env_production settings. Use MODE argument to switch between development and production modes.
 
+January 6, 2025
+- Multi-container deployment:
+	- Updated App Service siteConfig.linuxFxVersion to COMPOSE
+	- Provided the docker-compose file path in the app settings.
