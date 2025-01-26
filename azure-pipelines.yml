@@ -248,12 +248,21 @@ stages:
 
       # Deploy the multi-container configuration to Azure App Service
       - script: |
-          az webapp config container set \
-              --name AzurePhotoFlowWebApp \
+          az storage blob upload \
+              --account-name $(storageAccountName) \
+              --container-name $(containerName) \
+              --file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml \
+              --name docker-compose.yml \
+              --auth-mode key
+        displayName: Upload docker-compose.yml to Azure Blob Storage
+
+      - script: |
+          az resource update \
               --resource-group $(resourceGroupName) \
-              --multi-container-config-type "compose" \
-              --multi-container-config-file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml
-        displayName: Deploy Multi-Container Configuration to Azure App Service
+              --name AzurePhotoFlowWebApp \
+              --resource-type "Microsoft.Web/sites" \
+              --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(containerName)/docker-compose.yml"
+        displayName: Deploy Multi-Container Configuration
 
       # Configure App Service environment variables
       - script: |
