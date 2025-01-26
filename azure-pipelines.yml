@@ -254,6 +254,7 @@ stages:
               --file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml \
               --name docker-compose.yml \
               --auth-mode key
+              --overwrite
         displayName: Upload docker-compose.yml to Azure Blob Storage
 
       - script: |
