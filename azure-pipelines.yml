@@ -24,6 +24,8 @@ variables:
     value: 'photoflowtfstatedev'
   - name: containerName
     value: 'tfstate'
+  - name: docker-compose-container
+    value: 'docker-compose'
   - name: cognitiveAccountName
     value: 'azurephotoflowvision'
   - name: tfStateFile
@@ -250,11 +252,10 @@ stages:
       - script: |
           az storage blob upload \
               --account-name $(storageAccountName) \
-              --container-name $(containerName) \
+              --container-name $(docker-compose-container) \
               --file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml \
               --name docker-compose.yml \
               --auth-mode key
-              --overwrite
         displayName: Upload docker-compose.yml to Azure Blob Storage
 
       - script: |
@@ -262,7 +263,7 @@ stages:
               --resource-group $(resourceGroupName) \
               --name AzurePhotoFlowWebApp \
               --resource-type "Microsoft.Web/sites" \
-              --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(containerName)/docker-compose.yml"
+              --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
         displayName: Deploy Multi-Container Configuration
 
       # Configure App Service environment variables
