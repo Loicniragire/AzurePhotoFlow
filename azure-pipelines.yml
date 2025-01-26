@@ -253,7 +253,8 @@ stages:
           az storage container create \
               --account-name $(storageAccountName) \
               --name $(docker-compose-container) \
-              --auth-mode key
+              --auth-mode key \
+              --overwrite
 
           # Upload the docker-compose file
           az storage blob upload \
