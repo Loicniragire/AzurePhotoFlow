@@ -250,6 +250,13 @@ stages:
 
       # Deploy the multi-container configuration to Azure App Service
       - script: |
+          # Create the container if it doesn't exist
+          az storage container create \
+              --account-name $(storageAccountName) \
+              --name $(docker-compose-container) \
+              --auth-mode key
+
+          # Upload the docker-compose file
           az storage blob upload \
               --account-name $(storageAccountName) \
               --container-name $(docker-compose-container) \
