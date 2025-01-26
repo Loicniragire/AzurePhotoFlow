@@ -225,7 +225,6 @@ stages:
         artifact: env-artifact
         displayName: Download .env file artifact
 
-
       # Verify Docker Contexts
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
