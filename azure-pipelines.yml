@@ -253,8 +253,7 @@ stages:
           az storage container create \
               --account-name $(storageAccountName) \
               --name $(docker-compose-container) \
-              --auth-mode login \
-              --overwrite
+              --auth-mode login
 
           # Upload the docker-compose file
           az storage blob upload \
@@ -262,7 +261,8 @@ stages:
               --container-name $(docker-compose-container) \
               --file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml \
               --name docker-compose.yml \
-              --auth-mode key
+              --auth-mode key \
+              --overwrite
         displayName: Upload docker-compose.yml to Azure Blob Storage
 
       - script: |
