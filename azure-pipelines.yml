@@ -205,58 +205,41 @@ stages:
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml push
         displayName: Push docker images to ACR
 
+- stage: DeployApplications
+  displayName: Deploy Applications
+  dependsOn: DeployInfrastructure
+  jobs:
   - job: DeployMultiContainers
     displayName: Deploy Multi-Container App Service
     dependsOn: PushDockerImages
     steps:
-      # Login to Azure Container Registry
+      # (1) Login to ACR
       - task: Docker@2
         displayName: Login to ACR
         inputs:
           command: login
           containerRegistry: $(containerRegistryConnection)
-
-      # Download the docker-compose.yml artifact
+      
+      # (2) Download artifacts
       - download: current
         artifact: compose-artifact
-        displayName: Download docker-compose.yml Artifact
-
-      # Download the .env file artifact from previous stage
       - download: current
         artifact: env-artifact
-        displayName: Download .env file artifact
 
-      # Verify Docker Contexts
-      - script: |
-          export DOCKER_CONFIG=$HOME/.docker
-          docker context use desktop-linux
-          docker context ls
-        displayName: 'Set and Verify Docker Contexts'
-
-      # Pull images using the downloaded docker-compose.yml
+      # (3) Docker Compose Pull/Up
       - script: |
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml pull
         displayName: Pull Docker Images
-
-      # Start containers using the downloaded docker-compose.yml
       - script: |
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml up -d
         displayName: Deploy Services Using Docker Compose
 
+      # (4) Deploy Multi-Container Configuration to Azure
       - script: |
-          az version
-          az webapp list --output table
-        displayName: Validate Azure CLI Version
-
-      # Deploy the multi-container configuration to Azure App Service
-      - script: |
-          # Create the container if it doesn't exist
           az storage container create \
               --account-name $(storageAccountName) \
               --name $(docker-compose-container) \
               --auth-mode login
-
-          # Upload the docker-compose file
           az storage blob upload \
               --account-name $(storageAccountName) \
               --container-name $(docker-compose-container) \
@@ -268,30 +251,48 @@ stages:
 
       - script: |
           az resource update \
-              --resource-group $(resourceGroupName) \
-              --name AzurePhotoFlowWebApp \
-              --resource-type "Microsoft.Web/sites" \
-              --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
+            --resource-group $(resourceGroupName) \
+            --name AzurePhotoFlowWebApp \
+            --resource-type "Microsoft.Web/sites" \
+            --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
         displayName: Deploy Multi-Container Configuration
 
-      # Configure App Service environment variables
+      # (5) Configure App Settings
       - script: |
           az webapp config appsettings set \
-              --name AzurePhotoFlowWebApp \
-              --resource-group $(resourceGroupName) \
-              --settings \
-                AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
-                VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
-                CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD) \
-                CERTIFICATE_PATH=$(CERTIFICATE_PATH) \
-                NODE_ENV=production
+            --name AzurePhotoFlowWebApp \
+            --resource-group $(resourceGroupName) \
+            --settings \
+              AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
+              VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
+              CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD) \
+              CERTIFICATE_PATH=$(CERTIFICATE_PATH) \
+              NODE_ENV=production
         displayName: Configure App Service Environment Variables
 
-       # Add a Health check endpoint
+      # (6) Wait For Health Endpoint
       - script: |
-          curl -I https://AzurePhotoFlowWebApp.azurewebsites.net/health
-          if [ $? -ne 0 ]; then
-            echo "Health check failed!"
+          echo "Waiting for container to become healthy..."
+          MAX_ATTEMPTS=6
+          SLEEP_BETWEEN=10
+          ATTEMPT=1
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]
+          do
+            echo "Attempt $ATTEMPT: Checking /health endpoint..."
+            curl -s -f https://AzurePhotoFlowWebApp.azurewebsites.net/health && break
+            echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds before retry..."
+            ATTEMPT=$((ATTEMPT+1))
+            sleep $SLEEP_BETWEEN
+          done
+          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+            echo "Health check failed after $MAX_ATTEMPTS attempts!"
             exit 1
           fi
+          echo "Container is healthy!"
+        displayName: Wait for /health endpoint
+
+      # (7) (Optional) Final Single Check
+      - script: |
+          curl -I https://AzurePhotoFlowWebApp.azurewebsites.net/health
         displayName: Perform Health Check
+
