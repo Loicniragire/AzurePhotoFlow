@@ -50,6 +50,10 @@ resource "azurerm_application_gateway" "this" {
     port                  = 443
     protocol              = "Https"
     request_timeout       = 20
+
+    # Explicitly set the host name if the default is not matching
+    # or if Application Gateway attempts to send something else
+    host_name             = var.app_service_fqdn
   }
 
   url_path_map {
@@ -77,7 +81,7 @@ resource "azurerm_application_gateway" "this" {
     rule_type                  = "PathBasedRouting"
     http_listener_name         = "listener_https"
     url_path_map_name          = "url_path_map"
-    priority                   = 100
+    priority                   = 1
   }
 
   waf_configuration {
