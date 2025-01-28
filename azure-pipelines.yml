@@ -207,6 +207,7 @@ stages:
 
   - job: DeployMultiContainers
     displayName: Deploy Multi-Container App Service
+    dependsOn: PushDockerImages
     steps:
       # Login to Azure Container Registry
       - task: Docker@2

@@ -44,6 +44,16 @@ resource "azurerm_application_gateway" "this" {
     fqdns = [ var.app_service_fqdn ]
   }
 
+  probe {
+    name                = "pf_custom_probe"
+    protocol            = "Https"
+    path                = "/health"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
+    host = var.app_service_fqdn
+  }
+
   backend_http_settings {
     name                  = "http_settings"
     cookie_based_affinity = "Enabled"
@@ -51,9 +61,7 @@ resource "azurerm_application_gateway" "this" {
     protocol              = "Https"
     request_timeout       = 20
 
-    # Explicitly set the host name if the default is not matching
-    # or if Application Gateway attempts to send something else
-    host_name             = var.app_service_fqdn
+    probe_name = "pf_custom_probe"
   }
 
   url_path_map {
