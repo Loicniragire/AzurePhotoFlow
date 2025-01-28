@@ -60,7 +60,6 @@ resource "azurerm_application_gateway" "this" {
     port                  = 443
     protocol              = "Https"
     request_timeout       = 20
-    pick_host_name_from_backend_address = true
     probe_name = "pf_custom_probe"
     host_name = "azurephotoflowwebapp.azurewebsites.net"
   }
