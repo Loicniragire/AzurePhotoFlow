@@ -205,10 +205,6 @@ stages:
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml push
         displayName: Push docker images to ACR
 
-- stage: DeployApplications
-  displayName: Deploy Applications
-  dependsOn: DeployInfrastructure
-  jobs:
   - job: DeployMultiContainers
     displayName: Deploy Multi-Container App Service
     dependsOn: PushDockerImages
