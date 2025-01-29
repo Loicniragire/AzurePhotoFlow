@@ -18,6 +18,11 @@ variable "public_ip_name" {
   type        = string
 }
 
+variable "public_ip_address_id" {
+  description = ""
+  type        = string
+}
+
 variable "subnet_id" {
   description = "The ID of the subnet where the Application Gateway will be deployed"
   type        = string
