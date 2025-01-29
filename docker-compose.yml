@@ -4,7 +4,7 @@ services:
     ports:
       - "80:80"  # App Service requires the main container to listen on port 80
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - frontend
       - backend
@@ -12,7 +12,7 @@ services:
       - app-network
 
   backend:
-    image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
+    # image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
     build:
       context: ./backend/AzurePhotoFlow.Api
       dockerfile: Dockerfile
@@ -21,6 +21,7 @@ services:
         AZURE_BLOB_STORAGE: ${AZURE_BLOB_STORAGE}
         CERTIFICATE_PATH: ${CERTIFICATE_PATH}
         MODE: ${MODE}
+    container_name: backend
     environment:
       - ASPNETCORE_URLS=http://+:80
       - AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
@@ -31,13 +32,14 @@ services:
       - app-network
 
   frontend:
-    image: "${CONTAINER_REGISTRY}/azurephotoflow-frontend:${stableTag:-latest}"
+    # image: "${CONTAINER_REGISTRY}/azurephotoflow-frontend:${stableTag:-latest}"
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         MODE: ${MODE:-development}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: frontend
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - MODE=${MODE}
