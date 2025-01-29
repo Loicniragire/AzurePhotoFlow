@@ -129,12 +129,12 @@ if (app.Environment.IsDevelopment())
 
 // Middleware Pipeline
 app.UseCors("AllowSpecificOrigin");
-app.UseHttpsRedirection();
+/* app.UseHttpsRedirection(); */
 app.UseRouting();
 app.UseAuthorization();
 
-// Map the built-in Health Check Middleware
-app.MapHealthChecks("/health");
+// Health Check Middleware
+app.MapGet("/health", () => "Healthy");
 
 app.MapControllers();
 

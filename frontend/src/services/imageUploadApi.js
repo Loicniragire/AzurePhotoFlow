@@ -15,7 +15,7 @@ export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) 
   formData.append('directoryFile', directoryFile);
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/image/raw`, formData, {
+    const response = await axios.post(`/api/image/raw`, formData, {
       params: { timeStamp, projectName },
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -46,7 +46,7 @@ export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDi
   formData.append('directoryFile', directoryFile);
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/image/processed`, formData, {
+    const response = await axios.post(`$/api/image/processed`, formData, {
       params: { timeStamp, projectName, rawfileDirectoryName },
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -68,7 +68,7 @@ export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDi
 // Returns a success message
 export const deleteProject = async (projectName, timestamp) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/api/image/projects`, {
+    const response = await axios.delete(`$/api/image/projects`, {
       params: { projectName, timestamp },
     });
     return response.data; // Returns success message
@@ -87,7 +87,7 @@ export const deleteProject = async (projectName, timestamp) => {
 // Returns a list of projects
 export const getProjects = async (year = null, projectName = null, timestamp = null) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/image/projects`, {
+    const response = await axios.get(`$/api/image/projects`, {
       params: { year, projectName, timestamp },
     });
     return response.data; // Returns a list of projects
