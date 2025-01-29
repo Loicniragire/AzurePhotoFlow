@@ -48,6 +48,9 @@ if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 
 Console.WriteLine($"Azure Blob Storage Connection String: {azureBlobStorageConnectionString}");
 
+// Register the Health Check Service
+builder.Services.AddHealthChecks();
+
 // Add CORS 
 builder.Services.AddCors(options =>
 {
@@ -129,6 +132,9 @@ app.UseCors("AllowSpecificOrigin");
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
+
+// Map the built-in Health Check Middleware
+app.MapHealthChecks("/health");
 
 app.MapControllers();
 
