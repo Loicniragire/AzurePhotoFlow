@@ -77,7 +77,7 @@ module "application_gateway" {
   name                = "AzurePhotoFlowAG"
   location            = var.location
   resource_group_name = var.resource_group_name
-  public_ip_name      = azurerm_public_ip.pip.id
+  public_ip_address_id  = azurerm_public_ip.pip.id
   subnet_id           = azurerm_subnet.subnet.id
 
   app_service_fqdn = azurerm_linux_web_app.web_app.default_hostname
