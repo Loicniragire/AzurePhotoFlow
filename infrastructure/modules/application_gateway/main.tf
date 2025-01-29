@@ -56,7 +56,6 @@ resource "azurerm_application_gateway" "this" {
     interval            = 30
     timeout             = 30
     unhealthy_threshold = 3
-    protocol            = "Http"
   }
 
   # Backend HTTP Settings
