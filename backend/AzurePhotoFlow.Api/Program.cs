@@ -58,7 +58,7 @@ builder.Services.AddCors(options =>
     {
         builder.WithOrigins(
 				"http://localhost:3000", // local development
-				"https://azurephotoflowfe.azurewebsites.net" // production
+				"https://AzurePhotoFlowWebApp.azurewebsites.net"
 				) 
                .AllowAnyMethod()
                .AllowAnyHeader()
