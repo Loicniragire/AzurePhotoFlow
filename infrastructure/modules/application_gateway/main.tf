@@ -50,7 +50,7 @@ resource "azurerm_application_gateway" "this" {
   # Health Probe (Ensure /health exists in your backend)
   probe {
     name                = "health_probe"
-    protocol            = "Https"
+    protocol            = "Http"
     host                = var.app_service_fqdn
     path                = "/health"
     interval            = 30
@@ -66,7 +66,7 @@ resource "azurerm_application_gateway" "this" {
     cookie_based_affinity = "Disabled"
     request_timeout       = 60
     probe_name            = "health_probe"
-    host_name             = var.app_service_fqdn  # Critical for App Service routing
+    host_name             = var.app_service_fqdn
   }
 
   # Routing Rule (Simplified - Nginx handles path-based routing)
