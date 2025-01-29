@@ -61,8 +61,8 @@ resource "azurerm_application_gateway" "this" {
   # Backend HTTP Settings
   backend_http_settings {
     name                  = "backend_https_settings"
-    port                  = 443
-    protocol              = "Https"
+    port                  = 80
+    protocol              = "Http"
     cookie_based_affinity = "Disabled"
     request_timeout       = 60
     probe_name            = "health_probe"

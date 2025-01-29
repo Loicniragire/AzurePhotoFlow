@@ -17,23 +17,23 @@ builder.WebHost.ConfigureKestrel(options =>
     bool isInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 
     // Determine certificate path
-    string certFile = isInDocker
-        ? Environment.GetEnvironmentVariable("CERTIFICATE_PATH")
-        : Path.Combine(certDirectory, "certs", "https", "aspnetapp.pfx");
-
-    if (!File.Exists(certFile))
-    {
-        throw new FileNotFoundException("Certificate file not found", certFile);
-    }
+    /* string certFile = isInDocker */
+    /*     ? Environment.GetEnvironmentVariable("CERTIFICATE_PATH") */
+    /*     : Path.Combine(certDirectory, "certs", "https", "aspnetapp.pfx"); */
+    /*  */
+    /* if (!File.Exists(certFile)) */
+    /* { */
+    /*     throw new FileNotFoundException("Certificate file not found", certFile); */
+    /* } */
 
     options.ListenAnyIP(80); // HTTP
-    options.ListenAnyIP(443, listenOptions =>
-    {
-        string certPassword = Environment.GetEnvironmentVariable("CERTIFICATE_PASSWORD");
-        Console.WriteLine($"Certificate Password: {certPassword}");
-        listenOptions.UseHttps(certFile, certPassword);
-    }); // HTTPS
-    options.ListenAnyIP(8080); // Add listener for HTTP on port 8080
+    /* options.ListenAnyIP(443, listenOptions => */
+    /* { */
+    /*     string certPassword = Environment.GetEnvironmentVariable("CERTIFICATE_PASSWORD"); */
+    /*     Console.WriteLine($"Certificate Password: {certPassword}"); */
+    /*     listenOptions.UseHttps(certFile, certPassword); */
+    /* }); // HTTPS */
+    /* options.ListenAnyIP(8080); // Add listener for HTTP on port 8080 */
 });
 
 
