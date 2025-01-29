@@ -41,17 +41,6 @@ resources:
       endpoint: 'github.com_Loicniragire' 
 
 stages:
-# Update CLI
-- stage: UpdateAzureCLI
-  displayName: Update Azure CLI
-  jobs:
-  - job: UpdateCLI
-    displayName: Use Azure CLI via Docker
-    steps:
-      - script: |
-          docker run --rm mcr.microsoft.com/azure-cli:latest az version
-        displayName: Use Azure CLI Docker Image
-
 # Build Stage
 - stage: Build
   displayName: Build Stage
