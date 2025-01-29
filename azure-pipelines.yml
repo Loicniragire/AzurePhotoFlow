@@ -30,10 +30,6 @@ variables:
     value: 'azurephotoflowvision'
   - name: tfStateFile
     value: 'azurephotoflow.tfstate'
-  - name: backendAppServiceName
-    value: 'AzurePhotoFlowBE'
-  - name: frontendAppServiceName
-    value: 'AzurePhotoFlowFE'
   - name: stableTag
     value: "$(Build.BuildId)"
 
@@ -91,14 +87,11 @@ stages:
           cat .env
         displayName: Print .env file content for debugging
 
-      # Build and start Docker Images
       - script: |
           docker compose --env-file .env -f docker-compose.yml build
-          docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
-          docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:latest
-          docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
-          docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
-        displayName: Build Docker Images using Compose
+          docker tag azurephotoflow-backend:latest $(containerRegistry)/azurephotoflow-backend:$(stableTag)
+          docker tag azurephotoflow-frontend:latest $(containerRegistry)/azurephotoflow-frontend:$(stableTag)
+        displayName: Build and Tag Images
 
        # Publish docker compose
       - publish: $(Build.SourcesDirectory)/docker-compose.yml
@@ -226,9 +219,6 @@ stages:
       - script: |
           docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml pull
         displayName: Pull Docker Images
-      - script: |
-          docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml up -d
-        displayName: Deploy Services Using Docker Compose
 
       # (4) Deploy Multi-Container Configuration to Azure
       - script: |
@@ -292,3 +282,13 @@ stages:
           curl -I https://AzurePhotoFlowWebApp.azurewebsites.net/health
         displayName: Perform Health Check
 
+- stage: Validate
+  displayName: Validation Stage
+  dependsOn: DeployApplications
+  jobs:
+  - job: SmokeTest
+    steps:
+    - script: |
+        curl -sSf "https://$(appServiceFqdn)/" | grep "React App"
+        curl -sSf "https://$(appServiceFqdn)/api/health" | grep "Healthy"
+      displayName: Run Smoke Tests

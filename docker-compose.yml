@@ -1,4 +1,16 @@
 services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"  # App Service requires the main container to listen on port 80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
   backend:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
     build:
@@ -14,8 +26,8 @@ services:
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
       - CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
       - MODE=${MODE}
-    ports:
-      - "8080:80"
+    expose:
+      - "80"  # Internal port (no host mapping)
     networks:
       - app-network
 
@@ -30,12 +42,11 @@ services:
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - MODE=${MODE}
-    ports:
-      - "3000:80"
+    expose:
+      - "80"  # Internal port (no host mapping)
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
-

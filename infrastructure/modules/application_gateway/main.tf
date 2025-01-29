@@ -14,6 +14,7 @@ resource "azurerm_application_gateway" "this" {
     subnet_id = var.subnet_id
   }
 
+  # Frontend Configuration
   frontend_port {
     name = "https_port"
     port = 443
@@ -21,15 +22,17 @@ resource "azurerm_application_gateway" "this" {
 
   frontend_ip_configuration {
     name                 = "frontend_ip"
-    public_ip_address_id = var.public_ip_name
+    public_ip_address_id = var.public_ip_address_id
   }
 
+  # SSL Certificate (Terminate SSL at Gateway)
   ssl_certificate {
     name     = "ssl_cert"
     data     = filebase64(var.ssl_certificate.path)
     password = var.ssl_certificate.password
   }
 
+  # Listener
   http_listener {
     name                           = "listener_https"
     frontend_ip_configuration_name = "frontend_ip"
@@ -38,60 +41,45 @@ resource "azurerm_application_gateway" "this" {
     ssl_certificate_name           = "ssl_cert"
   }
 
+  # Backend Pool (App Service)
   backend_address_pool {
     name = "backend_pool"
-
-    fqdns = [ var.app_service_fqdn ]
+    fqdns = [var.app_service_fqdn]
   }
 
+  # Health Probe (Ensure /health exists in your backend)
   probe {
-    name                = "pf_custom_probe"
+    name                = "health_probe"
     protocol            = "Https"
+    host                = var.app_service_fqdn
     path                = "/health"
     interval            = 30
     timeout             = 30
     unhealthy_threshold = 3
-    host = var.app_service_fqdn
   }
 
+  # Backend HTTP Settings
   backend_http_settings {
-    name                  = "http_settings"
-    cookie_based_affinity = "Enabled"
+    name                  = "backend_https_settings"
     port                  = 443
     protocol              = "Https"
-    request_timeout       = 20
-    probe_name = "pf_custom_probe"
-    host_name = "azurephotoflowwebapp.azurewebsites.net"
+    cookie_based_affinity = "Disabled"
+    request_timeout       = 60
+    probe_name            = "health_probe"
+    host_name             = var.app_service_fqdn  # Critical for App Service routing
   }
 
-  url_path_map {
-    name                            = "url_path_map"
-    default_backend_address_pool_name = "backend_pool"
-    default_backend_http_settings_name = "http_settings"
-
-    path_rule {
-      name                       = "api_path"
-      paths                      = ["/api/*"]
-      backend_address_pool_name  = "backend_pool"
-      backend_http_settings_name = "http_settings"
-    }
-
-    path_rule {
-      name                       = "frontend_path"
-      paths                      = ["/*"]
-      backend_address_pool_name  = "backend_pool"
-      backend_http_settings_name = "http_settings"
-    }
-  }
-
+  # Routing Rule (Simplified - Nginx handles path-based routing)
   request_routing_rule {
-    name                       = "routing_rule"
-    rule_type                  = "PathBasedRouting"
-    http_listener_name         = "listener_https"
-    url_path_map_name          = "url_path_map"
-    priority                   = 1
+    name               = "default_route"
+    rule_type          = "Basic"
+    http_listener_name = "listener_https"
+    backend_address_pool_name  = "backend_pool"
+    backend_http_settings_name = "backend_https_settings"
+    priority           = 100  # Lower number = higher priority
   }
 
+  # WAF Configuration
   waf_configuration {
     enabled            = true
     firewall_mode      = "Prevention"
@@ -99,4 +87,3 @@ resource "azurerm_application_gateway" "this" {
     rule_set_version   = "3.2"
   }
 }
-
