@@ -13,7 +13,7 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "public_ip_address_id" {
+variable "public_ip_name" {
   description = "The ID of the Public IP resource for the Application Gateway"
   type        = string
 }
