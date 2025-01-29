@@ -22,7 +22,7 @@ resource "azurerm_application_gateway" "this" {
 
   frontend_ip_configuration {
     name                 = "frontend_ip"
-    public_ip_address_id = var.public_ip_address_id
+    public_ip_name       = var.public_ip_name
   }
 
   # SSL Certificate (Terminate SSL at Gateway)
