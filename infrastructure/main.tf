@@ -134,8 +134,7 @@ resource "azurerm_linux_web_app" "web_app" {
 
     application_stack {
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
-      docker_image_name   = "${azurerm_container_registry.acr.name}/azurephotoflow-backend"
-      docker_image_tag    = "latest"
+      docker_image_name   = "${azurerm_container_registry.acr.name}/azurephotoflow-backend:latest"
     }
 
     app_command_line = ""
