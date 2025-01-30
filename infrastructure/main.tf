@@ -98,7 +98,7 @@ resource "azurerm_service_plan" "service_plan" {
   location            = var.location
   resource_group_name = var.resource_group_name
   os_type             = "Linux"
-  sku_name            = "F1" # Free tier
+  sku_name            = "B1" # Minimum required for containers
 
   tags = {
     environment = var.environment
@@ -136,7 +136,7 @@ resource "azurerm_linux_web_app" "web_app" {
 
     # Allow Application Gateway IP
     ip_restriction {
-      ip_address = azurerm_public_ip.pip.ip_address
+      ip_address = "${azurerm_public_ip.pip.ip_address}/32"
       name       = "Allow-AppGW"
       priority   = 100
       action     = "Allow"
