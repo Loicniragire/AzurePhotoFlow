@@ -133,6 +133,22 @@ resource "azurerm_linux_web_app" "web_app" {
   site_config {
     app_command_line = ""
     always_on        = false
+
+    # Allow Application Gateway IP
+    ip_restriction {
+      ip_address = azurerm_public_ip.pip.ip_address
+      name       = "Allow-AppGW"
+      priority   = 100
+      action     = "Allow"
+    }
+
+    # Allow Azure Load Balancer (Required for health probes)
+    ip_restriction {
+      service_tag = "AzureLoadBalancer"
+      name        = "Allow-LoadBalancer"
+      priority    = 200
+      action      = "Allow"
+    }
   }
 
   app_settings = {
