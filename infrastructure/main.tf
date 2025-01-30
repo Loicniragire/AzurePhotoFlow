@@ -140,6 +140,10 @@ resource "azurerm_linux_web_app" "web_app" {
     # Additional settings for both frontend and backend
     BACKEND_API_BASE_URL  = "/api"       # Example: Adjust API path
     FRONTEND_PUBLIC_PATH  = "/static"   # Example: Adjust public path
+
+    #App insights
+    "APPINSIGHTS_INSTRUMENTATIONKEY"            = azurerm_application_insights.app_insights.instrumentation_key
+    "APPLICATIONINSIGHTS_CONNECTION_STRING"     = azurerm_application_insights.app_insights.connection_string
   }
 
   tags = {
@@ -148,3 +152,9 @@ resource "azurerm_linux_web_app" "web_app" {
   }
 }
 
+resource "azurerm_application_insights" "app_insights" {
+  name                = "pf-app-insights"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  application_type    = "web"
+}
