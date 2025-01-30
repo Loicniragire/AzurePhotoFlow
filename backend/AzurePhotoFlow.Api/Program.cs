@@ -1,6 +1,11 @@
+using System.Text.Json;
 using Api.Interfaces;
 using Azure.Storage.Blobs;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,135 +13,212 @@ var builder = WebApplication.CreateBuilder(args);
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
-// Configure Kestrel for HTTP and HTTPS
+// Configure Kestrel
 builder.WebHost.ConfigureKestrel(options =>
 {
-    string certDirectory = Directory.GetCurrentDirectory();
-
-    // Check if running in Docker
-    bool isInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-
-    // Determine certificate path
-    /* string certFile = isInDocker */
-    /*     ? Environment.GetEnvironmentVariable("CERTIFICATE_PATH") */
-    /*     : Path.Combine(certDirectory, "certs", "https", "aspnetapp.pfx"); */
-    /*  */
-    /* if (!File.Exists(certFile)) */
-    /* { */
-    /*     throw new FileNotFoundException("Certificate file not found", certFile); */
-    /* } */
-
-    options.ListenAnyIP(80); // HTTP
-    /* options.ListenAnyIP(443, listenOptions => */
-    /* { */
-    /*     string certPassword = Environment.GetEnvironmentVariable("CERTIFICATE_PASSWORD"); */
-    /*     Console.WriteLine($"Certificate Password: {certPassword}"); */
-    /*     listenOptions.UseHttps(certFile, certPassword); */
-    /* }); // HTTPS */
-    /* options.ListenAnyIP(8080); // Add listener for HTTP on port 8080 */
+    options.ListenAnyIP(80);
 });
 
-
+// Validate Blob Storage Connection Early
 var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage")
                                    ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
 
 if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 {
-    Console.WriteLine("Azure Blob Storage Connection String is not set.");
     throw new InvalidOperationException("Azure Blob Storage Connection String is missing.");
 }
 
-Console.WriteLine($"Azure Blob Storage Connection String: {azureBlobStorageConnectionString}");
+// Configure Services
+builder.Services.AddHealthChecks()
+    .AddCheck("BlobStorage", () =>
+    {
+        try
+        {
+            var client = new BlobServiceClient(azureBlobStorageConnectionString);
+            client.GetBlobContainers().AsPages().GetEnumerator().MoveNext();
+            return HealthCheckResult.Healthy();
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("Blob Storage connection failed", ex);
+        }
+    });
 
-// Register the Health Check Service
-builder.Services.AddHealthChecks();
-
-// Add CORS 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", builder =>
     {
         builder.WithOrigins(
-				"http://localhost:3000", // local development
-				"https://AzurePhotoFlowWebApp.azurewebsites.net"
-				) 
-               .AllowAnyMethod()
-               .AllowAnyHeader()
-               .AllowCredentials(); // Required for cookies/auth headers
+                "http://localhost",
+                "https://AzurePhotoFlowWebApp.azurewebsites.net")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
-// Configure Services
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.PropertyNamingPolicy = null; // Use PascalCase for serialization
-    options.JsonSerializerOptions.WriteIndented = true;
-});
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        options.JsonSerializerOptions.WriteIndented = true;
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            return new BadRequestObjectResult(new
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Message = "Validation errors occurred",
+                Errors = errors
+            });
+        };
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AzurePhotoFlow API", Version = "v1" });
-
-    // Add support for form-data file uploads
     c.OperationFilter<SwaggerFileOperationFilter>();
-
-    // Enable annotation
     c.EnableAnnotations();
-
-    // Map IFormFile explicitly for Swagger
-    c.MapType<IFormFile>(() => new OpenApiSchema
-    {
-        Type = "string",
-        Format = "binary"
-    });
-
-    // Map DateTime explicitly for Swagger
-    c.MapType<DateTime>(() => new OpenApiSchema
-    {
-        Type = "string",
-        Format = "date-time"
-    });
+    c.MapType<IFormFile>(() => new OpenApiSchema { Type = "string", Format = "binary" });
+    c.MapType<DateTime>(() => new OpenApiSchema { Type = "string", Format = "date-time" });
 });
 
-// Logging Configuration
-builder.Logging.ClearProviders(); // Optional: Clears default providers
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
-builder.Logging.AddEventSourceLogger();
+// Configure Structured Logging
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.JsonWriterOptions = new JsonWriterOptions { Indented = true };
+});
 
-// Add Azure Blob Storage Service
-builder.Services.AddSingleton(x => new BlobServiceClient(azureBlobStorageConnectionString));
+// Secure Blob Client Initialization
+builder.Services.AddSingleton(x =>
+{
+    try
+    {
+        return new BlobServiceClient(
+            azureBlobStorageConnectionString,
+            new BlobClientOptions { Retry = { MaxRetries = 3 } });
+    }
+    catch (Exception ex)
+    {
+        var logger = x.GetRequiredService<ILogger<Program>>();
+        logger.LogCritical(ex, "Failed to initialize Blob Service Client");
+        throw;
+    }
+});
 
-// Add custom services
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
 
-// Allow large file uploads
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 104857600; // 100MB
+    options.MultipartBodyLengthLimit = 104_857_600; // 100MB
 });
 
-// Build the application
 var app = builder.Build();
 
-// Enable Swagger in Development
+// Security Headers Middleware
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'");
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    await next();
+});
+
+// Development Configuration
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
 }
 
 // Middleware Pipeline
-app.UseCors("AllowSpecificOrigin");
-/* app.UseHttpsRedirection(); */
 app.UseRouting();
+app.UseCors("AllowSpecificOrigin");
+
+// Global Exception Handling
+app.UseExceptionHandler(appError =>
+{
+    appError.Run(async context =>
+    {
+        var exceptionHandlerPathFeature = 
+            context.Features.Get<IExceptionHandlerPathFeature>();
+        var exception = exceptionHandlerPathFeature?.Error;
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(exception, "Unhandled exception occurred: {Message}", exception?.Message);
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = "An unexpected error occurred. Please try again later.",
+            Details = app.Environment.IsDevelopment() ? exception?.ToString() : null
+        }));
+    });
+});
+
 app.UseAuthorization();
 
-// Health Check Middleware
-app.MapGet("/health", () => "Healthy");
+// Health Check Endpoint
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        var result = JsonSerializer.Serialize(new
+        {
+            Status = report.Status.ToString(),
+            Checks = report.Entries.Select(e => new
+            {
+                Name = e.Key,
+                Status = e.Value.Status.ToString(),
+                Description = e.Value.Description,
+                Exception = e.Value.Exception?.Message
+            }),
+            Duration = report.TotalDuration
+        });
+        
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(result);
+    }
+});
 
 app.MapControllers();
 
-app.Run();
+// Startup Validation
+try
+{
+    using var scope = app.Services.CreateScope();
+    var blobClient = scope.ServiceProvider.GetRequiredService<BlobServiceClient>();
+    blobClient.GetBlobContainers().AsPages().GetEnumerator().MoveNext();
+    app.Logger.LogInformation("All critical services initialized successfully");
+}
+catch (Exception ex)
+{
+    app.Logger.LogCritical(ex, "Critical service initialization failed");
+    throw;
+}
 
+// Graceful Shutdown Handling
+var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+appLifetime.ApplicationStopping.Register(() =>
+{
+    app.Logger.LogInformation("Application is shutting down...");
+    // Add any necessary cleanup logic here
+});
+
+app.Run();
