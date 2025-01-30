@@ -131,6 +131,13 @@ resource "azurerm_linux_web_app" "web_app" {
   }
 
   site_config {
+
+    application_stack {
+      docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
+      docker_image_name   = "${azurerm_container_registry.acr.name}/azurephotoflow-backend"
+      docker_image_tag    = "latest"
+    }
+
     app_command_line = ""
     always_on        = false
 
@@ -152,10 +159,10 @@ resource "azurerm_linux_web_app" "web_app" {
   }
 
   app_settings = {
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true" # required for containers.
     # Additional settings for both frontend and backend
-    BACKEND_API_BASE_URL  = "/api"       # Example: Adjust API path
-    FRONTEND_PUBLIC_PATH  = "/static"   # Example: Adjust public path
+    BACKEND_API_BASE_URL  = "/api"
+    FRONTEND_PUBLIC_PATH  = "/static"
 
     #App insights
     "APPINSIGHTS_INSTRUMENTATIONKEY"            = azurerm_application_insights.app_insights.instrumentation_key
