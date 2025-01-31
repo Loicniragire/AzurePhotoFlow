@@ -38,7 +38,7 @@ resource "azurerm_application_gateway" "this" {
     frontend_ip_configuration_name = "frontend_ip"
     frontend_port_name             = "https_port"
     protocol                       = "Https"
-    ssl_certificate_name           = ssl_certificate.this.name
+    ssl_certificate_name           = "cert"
   }
 
   # Backend Pool (App Service)
