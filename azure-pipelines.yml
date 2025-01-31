@@ -249,10 +249,11 @@ stages:
         displayName: Configure App Service Environment Variables
 
       - script: |
-          az webapp config container show \
+          az resource show \
             --name AzurePhotoFlowWebApp \
-            --resource-group $(resourceGroupName) \
-            --query "[].{Name:name, Image:image, Status:status}"
+            --resource-group AzurePhotoFlow-RG \
+            --resource-type "Microsoft.Web/sites" \
+            --query "properties.siteConfig.linuxFxVersion"
         displayName: Check deployment status
 
 
