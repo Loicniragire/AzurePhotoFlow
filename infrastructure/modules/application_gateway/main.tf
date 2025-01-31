@@ -87,3 +87,53 @@ resource "azurerm_application_gateway" "this" {
     rule_set_version   = "3.2"
   }
 }
+
+# configure logs and metrics for the application gateway
+
+resource "azurerm_log_analytics_workspace" "this" {
+  name                = "my-log-analytics"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
+  name                       = "appgateway-diagnostic-setting"
+  target_resource_id         = azurerm_application_gateway.this.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
+
+  # Enable logs you want:
+  logs {
+    category = "ApplicationGatewayAccessLog"
+    enabled  = true
+    retention_policy {
+      enabled = false
+    }
+  }
+
+  logs {
+    category = "ApplicationGatewayPerformanceLog"
+    enabled  = true
+    retention_policy {
+      enabled = false
+    }
+  }
+
+  logs {
+    category = "ApplicationGatewayFirewallLog" # for WAF logs
+    enabled  = true
+    retention_policy {
+      enabled = false
+    }
+  }
+
+  # Optionally enable metrics
+  metrics {
+    category = "AllMetrics"
+    enabled  = true
+    retention_policy {
+      enabled = false
+    }
+  }
+}
