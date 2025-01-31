@@ -153,8 +153,8 @@ resource "azurerm_linux_web_app" "web_app" {
 
   app_settings = {
     #App insights
-    "APPINSIGHTS_INSTRUMENTATIONKEY"            = azurerm_application_insights.app_insights.instrumentation_key
-    "APPLICATIONINSIGHTS_CONNECTION_STRING"     = azurerm_application_insights.app_insights.connection_string
+    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
+    "APPINSIGHTS_CONNECTION_STRING"  = azurerm_application_insights.app_insights.connection_string
   }
 
   tags = {
