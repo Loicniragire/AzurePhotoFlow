@@ -83,7 +83,7 @@ module "application_gateway" {
   app_service_fqdn = azurerm_linux_web_app.web_app.default_hostname
 
   ssl_certificate = {
-    path     = "./certs/https/aspnetapp.pfx"
+    path     = "./certs/myserver.pfx"
     password = var.ssl_certificate_password
   }
 
