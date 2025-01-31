@@ -88,52 +88,37 @@ resource "azurerm_application_gateway" "this" {
   }
 }
 
-# configure logs and metrics for the application gateway
+# Configure diagnostics settings for the application gateway
+resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
+  name               = "appgw-diagnostics"
+  target_resource_id = azurerm_application_gateway.this.id
 
-resource "azurerm_log_analytics_workspace" "this" {
-  name                = "my-log-analytics"
+  # Send logs to Log Analytics Workspace
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+
+  # Configure which logs to collect
+  enabled_log {
+    category = "ApplicationGatewayAccessLog"
+  }
+
+  enabled_log {
+    category = "ApplicationGatewayPerformanceLog"
+  }
+
+  enabled_log {
+    category = "ApplicationGatewayFirewallLog"
+  }
+
+  # Collect metrics
+  metric {
+    category = "AllMetrics"
+  }
+}
+
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "agw-logs-workspace"
   location            = var.location
   resource_group_name = var.resource_group_name
   sku                 = "PerGB2018"
   retention_in_days   = 30
-}
-
-resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
-  name                       = "appgateway-diagnostic-setting"
-  target_resource_id         = azurerm_application_gateway.this.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
-
-  # Enable logs you want:
-  logs {
-    category = "ApplicationGatewayAccessLog"
-    enabled  = true
-    retention_policy {
-      enabled = false
-    }
-  }
-
-  logs {
-    category = "ApplicationGatewayPerformanceLog"
-    enabled  = true
-    retention_policy {
-      enabled = false
-    }
-  }
-
-  logs {
-    category = "ApplicationGatewayFirewallLog" # for WAF logs
-    enabled  = true
-    retention_policy {
-      enabled = false
-    }
-  }
-
-  # Optionally enable metrics
-  metrics {
-    category = "AllMetrics"
-    enabled  = true
-    retention_policy {
-      enabled = false
-    }
-  }
-}
+}# configure logs and metrics for the application gateway
