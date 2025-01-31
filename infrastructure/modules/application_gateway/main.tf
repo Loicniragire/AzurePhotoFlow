@@ -27,7 +27,7 @@ resource "azurerm_application_gateway" "this" {
 
   # SSL Certificate (Terminate SSL at Gateway)
   ssl_certificate {
-    name     = "ssl_cert"
+    name     = "cert"
     data     = filebase64(var.ssl_certificate.path)
     password = var.ssl_certificate.password
   }
