@@ -13,9 +13,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
-builder.Services.AddApplicationInsightsTelemetry(); // Program.cs for .NET 6+
+// Integrate AI with Application Insights (required)
+builder.Services.AddApplicationInsightsTelemetry();
 
-// or in Startup.ConfigureServices for older .NET Core
+builder.Logging.AddApplicationInsights(
+    configureTelemetryConfiguration: (config) => { },
+    configureApplicationInsightsLoggerOptions: (options) => { }
+);
 
 // Configure Kestrel
 builder.WebHost.ConfigureKestrel(options =>
