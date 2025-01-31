@@ -240,12 +240,21 @@ stages:
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
             --settings \
-              AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE) \
-              VITE_API_BASE_URL=$(VITE_API_BASE_URL) \
-              CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD) \
-              CERTIFICATE_PATH=$(CERTIFICATE_PATH) \
-              NODE_ENV=production
+              "AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)" \
+              "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" \
+              "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" \
+              "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" \
+              "NODE_ENV=production" \
+              "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
         displayName: Configure App Service Environment Variables
+
+      - script: |
+          az webapp config container show \
+            --name AzurePhotoFlowWebApp \
+            --resource-group $(resourceGroupName) \
+            --query "[].{Name:name, Image:image, Status:status}"
+        displayName: Check deployment status
+
 
       # (6) Wait For Health Endpoint
       - script: |
