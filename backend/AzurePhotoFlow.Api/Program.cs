@@ -13,6 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
+builder.Services.AddApplicationInsightsTelemetry(); // Program.cs for .NET 6+
+
+// or in Startup.ConfigureServices for older .NET Core
+
 // Configure Kestrel
 builder.WebHost.ConfigureKestrel(options =>
 {
