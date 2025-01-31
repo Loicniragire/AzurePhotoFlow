@@ -132,7 +132,7 @@ resource "azurerm_linux_web_app" "web_app" {
 
   site_config {
     app_command_line = ""
-    always_on        = false
+    always_on        = true
 
     # Allow Application Gateway IP
     ip_restriction {

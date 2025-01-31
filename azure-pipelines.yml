@@ -249,6 +249,13 @@ stages:
         displayName: Configure App Service Environment Variables
 
       - script: |
+          az webapp log config \
+            --name AzurePhotoFlowWebApp \
+            --resource-group $(resourceGroupName) \
+            --docker-container-logging filesystem
+        displayName: Enabling filesystem logs
+
+      - script: |
           az resource show \
             --name AzurePhotoFlowWebApp \
             --resource-group AzurePhotoFlow-RG \
