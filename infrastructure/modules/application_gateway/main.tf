@@ -60,7 +60,7 @@ resource "azurerm_application_gateway" "this" {
 
   # Backend HTTP Settings
   backend_http_settings {
-    name                  = "backend_https_settings"
+    name                  = "backend_http_settings"
     port                  = 80
     protocol              = "Http"
     cookie_based_affinity = "Disabled"
@@ -75,7 +75,7 @@ resource "azurerm_application_gateway" "this" {
     rule_type          = "Basic"
     http_listener_name = "listener_https"
     backend_address_pool_name  = "backend_pool"
-    backend_http_settings_name = "backend_https_settings"
+    backend_http_settings_name = "backend_http_settings"
     priority           = 100  # Lower number = higher priority
   }
 
