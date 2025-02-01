@@ -255,17 +255,30 @@ stages:
               --account-name $(storageAccountName) \
               --name $(logging) \
               --auth-mode login
+
+          # Generate a SAS token for the container
+          sasToken=$(az storage container generate-sas \
+            --account-name $(storageAccountName) \
+            --name $(logging) \
+            --permissions rwld \
+            --expiry 2025-12-31T23:59:00Z \
+            --auth-mode login \
+            --output tsv)
+
+          # Construct the full SAS URL
+          sasUrl="https://$(storageAccountName).blob.core.windows.net/$(logging)?${sasToken}"
+
+          # Configure the App Service logging using the full SAS URL
           az webapp log config \
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
             --docker-container-logging azureblobstorage \
-            --sas-url $(logging)\
+            --sas-url "$sasUrl" \
             --application-logging filesystem \
             --level verbose \
             --detailed-error-messages true \
             --failed-request-tracing true \
             --web-server-logging filesystem
-
         displayName: Enabling filesystem logs
 
       - script: |
