@@ -252,9 +252,9 @@ stages:
           az webapp log config \
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
-            --docker-container-logging filesystem
+            --docker-container-logging filesystem \
             --application-logging filesystem \
-            --level Information \
+            --level verbose \
             --detailed-error-messages true \
             --failed-request-tracing true \
             --web-server-logging filesystem
