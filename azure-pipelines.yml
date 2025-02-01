@@ -253,14 +253,20 @@ stages:
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
             --docker-container-logging filesystem
+            --application-logging filesystem \
+            --level Information \
+            --detailed-error-messages true \
+            --failed-request-tracing true \
+            --web-server-logging filesystem
+
         displayName: Enabling filesystem logs
 
       - script: |
           az resource show \
             --name AzurePhotoFlowWebApp \
-            --resource-group AzurePhotoFlow-RG \
-            --resource-type "Microsoft.Web/sites" \
-            --query "properties.siteConfig.linuxFxVersion"
+            --resource-group AzurePhotoFlow-RG
+            # --resource-type "Microsoft.Web/sites" \
+            # --query "properties.siteConfig.linuxFxVersion"
         displayName: Check deployment status
 
 
