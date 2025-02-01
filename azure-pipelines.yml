@@ -26,6 +26,8 @@ variables:
     value: 'tfstate'
   - name: docker-compose-container
     value: 'docker-compose'
+  - name: logging
+    value: 'logs'
   - name: cognitiveAccountName
     value: 'azurephotoflowvision'
   - name: tfStateFile
@@ -249,10 +251,15 @@ stages:
         displayName: Configure App Service Environment Variables
 
       - script: |
+          az storage container create \
+              --account-name $(storageAccountName) \
+              --name $(logging) \
+              --auth-mode login
           az webapp log config \
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
-            --docker-container-logging filesystem \
+            --docker-container-logging azureblobstorage \
+            --sas-url $(logging)\
             --application-logging filesystem \
             --level verbose \
             --detailed-error-messages true \
