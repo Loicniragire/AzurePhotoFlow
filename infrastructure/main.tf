@@ -136,10 +136,8 @@ resource "azurerm_linux_web_app" "web_app" {
 
     # Allow Application Gateway IP
     ip_restriction {
-      # ip_address = "${azurerm_public_ip.pip.ip_address}/32"
-      # name       = "Allow-AppGW"
-      ip_address = "0.0.0.0/0" #allows traffic from the entire IPv4 range
-      name       = "Allow-All"
+      ip_address = "${azurerm_public_ip.pip.ip_address}/32"
+      name       = "Allow-AppGW"
       priority   = 100
       action     = "Allow"
     }
