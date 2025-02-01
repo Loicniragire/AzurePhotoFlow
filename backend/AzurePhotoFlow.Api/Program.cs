@@ -14,12 +14,12 @@ var builder = WebApplication.CreateBuilder(args);
 DotNetEnv.Env.Load();
 
 // Integrate AI with Application Insights (required)
-builder.Services.AddApplicationInsightsTelemetry();
-
-builder.Logging.AddApplicationInsights(
-    configureTelemetryConfiguration: (config) => { },
-    configureApplicationInsightsLoggerOptions: (options) => { }
-);
+/* builder.Services.AddApplicationInsightsTelemetry(); */
+/*  */
+/* builder.Logging.AddApplicationInsights( */
+/*     configureTelemetryConfiguration: (config) => { }, */
+/*     configureApplicationInsightsLoggerOptions: (options) => { } */
+/* ); */
 
 // Configure Kestrel
 builder.WebHost.ConfigureKestrel(options =>
