@@ -143,12 +143,12 @@ resource "azurerm_linux_web_app" "web_app" {
     }
 
     # Allow Azure Load Balancer (Required for health probes)
-    # ip_restriction {
-    #   service_tag = "AzureLoadBalancer"
-    #   name        = "Allow-LoadBalancer"
-    #   priority    = 200
-    #   action      = "Allow"
-    # }
+    ip_restriction {
+      service_tag = "AzureLoadBalancer"
+      name        = "Allow-LoadBalancer"
+      priority    = 200
+      action      = "Allow"
+    }
   }
 
   app_settings = {
