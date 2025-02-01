@@ -153,8 +153,8 @@ resource "azurerm_linux_web_app" "web_app" {
 
   app_settings = {
     #App insights
-    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
-    "APPINSIGHTS_CONNECTION_STRING"  = azurerm_application_insights.app_insights.connection_string
+    # "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
+    # "APPINSIGHTS_CONNECTION_STRING"  = azurerm_application_insights.app_insights.connection_string
   }
 
   tags = {
@@ -163,11 +163,11 @@ resource "azurerm_linux_web_app" "web_app" {
   }
 }
 
-resource "azurerm_application_insights" "app_insights" {
-  name                = "pf-app-insights"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  application_type    = "web"
-  workspace_id        = "DefaultWorkspace-ebe2acfb-f4a5-4f6b-8f30-252c571813f9-EUS2"
-}
+# resource "azurerm_application_insights" "app_insights" {
+#   name                = "pf-app-insights"
+#   location            = var.location
+#   resource_group_name = var.resource_group_name
+#   application_type    = "web"
+#   workspace_id        = "DefaultWorkspace-ebe2acfb-f4a5-4f6b-8f30-252c571813f9-EUS2"
+# }
 
