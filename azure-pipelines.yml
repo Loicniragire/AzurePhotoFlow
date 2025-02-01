@@ -286,8 +286,8 @@ stages:
           az resource show \
             --name AzurePhotoFlowWebApp \
             --resource-group AzurePhotoFlow-RG
-            # --resource-type "Microsoft.Web/sites" \
-            # --query "properties.siteConfig.linuxFxVersion"
+            --resource-type "Microsoft.Web/sites" \
+            --query "properties.siteConfig.linuxFxVersion"
         displayName: Check deployment status
 
 
