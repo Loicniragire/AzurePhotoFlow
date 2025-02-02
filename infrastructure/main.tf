@@ -217,9 +217,8 @@ data "azurerm_storage_account" "storage" {
 
 resource "azurerm_monitor_diagnostic_setting" "storage_diagnostics" {
   name                       = "storage-diagnostics"
-  target_resource_id         = data.azurerm_storage_account.storage.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
   target_resource_id         = "${data.azurerm_storage_account.storage.id}/blobServices/default"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
   enabled_log { category = "StorageRead" }
   enabled_log { category = "StorageWrite" }
