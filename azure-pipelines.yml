@@ -203,18 +203,30 @@ stages:
           command: login
           containerRegistry: $(containerRegistryConnection)
       
-      # (2) Download artifacts
+      # (2) Download the compose artifact (no longer need the .env artifact for deployment)
       - download: current
         artifact: compose-artifact
-      - download: current
-        artifact: env-artifact
 
-      # (3) Docker Compose Pull/Up
+      # (3) Substitute placeholders in docker-compose file to create a self-contained file
       - script: |
-          docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml pull
+          echo "Substituting placeholders in docker-compose.yml..."
+          # Display the original file for debugging
+          cat $(Pipeline.Workspace)/compose-artifact/docker-compose.yml
+          
+          # Substitute environment variables in the file
+          envsubst < $(Pipeline.Workspace)/compose-artifact/docker-compose.yml > $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml
+          
+          echo "Resulting self-contained docker-compose file:"
+          cat $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml
+        displayName: "Substitute Placeholders in docker-compose File"
+
+      # (4) Pull Docker images using the self-contained docker-compose file
+      - script: |
+          echo "Pulling Docker images using substituted docker-compose file..."
+          docker compose -f $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml pull
         displayName: Pull Docker Images
 
-      # (4) Deploy Multi-Container Configuration to Azure
+      # (5) Deploy Multi-Container Configuration to Azure by uploading the self-contained docker-compose file to Blob Storage
       - script: |
           echo "Creating docker-compose container..."
           az storage container create \
@@ -223,23 +235,25 @@ stages:
               --public-access blob \
               --auth-mode login
 
-          echo "Update storage account to public..."
+          echo "Updating storage account to allow public blob access..."
           az storage account update \
-            --name photoflowtfstatedev \
+            --name $(storageAccountName) \
             --resource-group $(resourceGroupName) \
             --set allowBlobPublicAccess=true
 
-          echo "Uploading docker-compose to blob..."
+          echo "Uploading self-contained docker-compose file to Azure Blob Storage..."
           az storage blob upload \
               --account-name $(storageAccountName) \
               --container-name $(docker-compose-container) \
-              --file $(Pipeline.Workspace)/compose-artifact/docker-compose.yml \
+              --file $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml \
               --name docker-compose.yml \
               --auth-mode key \
               --overwrite
         displayName: Upload docker-compose.yml to Azure Blob Storage
 
+      # (6) Update the App Service to reference the uploaded self-contained docker-compose file
       - script: |
+          echo "Deploying Multi-Container Configuration to Azure App Service..."
           az resource update \
             --resource-group $(resourceGroupName) \
             --name AzurePhotoFlowWebApp \
@@ -248,8 +262,9 @@ stages:
             --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
         displayName: Deploy Multi-Container Configuration
 
-      # (5) Configure App Settings
+      # (7) Configure App Service Application Settings for runtime environment variables
       - script: |
+          echo "Configuring App Service environment variables..."
           az webapp config appsettings set \
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
@@ -282,32 +297,32 @@ stages:
             --query "properties.siteConfig.linuxFxVersion"
         displayName: Check deployment status
 
-
-      # (6) Wait For Health Endpoint
-      - script: |
-          echo "Waiting for container to become healthy..."
-          MAX_ATTEMPTS=6
-          SLEEP_BETWEEN=10
-          ATTEMPT=1
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]
-          do
-            echo "Attempt $ATTEMPT: Checking /health endpoint..."
-            curl -s -f https://AzurePhotoFlowWebApp.azurewebsites.net/health && break
-            echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds before retry..."
-            ATTEMPT=$((ATTEMPT+1))
-            sleep $SLEEP_BETWEEN
-          done
-          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-            echo "Health check failed after $MAX_ATTEMPTS attempts!"
-            exit 1
-          fi
-          echo "Container is healthy!"
-        displayName: Wait for /health endpoint
-
-      # (7) (Optional) Final Single Check
-      - script: |
-          curl -I https://AzurePhotoFlowWebApp.azurewebsites.net/health
-        displayName: Perform Health Check
+  - job: WaitForHealthEndpoint
+    displayName: Wait For Health Endpoint
+    steps:
+    - script: |
+        echo "Waiting for container to become healthy..."
+        MAX_ATTEMPTS=6
+        SLEEP_BETWEEN=10
+        ATTEMPT=1
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ]
+        do
+          echo "Attempt $ATTEMPT: Checking /health endpoint..."
+          curl -s -f https://AzurePhotoFlowWebApp.azurewebsites.net/health && break
+          echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds before retry..."
+          ATTEMPT=$((ATTEMPT+1))
+          sleep $SLEEP_BETWEEN
+        done
+        if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+          echo "Health check failed after $MAX_ATTEMPTS attempts!"
+          exit 1
+        fi
+        echo "Container is healthy!"
+      displayName: Wait for /health endpoint
+  - job: PerformHealthCheck
+    displayName: Perform Health Check
+    steps:
+    - script: curl -I https://AzurePhotoFlowWebApp.azurewebsites.net/health
 
 - stage: Validate
   displayName: Validation Stage
