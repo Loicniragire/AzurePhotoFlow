@@ -191,90 +191,20 @@ resource "azurerm_monitor_diagnostic_setting" "webapp_diagnostics" {
   target_resource_id         = azurerm_linux_web_app.web_app.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
-  log {
-    category = "AppServiceAppLogs"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
-
-  log {
-    category = "AppServiceAuditLogs"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
-
-  log {
-    category = "AppServiceHTTPLogs"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
+  enabled_log { category = "AppServiceAppLogs" }
+  enabled_log { category = "AppServiceAuditLogs" }
+  enabled_log { category = "AppServiceHTTPLogs" }
+  metric { category = "AllMetrics" }
 }
 
 # Connect the Application Gateway to the Log Analytics workspace
 resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
   name                       = "appgw-diagnostics"
-  target_resource_id         = azurerm_application_gateway.this.id
+  target_resource_id         = module.application_gateway.app_gateway_id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
-  log {
-    category = "ApplicationGatewayAccessLog"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
-
-  log {
-    category = "ApplicationGatewayPerformanceLog"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
-
-  log {
-    category = "ApplicationGatewayFirewallLog"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-
-    retention_policy {
-      enabled = false
-      days    = 0
-    }
-  }
+  enabled_log { category = "ApplicationGatewayAccessLog" }
+  enabled_log { category = "ApplicationGatewayPerformanceLog" }
+  enabled_log { category = "ApplicationGatewayFirewallLog" }
+  metric { category = "AllMetrics" }
 }
