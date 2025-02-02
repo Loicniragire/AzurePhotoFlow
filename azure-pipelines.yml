@@ -226,6 +226,7 @@ stages:
           az storage container create \
               --account-name $(storageAccountName) \
               --name $(docker-compose-container) \
+              --public-access blob \
               --auth-mode login
 
           echo "Uploading docker-compose to blob..."
