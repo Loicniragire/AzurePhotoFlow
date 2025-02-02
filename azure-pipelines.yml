@@ -206,13 +206,18 @@ stages:
       - download: current
         artifact: compose-artifact
       - script: |
-          echo "Substituting placeholders in docker-compose.yml..."
-          # Display the original docker-compose file for debugging
-          cat $(Pipeline.Workspace)/compose-artifact/docker-compose.yml
-          # Substitute environment variables into a new self-contained file
-          envsubst < $(Pipeline.Workspace)/compose-artifact/docker-compose.yml > $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml
+          echo "Substituting placeholders in docker-compose.yml using Bash eval..."
+          # Copy the original compose file to a temporary template file
+          cp "$(Pipeline.Workspace)/compose-artifact/docker-compose.yml" "$(Pipeline.Workspace)/compose-artifact/docker-compose.template.yml"
+          
+          # Ensure the environment variable stableTag is set; if not, default to 'latest'
+          export stableTag=${stableTag:-latest}
+          
+          # Use eval to perform full Bash parameter expansion (including default value syntax)
+          eval "echo \"$(cat $(Pipeline.Workspace)/compose-artifact/docker-compose.template.yml)\"" > "$(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml"
+          
           echo "Resulting self-contained docker-compose file:"
-          cat $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml
+          cat "$(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml"
         displayName: "Substitute Placeholders in docker-compose File"
       - script: |
           echo "Pulling Docker images using substituted docker-compose file..."
