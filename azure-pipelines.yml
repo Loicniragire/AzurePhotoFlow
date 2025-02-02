@@ -233,7 +233,7 @@ stages:
             --account-name $(storageAccountName) \
             --name $(docker-compose-container) \
             --permissions rwld \
-            --expiry 2025-02-31T23:59:00Z \
+            --expiry 2025-02-03T23:59:00Z \
             --auth-mode login \
             --as-user \
             --output tsv)
@@ -271,7 +271,7 @@ stages:
             --account-name $(storageAccountName) \
             --name $(logging) \
             --permissions rwld \
-            --expiry 2025-05-31T23:59:00Z \
+            --expiry 2025-02-03T23:59:00Z \
             --auth-mode login \
             --as-user \
             --output tsv)
