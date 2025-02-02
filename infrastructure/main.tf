@@ -200,7 +200,7 @@ resource "azurerm_monitor_diagnostic_setting" "webapp_diagnostics" {
 # Connect the Application Gateway to the Log Analytics workspace
 resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
   name                       = "appgw-diagnostics"
-  target_resource_id         = module.application_gateway.id
+  target_resource_id         = module.application_gateway.application_gateway_id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
   enabled_log { category = "ApplicationGatewayAccessLog" }
