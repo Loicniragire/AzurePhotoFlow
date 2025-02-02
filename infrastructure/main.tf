@@ -171,3 +171,110 @@ resource "azurerm_linux_web_app" "web_app" {
 #   workspace_id        = "DefaultWorkspace-ebe2acfb-f4a5-4f6b-8f30-252c571813f9-EUS2"
 # }
 
+
+resource "azurerm_log_analytics_workspace" "log_workspace" {
+  name                = "pf-log-analytics"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+# Connect the App Service to the Log Analytics workspace
+resource "azurerm_monitor_diagnostic_setting" "webapp_diagnostics" {
+  name                       = "webapp-diagnostics"
+  target_resource_id         = azurerm_linux_web_app.web_app.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
+
+  log {
+    category = "AppServiceAppLogs"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+
+  log {
+    category = "AppServiceAuditLogs"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+
+  log {
+    category = "AppServiceHTTPLogs"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+}
+
+# Connect the Application Gateway to the Log Analytics workspace
+resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
+  name                       = "appgw-diagnostics"
+  target_resource_id         = azurerm_application_gateway.this.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
+
+  log {
+    category = "ApplicationGatewayAccessLog"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+
+  log {
+    category = "ApplicationGatewayPerformanceLog"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+
+  log {
+    category = "ApplicationGatewayFirewallLog"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+
+    retention_policy {
+      enabled = false
+      days    = 0
+    }
+  }
+}
