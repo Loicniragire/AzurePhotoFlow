@@ -79,6 +79,7 @@ stages:
         displayName: Print .env file content for debugging
 
       - script: |
+          set -e
           docker compose --env-file .env -f docker-compose.yml build
           docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
           docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:latest
@@ -270,12 +271,13 @@ stages:
             --public-access blob \
             --auth-mode login
 
+
           az webapp log config \
             --name AzurePhotoFlowWebApp \
             --resource-group $(resourceGroupName) \
             --docker-container-logging filesystem \
             --application-logging filesystem \
-            --web-server-logging filesystem \
+            --web-server-logging storage \
             --storage-account $(storageAccountName) \
             --storage-container $(logging) \
             --level verbose \
