@@ -200,11 +200,27 @@ resource "azurerm_monitor_diagnostic_setting" "webapp_diagnostics" {
 # Connect the Application Gateway to the Log Analytics workspace
 resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
   name                       = "appgw-diagnostics"
-  target_resource_id         = module.application_gateway.app_gateway_id
+  target_resource_id         = module.application_gateway.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
   enabled_log { category = "ApplicationGatewayAccessLog" }
   enabled_log { category = "ApplicationGatewayPerformanceLog" }
   enabled_log { category = "ApplicationGatewayFirewallLog" }
   metric { category = "AllMetrics" }
+}
+
+
+data "azurerm_storage_account" "storage" {
+  name                = "photoflowtfstatedev"
+  resource_group_name = var.resource_group_name
+}
+
+resource "azurerm_monitor_diagnostic_setting" "storage_diagnostics" {
+  name                       = "storage-diagnostics"
+  target_resource_id         = data.azurerm_storage_account.storage.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
+
+  enabled_log { category = "StorageRead" }
+  enabled_log { category = "StorageWrite" }
+  enabled_log { category = "StorageDelete" }
 }
