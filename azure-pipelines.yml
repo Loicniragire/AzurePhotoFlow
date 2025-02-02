@@ -229,11 +229,20 @@ stages:
         displayName: Upload docker-compose.yml to Azure Blob Storage
 
       - script: |
+          ssToken=$(az storage container generate-sas \
+            --account-name $(storageAccountName) \
+            --name $(docker-compose-container) \
+            --permissions rwld \
+            --expiry 2025-02-31T23:59:00Z \
+            --auth-mode login \
+            --as-user \
+            --output tsv)
+
           az resource update \
             --resource-group $(resourceGroupName) \
             --name AzurePhotoFlowWebApp \
             --resource-type "Microsoft.Web/sites" \
-            --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
+            --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml?${ssToken}"
         displayName: Deploy Multi-Container Configuration
 
       # (5) Configure App Settings
