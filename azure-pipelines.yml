@@ -264,26 +264,26 @@ stages:
         displayName: Configure App Service Environment Variables
 
       - script: |
-          # Create the blob container (if not already created)
-          az storage container create \
-            --account-name $(storageAccountName) \
-            --name $(logging) \
-            --public-access blob \
-            --auth-mode login
-
-
-          az webapp log config \
-            --name AzurePhotoFlowWebApp \
-            --resource-group $(resourceGroupName) \
-            --docker-container-logging filesystem \
-            --application-logging filesystem \
-            --web-server-logging storage \
-            --storage-account $(storageAccountName) \
-            --storage-container $(logging) \
-            --level verbose \
-            --detailed-error-messages true \
-            --failed-request-tracing true
-        displayName: Enabling filesystem logs
+        #   # Create the blob container (if not already created)
+        #   az storage container create \
+        #     --account-name $(storageAccountName) \
+        #     --name $(logging) \
+        #     --public-access blob \
+        #     --auth-mode login
+        #
+        #
+        #   az webapp log config \
+        #     --name AzurePhotoFlowWebApp \
+        #     --resource-group $(resourceGroupName) \
+        #     --docker-container-logging filesystem \
+        #     --application-logging filesystem \
+        #     --web-server-logging storage \
+        #     --storage-account $(storageAccountName) \
+        #     --storage-container $(logging) \
+        #     --level verbose \
+        #     --detailed-error-messages true \
+        #     --failed-request-tracing true
+        # displayName: Enabling filesystem logs
 
       - script: |
           az resource show \
