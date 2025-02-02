@@ -215,12 +215,12 @@ stages:
 
       # (4) Deploy Multi-Container Configuration to Azure
       - script: |
-          echo "Enabling Blob Storage logging..."
-          az storage blob service-properties update \
-            --account-name $(storageAccountName) \
-            --services b \
-            --logging "r" \
-            --retention 7
+          # echo "Enabling Blob Storage logging..."
+          # az storage blob service-properties update \
+          #   --account-name $(storageAccountName) \
+          #   --services b \
+          #   --logging "r" \
+          #   --retention 7
 
           echo "Creating docker-compose container..."
           az storage container create \
@@ -275,7 +275,7 @@ stages:
             --resource-group $(resourceGroupName) \
             --docker-container-logging filesystem \
             --application-logging filesystem \
-            --web-server-logging storage \
+            --web-server-logging filesystem \
             --storage-account $(storageAccountName) \
             --storage-container $(logging) \
             --level verbose \
