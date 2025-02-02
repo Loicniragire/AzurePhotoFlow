@@ -240,21 +240,12 @@ stages:
         displayName: Upload docker-compose.yml to Azure Blob Storage
 
       - script: |
-          # ssToken=$(az storage container generate-sas \
-          #   --account-name $(storageAccountName) \
-          #   --name $(docker-compose-container) \
-          #   --permissions rwld \
-          #   --expiry 2025-02-03T23:59:00Z \
-          #   --auth-mode login \
-          #   --as-user \
-          #   --output tsv)
-
           az resource update \
             --resource-group $(resourceGroupName) \
             --name AzurePhotoFlowWebApp \
             --resource-type "Microsoft.Web/sites" \
+            --set properties.siteConfig.clientCertMode="Optional" \
             --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
-            # --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml?${ssToken}"
         displayName: Deploy Multi-Container Configuration
 
       # (5) Configure App Settings
@@ -271,37 +262,26 @@ stages:
               "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
         displayName: Configure App Service Environment Variables
 
-      # - script: |
-      #     # Create the blob container (if not already created)
-      #     az storage container create \
-      #       --account-name $(storageAccountName) \
-      #       --name $(logging) \
-      #       --auth-mode login
-      #
-      #     # Generate a SAS token for the container with the required flag
-      #     sasToken=$(az storage container generate-sas \
-      #       --account-name $(storageAccountName) \
-      #       --name $(logging) \
-      #       --permissions rwld \
-      #       --expiry 2025-02-03T23:59:00Z \
-      #       --auth-mode login \
-      #       --as-user \
-      #       --output tsv)
-      #
-      #     # Construct the full SAS URL
-      #     sasUrl="https://$(storageAccountName).blob.core.windows.net/$(logging)?${sasToken}"
-      #
-      #     # Configure the App Service logging using the full SAS URL
-      #     az webapp log config \
-      #       --name AzurePhotoFlowWebApp \
-      #       --resource-group $(resourceGroupName) \
-      #       --docker-container-logging filesystem \
-      #       --application-logging filesystem \
-      #       --level verbose \
-      #       --detailed-error-messages true \
-      #       --failed-request-tracing true \
-      #       --web-server-logging filesystem
-        # displayName: Enabling filesystem logs
+      - script: |
+          # Create the blob container (if not already created)
+          az storage container create \
+            --account-name $(storageAccountName) \
+            --name $(logging) \
+            --public-access blob \
+            --auth-mode login
+
+          az webapp log config \
+            --name AzurePhotoFlowWebApp \
+            --resource-group $(resourceGroupName) \
+            --docker-container-logging filesystem \
+            --application-logging filesystem \
+            --web-server-logging storage \
+            --storage-account $(storageAccountName) \
+            --storage-container $(logging) \
+            --level verbose \
+            --detailed-error-messages true \
+            --failed-request-tracing true
+        displayName: Enabling filesystem logs
 
       - script: |
           az resource show \
