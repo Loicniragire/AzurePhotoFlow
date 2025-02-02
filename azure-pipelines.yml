@@ -210,8 +210,9 @@ stages:
           # Copy the original compose file to a temporary template file
           cp "$(Pipeline.Workspace)/compose-artifact/docker-compose.yml" "$(Pipeline.Workspace)/compose-artifact/docker-compose.template.yml"
           
-          # Ensure the environment variable stableTag is set; if not, default to 'latest'
-          export stableTag=${stableTag:-latest}
+          # Explicitly set the stableTag environment variable using the pipeline variable
+          export stableTag=$(stableTag)
+          echo "Using stableTag=${stableTag}"
           
           # Use eval to perform full Bash parameter expansion (including default value syntax)
           eval "echo \"$(cat $(Pipeline.Workspace)/compose-artifact/docker-compose.template.yml)\"" > "$(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml"
