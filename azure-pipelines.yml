@@ -216,12 +216,11 @@ stages:
 
       # (4) Deploy Multi-Container Configuration to Azure
       - script: |
-          # echo "Enabling Blob Storage logging..."
-          # az storage blob service-properties update \
-          #   --account-name $(storageAccountName) \
-          #   --services b \
-          #   --logging "r" \
-          #   --retention 7
+          echo "Update storage account to public..."
+          az storage account update \
+            --name photoflowtfstatedev \
+            --resource-group $(resourceGroupName) \
+            --set allowBlobPublicAccess=true
 
           echo "Creating docker-compose container..."
           az storage container create \
@@ -264,26 +263,16 @@ stages:
         displayName: Configure App Service Environment Variables
 
       - script: |
-        #   # Create the blob container (if not already created)
-        #   az storage container create \
-        #     --account-name $(storageAccountName) \
-        #     --name $(logging) \
-        #     --public-access blob \
-        #     --auth-mode login
-        #
-        #
-        #   az webapp log config \
-        #     --name AzurePhotoFlowWebApp \
-        #     --resource-group $(resourceGroupName) \
-        #     --docker-container-logging filesystem \
-        #     --application-logging filesystem \
-        #     --web-server-logging storage \
-        #     --storage-account $(storageAccountName) \
-        #     --storage-container $(logging) \
-        #     --level verbose \
-        #     --detailed-error-messages true \
-        #     --failed-request-tracing true
-        # displayName: Enabling filesystem logs
+          az webapp log config \
+            --name AzurePhotoFlowWebApp \
+            --resource-group $(resourceGroupName) \
+            --docker-container-logging filesystem \
+            --application-logging filesystem \
+            --level verbose \
+            --web-server-logging filesystem \
+            --detailed-error-messages true \
+            --failed-request-tracing true
+        displayName: Enabling filesystem logs
 
       - script: |
           az resource show \
