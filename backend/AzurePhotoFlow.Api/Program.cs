@@ -13,15 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
-// Integrate AI with Application Insights (required)
-/* builder.Services.AddApplicationInsightsTelemetry(); */
-/*  */
-/* builder.Logging.AddApplicationInsights( */
-/*     configureTelemetryConfiguration: (config) => { }, */
-/*     configureApplicationInsightsLoggerOptions: (options) => { } */
-/* ); */
-
-// Configure Kestrel
+// Configure Kestrel to listen on port 80
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(80);
@@ -29,7 +21,7 @@ builder.WebHost.ConfigureKestrel(options =>
 
 // Validate Blob Storage Connection Early
 var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage")
-                                   ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+    ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
 
 if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 {
@@ -54,9 +46,9 @@ builder.Services.AddHealthChecks()
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin", builder =>
+    options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
-        builder.WithOrigins(
+        policyBuilder.WithOrigins(
                 "http://localhost",
                 "https://AzurePhotoFlowWebApp.azurewebsites.net")
             .AllowAnyMethod()
@@ -134,6 +126,20 @@ builder.Services.Configure<FormOptions>(options =>
 
 var app = builder.Build();
 
+// Temporary Logging Middleware to Capture the Host Header
+app.Use(async (context, next) =>
+{
+    // Capture the Host header from the incoming request
+    var hostHeader = context.Request.Headers["Host"].ToString();
+
+    // Log the Host header
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+    logger.LogInformation("Incoming request Host header: {HostHeader}", hostHeader);
+
+    // Continue processing the request
+    await next.Invoke();
+});
+
 // Security Headers Middleware
 app.Use(async (context, next) =>
 {
@@ -161,13 +167,13 @@ app.UseExceptionHandler(appError =>
 {
     appError.Run(async context =>
     {
-        var exceptionHandlerPathFeature = 
+        var exceptionHandlerPathFeature =
             context.Features.Get<IExceptionHandlerPathFeature>();
         var exception = exceptionHandlerPathFeature?.Error;
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         context.Response.ContentType = "application/json";
-        
+
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
         logger.LogError(exception, "Unhandled exception occurred: {Message}", exception?.Message);
 
@@ -199,7 +205,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
             }),
             Duration = report.TotalDuration
         });
-        
+
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(result);
     }
@@ -230,3 +236,4 @@ appLifetime.ApplicationStopping.Register(() =>
 });
 
 app.Run();
+
