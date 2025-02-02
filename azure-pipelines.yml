@@ -216,18 +216,18 @@ stages:
 
       # (4) Deploy Multi-Container Configuration to Azure
       - script: |
-          echo "Update storage account to public..."
-          az storage account update \
-            --name photoflowtfstatedev \
-            --resource-group $(resourceGroupName) \
-            --set allowBlobPublicAccess=true
-
           echo "Creating docker-compose container..."
           az storage container create \
               --account-name $(storageAccountName) \
               --name $(docker-compose-container) \
               --public-access blob \
               --auth-mode login
+
+          echo "Update storage account to public..."
+          az storage account update \
+            --name photoflowtfstatedev \
+            --resource-group $(resourceGroupName) \
+            --set allowBlobPublicAccess=true
 
           echo "Uploading docker-compose to blob..."
           az storage blob upload \
