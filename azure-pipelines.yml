@@ -300,7 +300,7 @@ stages:
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]
           do
             echo "Attempt $ATTEMPT: Checking /health endpoint..."
-            curl -s -f https://AzurePhotoFlowWebApp.azurewebsites.net/health && break
+            curl -s -f https://azurephotoflowwebapp.azurewebsites.net/health && break
             echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds before retry..."
             ATTEMPT=$((ATTEMPT+1))
             sleep $SLEEP_BETWEEN
@@ -318,7 +318,7 @@ stages:
     dependsOn: WaitForHealthEndpoint
     steps:
       - script: |
-          curl -I https://AzurePhotoFlowWebApp.azurewebsites.net/health
+          curl -I https://azurephotoflowwebapp.azurewebsites.net/health
         displayName: Check /health Endpoint
 
 # ---------------------------------------------------------------------------
