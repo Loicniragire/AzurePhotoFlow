@@ -265,7 +265,8 @@ stages:
               "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" \
               "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" \
               "NODE_ENV=production" \
-              "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
+              "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true" \
+              "stableTag=${stableTag}"
         displayName: Configure App Service Environment Variables
       - script: |
           az webapp log config \
