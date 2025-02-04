@@ -141,14 +141,6 @@ resource "azurerm_linux_web_app" "web_app" {
       priority   = 100
       action     = "Allow"
     }
-
-    # Allow Azure Load Balancer (Required for health probes)
-    # ip_restriction {
-    #   service_tag = "AzureLoadBalancer"
-    #   name        = "Allow-LoadBalancer"
-    #   priority    = 200
-    #   action      = "Allow"
-    # }
   }
 
   app_settings = {
@@ -161,6 +153,12 @@ resource "azurerm_linux_web_app" "web_app" {
     environment = var.environment
     project     = "AzurePhotoFlow"
   }
+}
+
+resource "azurerm_role_assignment" "app_service_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_web_app.web_app.identity[0].principal_id
 }
 
 # resource "azurerm_application_insights" "app_insights" {
