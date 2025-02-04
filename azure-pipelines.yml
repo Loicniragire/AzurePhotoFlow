@@ -252,7 +252,7 @@ stages:
             --name AzurePhotoFlowWebApp \
             --resource-type "Microsoft.Web/sites" \
             --set properties.siteConfig.clientCertMode="Optional" \
-            --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
+            --set properties.siteConfig.linux-fx-Version="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
         displayName: Deploy Multi-Container Configuration
       - script: |
           echo "Configuring App Service environment variables..."
