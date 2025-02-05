@@ -205,6 +205,12 @@ stages:
           containerRegistry: $(containerRegistryConnection)
       - download: current
         artifact: compose-artifact
+
+      - script: |
+          echo "Setting global FTP deployment credentials..."
+          az webapp deployment user set --user-name $(ftpUserName) --password $(ftpPassword)
+        displayName: 'Set FTP Deployment Credentials'
+
       - script: |
           echo "Substituting placeholders in docker-compose.yml using Bash eval..."
           # Copy the original compose file to a temporary template file
