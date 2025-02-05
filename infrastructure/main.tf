@@ -14,84 +14,6 @@ provider "azurerm" {
   features {}
 }
 
-# Virtual Network
-resource "azurerm_virtual_network" "vnet" {
-  name                = "AzurePhotoFlowVNet"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  address_space       = ["10.0.0.0/16"]
-}
-
-# Subnet
-resource "azurerm_subnet" "subnet" {
-  name                 = "app_gateway_subnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.2.0/24"]
-}
-
-# Public IP for Application Gateway
-resource "azurerm_public_ip" "pip" {
-  name                = "app_gateway_public_ip"
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  allocation_method   = "Static"
-}
-
-
-resource "azurerm_web_application_firewall_policy" "waf_policy" {
-  name                = "${var.firewallname}-waf-policy"
-  resource_group_name = var.resource_group_name
-  location            = var.location
-
-  custom_rules {
-    name      = "AllowAll"
-    priority  = 100
-    rule_type = "MatchRule"
-
-    match_conditions {
-      match_variables {
-        variable_name = "RequestHeaders"
-        selector      = "User-Agent"
-      }
-
-      operator = "Contains"
-      match_values   = ["*"]
-    }
-
-    action = "Allow"
-  }
-
-  managed_rules {
-    managed_rule_set {
-      type    = "OWASP"
-      version = "3.2"
-    }
-  }
-}
-
-
-# Application Gateway Module
-module "application_gateway" {
-  source              = "./modules/application_gateway"
-  name                = "AzurePhotoFlowAG"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  public_ip_id      = azurerm_public_ip.pip.id
-  subnet_id           = azurerm_subnet.subnet.id
-
-  app_service_fqdn = azurerm_linux_web_app.web_app.default_hostname
-
-  ssl_certificate = {
-    path     = "./certs/myserver.pfx"
-    password = var.ssl_certificate_password
-  }
-
-  tags = {
-    environment = var.environment
-  }
-}
-
 # Shared service plan for all App Services
 resource "azurerm_service_plan" "service_plan" {
   name                = var.service_plan_name
@@ -132,17 +54,7 @@ resource "azurerm_linux_web_app" "web_app" {
 
   site_config {
     app_command_line = ""
-    always_on        = true
-
-    # Allow Application Gateway IP
-    ip_restriction {
-      # ip_address = "${azurerm_public_ip.pip.ip_address}/32"
-      # name       = "Allow-AppGW"
-      ip_address = "0.0.0.0/0"
-      name       = "AllowAll"
-      priority   = 100
-      action     = "Allow"
-    }
+    always_on        = false
   }
 
   app_settings = {
@@ -162,14 +74,6 @@ resource "azurerm_role_assignment" "app_service_acr_pull" {
   role_definition_name = "AcrPull"
   principal_id         = azurerm_linux_web_app.web_app.identity[0].principal_id
 }
-
-# resource "azurerm_application_insights" "app_insights" {
-#   name                = "pf-app-insights"
-#   location            = var.location
-#   resource_group_name = var.resource_group_name
-#   application_type    = "web"
-#   workspace_id        = "DefaultWorkspace-ebe2acfb-f4a5-4f6b-8f30-252c571813f9-EUS2"
-# }
 
 
 resource "azurerm_log_analytics_workspace" "log_workspace" {
@@ -194,18 +98,6 @@ resource "azurerm_monitor_diagnostic_setting" "webapp_diagnostics" {
   enabled_log { category = "AppServiceAppLogs" }
   enabled_log { category = "AppServiceAuditLogs" }
   enabled_log { category = "AppServiceHTTPLogs" }
-  metric { category = "AllMetrics" }
-}
-
-# Connect the Application Gateway to the Log Analytics workspace
-resource "azurerm_monitor_diagnostic_setting" "appgw_diagnostics" {
-  name                       = "appgw-diagnostics"
-  target_resource_id         = module.application_gateway.application_gateway_id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
-
-  enabled_log { category = "ApplicationGatewayAccessLog" }
-  enabled_log { category = "ApplicationGatewayPerformanceLog" }
-  enabled_log { category = "ApplicationGatewayFirewallLog" }
   metric { category = "AllMetrics" }
 }
 
