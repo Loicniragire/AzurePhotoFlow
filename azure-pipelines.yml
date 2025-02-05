@@ -266,7 +266,7 @@ stages:
               "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" \
               "NODE_ENV=production" \
               "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true" \
-              "stableTag=${stableTag}"
+              "stableTag=$(Build.BuildId)"
         displayName: Configure App Service Environment Variables
       - script: |
           az webapp log config \
@@ -285,6 +285,8 @@ stages:
             --resource-group $(resourceGroupName) \
             --resource-type "Microsoft.Web/sites" \
             --query "properties.siteConfig.linuxFxVersion"
+
+          az webapp restart --name AzurePhotoFlowWebApp --resource-group $(resourceGroupName)
         displayName: Check Deployment Status
 
   # Wait For Health Endpoint
