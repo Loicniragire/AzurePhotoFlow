@@ -3,7 +3,7 @@ output "application_gateway_id" {
 }
 
 output "public_ip" {
-  value       = var.public_ip_name
+  value       = var.public_ip_id
   description = "The Public IP address for the Application Gateway."
 }
 
