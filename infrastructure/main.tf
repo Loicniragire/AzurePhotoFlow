@@ -3,7 +3,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.0.0"
+      version = "4.17.0"
     }
   }
   
@@ -42,7 +42,6 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
   location            = var.location
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.service_plan.id
-  kind                = "linux"
 
   # Enable system-assigned managed identity so it can pull from ACR without credentials
   identity {
@@ -79,7 +78,6 @@ resource "azurerm_linux_web_app" "backend_web_app" {
   location            = var.location
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.service_plan.id
-  kind                = "linux"
 
   identity {
     type = "SystemAssigned"
