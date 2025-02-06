@@ -48,9 +48,34 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
     type = "SystemAssigned"
   }
 
+  # Configure various types of logs
+  logs {
+    # Docker container logging (stdout/stderr)
+    # Valid values: "off", "filesystem", "azureBlobStorage"
+    docker_container_logging_enabled = "filesystem"
+
+    # Optional: Detailed error messages
+    detailed_error_messages_enabled = true
+
+    # Optional: Failed request tracing
+    failed_request_tracing_enabled = true
+
+    # Optional: Application logs to file system
+    application_logs {
+      file_system_level = "Verbose" # or "Off", "Verbose", "Information", "Warning"
+    }
+
+    # Optional: HTTP logs to file system
+    http_logs {
+      file_system {
+        retention_in_days = 7
+        retention_in_mb   = 100
+      }
+    }
+  }
+
   site_config {
     always_on = false
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true"
     application_stack {
       docker_image_name = "azurephotoflow-frontend:${var.frontend_image_tag}"
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
@@ -85,9 +110,34 @@ resource "azurerm_linux_web_app" "backend_web_app" {
     type = "SystemAssigned"
   }
 
+  # Configure various types of logs
+  logs {
+    # Docker container logging (stdout/stderr)
+    # Valid values: "off", "filesystem", "azureBlobStorage"
+    docker_container_logging_enabled = "filesystem"
+
+    # Optional: Detailed error messages
+    detailed_error_messages_enabled = true
+
+    # Optional: Failed request tracing
+    failed_request_tracing_enabled = true
+
+    # Optional: Application logs to file system
+    application_logs {
+      file_system_level = "Verbose" # or "Off", "Verbose", "Information", "Warning"
+    }
+
+    # Optional: HTTP logs to file system
+    http_logs {
+      file_system {
+        retention_in_days = 7
+        retention_in_mb   = 100
+      }
+    }
+  }
+
   site_config {
     always_on = false
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true"
     application_stack {
         docker_image_name = "azurephotoflow-backend:${var.backend_image_tag}"
         docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
