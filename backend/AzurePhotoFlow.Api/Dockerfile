@@ -1,45 +1,50 @@
-# ==================
+#############################################
 # 1) Build Stage
-# ==================
+#############################################
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /app
 
-# Copy project file and restore dependencies
-COPY AzurePhotoFlow.Api.csproj .
-RUN dotnet restore
+# Create and switch to a new working directory for the build
+WORKDIR /src
+COPY AzurePhotoFlow.Api.csproj ./ 
 
-# Copy the rest of the files and build the application
+# Restore dependencies
+RUN dotnet restore AzurePhotoFlow.Api.csproj
+
+# Copy the rest of your source code
 COPY . .
 
-# Set build-time environment variables
+# Build-time arguments (only if needed for build logic)
 ARG AZURE_BLOB_STORAGE
 ARG CERTIFICATE_PASSWORD
 ARG CERTIFICATE_PATH
+ENV AZURE_BLOB_STORAGE=$AZURE_BLOB_STORAGE
+ENV CERTIFICATE_PASSWORD=$CERTIFICATE_PASSWORD
+ENV CERTIFICATE_PATH=$CERTIFICATE_PATH
 
-ENV AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
-ENV CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
-ENV CERTIFICATE_PATH=${CERTIFICATE_PATH}
+# Publish the application in Release mode to the "out" folder
+RUN dotnet publish -c Release -o /app/out
 
-RUN dotnet publish -c Release -o out
 
-# ==================
-# 2) Final Runtime Stage
-# ==================
+#############################################
+# 2) Runtime Stage
+#############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
-# (A) Install curl (Debian-based command)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && apt-get clean \
+# Optionally install debugging tools (curl, etc.) in the final image
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create working directory for the runtime
 WORKDIR /app
-COPY --from=build /app/out .
 
-# Propagate environment variables
-ENV AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
-ENV CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
-ENV CERTIFICATE_PATH=${CERTIFICATE_PATH}
+# Copy published output from the build stage
+COPY --from=build /app/out ./
+
+ENV ASPNETCORE_URLS=http://+:80
 
 EXPOSE 80
+
+# Start the application
 ENTRYPOINT ["dotnet", "AzurePhotoFlow.Api.dll"]
+

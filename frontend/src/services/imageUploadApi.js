@@ -1,98 +1,127 @@
 import axios from 'axios';
 
-// print all Environment Variables
+// Print Environment Variables (for debugging)
 console.log('All Environment Variables:', import.meta.env);
-
 console.log('Mode:', import.meta.env.MODE);
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-console.log('API_BASE_URL:', API_BASE_URL);
+console.log('API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
 
-// Upload raw image directory as a zip file
-// Endpoint: POST /api/image/raw
-// Parameters: timeStamp, projectName, directoryFile
+// Create a reusable Axios instance
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '', // Fallback to '' if not defined
+});
+
+/**
+ * Health Check
+ * GET /api/health
+ * @returns {Promise<any>} Response data from health check
+ */
+export const healthCheck = async () => {
+  try {
+    const response = await apiClient.get('/api/health');
+    return response.data;
+  } catch (error) {
+    console.error('Error checking health:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload raw image directory (as a zip file)
+ * POST /api/image/raw
+ * @param {string} timeStamp
+ * @param {string} projectName
+ * @param {File} directoryFile
+ * @returns {Promise<any>} Success message or extracted files
+ */
 export const uploadRawDirectory = async (timeStamp, projectName, directoryFile) => {
   const formData = new FormData();
   formData.append('directoryFile', directoryFile);
 
   try {
-    const response = await axios.post(`/api/image/raw`, formData, {
+    const response = await apiClient.post('/api/image/raw', formData, {
       params: { timeStamp, projectName },
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data; // Returns the extracted files or success message
+    return response.data;
   } catch (error) {
-	  if (error.response) {
-		console.error('Error response:', error.response);
-		console.error('Error response data:', error.response.data);
-		console.error('Error status:', error.response.status);
-	  } else if (error.request) {
-		console.error('Error request:', error.request);
-	  } else {
-		console.error('Error message:', error.message);
-	  }
-  throw error;}
+    if (error.response) {
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response.data);
+      console.error('Error status:', error.response.status);
+    } else if (error.request) {
+      console.error('Error request:', error.request);
+    } else {
+      console.error('Error message:', error.message);
+    }
+    throw error;
+  }
 };
 
-// Upload processed image directory as a zip file
-// Endpoint: POST /api/image/processed
-// Parameters: timeStamp, projectName, rawfileDirectoryName, directoryFile
-// rawfileDirectoryName is the name of the raw file directory that was uploaded
-// directoryFile is the zip file containing the processed images
-// The processed images will be stored in the directory with the same name as the raw file directory
+/**
+ * Upload processed image directory (as a zip file)
+ * POST /api/image/processed
+ * @param {string} timeStamp
+ * @param {string} projectName
+ * @param {string} rawfileDirectoryName
+ * @param {File} directoryFile
+ * @returns {Promise<any>} Success message or extracted files
+ */
 export const uploadProcessedDirectory = async (timeStamp, projectName, rawfileDirectoryName, directoryFile) => {
   const formData = new FormData();
   formData.append('directoryFile', directoryFile);
 
   try {
-    const response = await axios.post(`$/api/image/processed`, formData, {
+    const response = await apiClient.post('/api/image/processed', formData, {
       params: { timeStamp, projectName, rawfileDirectoryName },
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data; // Returns the extracted files or success message
+    return response.data;
   } catch (error) {
     console.error('Error uploading processed directory:', error);
     throw error;
   }
 };
 
-// Delete a project and its associated files
-// Endpoint: DELETE /api/image/projects
-// Parameters: projectName, timestamp
-// projectName is the name of the project to delete
-// timestamp is the timestamp of the project to delete
-// The project directory and all associated files will be deleted
-// Returns a success message
+/**
+ * Delete a project and its associated files
+ * DELETE /api/image/projects
+ * @param {string} projectName
+ * @param {string} timestamp
+ * @returns {Promise<any>} Success message
+ */
 export const deleteProject = async (projectName, timestamp) => {
   try {
-    const response = await axios.delete(`$/api/image/projects`, {
+    const response = await apiClient.delete('/api/image/projects', {
       params: { projectName, timestamp },
     });
-    return response.data; // Returns success message
+    return response.data;
   } catch (error) {
     console.error('Error deleting project:', error);
     throw error;
   }
 };
 
-// Get a list of projects
-// Endpoint: GET /api/image/projects
-// Parameters: year, projectName, timestamp
-// year is the year of the project
-// projectName is the name of the project
-// timestamp is the timestamp of the project
-// Returns a list of projects
+/**
+ * Get a list of projects
+ * GET /api/image/projects
+ * @param {number} [year]
+ * @param {string} [projectName]
+ * @param {string} [timestamp]
+ * @returns {Promise<any>} List of projects
+ */
 export const getProjects = async (year = null, projectName = null, timestamp = null) => {
   try {
-    const response = await axios.get(`$/api/image/projects`, {
+    const response = await apiClient.get('/api/image/projects', {
       params: { year, projectName, timestamp },
     });
-    return response.data; // Returns a list of projects
+    return response.data;
   } catch (error) {
     console.error('Error fetching projects:', error);
     throw error;
   }
 };
+
