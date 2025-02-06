@@ -20,12 +20,95 @@ resource "azurerm_service_plan" "service_plan" {
   location            = var.location
   resource_group_name = var.resource_group_name
   os_type             = "Linux"
-  sku_name            = "B1" # Minimum required for containers
+  sku_name            = "F1"
 
   tags = {
     environment = var.environment
     project     = "AzurePhotoFlow"
   }
+}
+
+###############################
+# Frontend Web App
+###############################
+resource "azurerm_linux_web_app" "frontend_web_app" {
+  name                = var.frontend_web_app_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  service_plan_id     = azurerm_service_plan.service_plan.id
+
+  # System-assigned identity for pulling from ACR
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
+    app_command_line = ""
+  }
+
+  # Environment variables for the frontend container
+  app_settings = {
+    "VITE_API_BASE_URL"                  = var.vite_api_base_url
+    "NODE_ENV"                            = "production"
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    # ...other keys as needed...
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+###############################
+# Backend Web App
+###############################
+resource "azurerm_linux_web_app" "backend_web_app" {
+  name                = var.backend_web_app_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  service_plan_id     = azurerm_service_plan.service_plan.id
+
+  # System-assigned identity to pull from ACR
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    # The DOCKER| prefix is required to specify a custom container for Linux
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
+    app_command_line = ""
+    # We could also define startup commands if needed
+  }
+
+  # App settings / environment variables for the backend container
+  app_settings = {
+    "ASPNETCORE_ENVIRONMENT"         = "Production"
+    "AZURE_BLOB_STORAGE"             = var.azure_blob_storage
+    "CERTIFICATE_PASSWORD"           = var.certificate_password
+    "CERTIFICATE_PATH"               = var.certificate_path
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    # ...other keys as needed...
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}
+
+resource "azurerm_role_assignment" "backend_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_web_app.backend_web_app.identity[0].principal_id
+}
+
+# The frontend web app needs permission to pull images from ACR
+resource "azurerm_role_assignment" "frontend_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_web_app.frontend_web_app.identity[0].principal_id
 }
 
 resource "azurerm_container_registry" "acr" {
@@ -41,39 +124,6 @@ resource "azurerm_container_registry" "acr" {
   }
 }
 
-# Unified App Service for Frontend and Backend
-resource "azurerm_linux_web_app" "web_app" {
-  name                = var.web_app_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  service_plan_id     = azurerm_service_plan.service_plan.id
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  site_config {
-    app_command_line = ""
-    always_on        = false
-  }
-
-  app_settings = {
-    #App insights
-    # "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
-    # "APPINSIGHTS_CONNECTION_STRING"  = azurerm_application_insights.app_insights.connection_string
-  }
-
-  tags = {
-    environment = var.environment
-    project     = "AzurePhotoFlow"
-  }
-}
-
-resource "azurerm_role_assignment" "app_service_acr_pull" {
-  scope                = azurerm_container_registry.acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = azurerm_linux_web_app.web_app.identity[0].principal_id
-}
 
 
 resource "azurerm_log_analytics_workspace" "log_workspace" {
@@ -89,18 +139,29 @@ resource "azurerm_log_analytics_workspace" "log_workspace" {
   }
 }
 
-# Connect the App Service to the Log Analytics workspace
-resource "azurerm_monitor_diagnostic_setting" "webapp_diagnostics" {
-  name                       = "webapp-diagnostics"
-  target_resource_id         = azurerm_linux_web_app.web_app.id
+# Diagnostic for Frontend Web App
+resource "azurerm_monitor_diagnostic_setting" "frontend_webapp_diagnostics" {
+  name                       = "frontend-webapp-diagnostics"
+  target_resource_id         = azurerm_linux_web_app.frontend_web_app.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
   enabled_log { category = "AppServiceAppLogs" }
   enabled_log { category = "AppServiceAuditLogs" }
   enabled_log { category = "AppServiceHTTPLogs" }
-  metric { category = "AllMetrics" }
+  metric      { category = "AllMetrics" }
 }
 
+# Diagnostic for Backend Web App
+resource "azurerm_monitor_diagnostic_setting" "backend_webapp_diagnostics" {
+  name                       = "backend-webapp-diagnostics"
+  target_resource_id         = azurerm_linux_web_app.backend_web_app.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
+
+  enabled_log { category = "AppServiceAppLogs" }
+  enabled_log { category = "AppServiceAuditLogs" }
+  enabled_log { category = "AppServiceHTTPLogs" }
+  metric      { category = "AllMetrics" }
+}
 
 data "azurerm_storage_account" "storage" {
   name                = "photoflowtfstatedev"

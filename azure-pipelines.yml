@@ -23,8 +23,6 @@ variables:
     value: 'photoflowtfstatedev'
   - name: containerName
     value: 'tfstate'
-  - name: docker-compose-container
-    value: 'docker-compose'
   - name: logging
     value: 'logs'
   - name: cognitiveAccountName
@@ -33,6 +31,12 @@ variables:
     value: 'azurephotoflow.tfstate'
   - name: stableTag
     value: "$(Build.BuildId)"
+
+  # Web App names as defined in Terraform variables
+  - name: backendWebAppName
+    value: "PhotoFlowBackendWebApp"
+  - name: frontendWebAppName
+    value: "PhotoFlowFrontendWebApp"
 
 resources:
   repositories:
@@ -51,16 +55,14 @@ stages:
   - job: BuildDockerImages
     displayName: Build Docker Images
     steps:
-      # Checkout source code
       - checkout: github_repo
 
-      # Set Docker Context
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
           docker context use desktop-linux
         displayName: 'Set Docker Context'
 
-      # Create .env file for Docker Compose
+      # Create .env file for local Docker usage
       - script: |
           echo "AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)" > .env
           echo "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" >> .env
@@ -68,33 +70,29 @@ stages:
           echo "MODE=$(MODE)" >> .env
           echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)"  >> .env
           echo "stableTag=$(Build.BuildId)" >> .env
-        displayName: Create .env file for Docker Compose
+        displayName: 'Create .env file'
 
-      # Publish the .env file as an artifact
       - publish: $(Build.SourcesDirectory)/.env
         artifact: env-artifact
-        displayName: Publish .env File Artifact
+        displayName: 'Publish .env File Artifact'
 
-      # Print the .env file content for debugging
       - script: |
           echo "Printing .env file content for debugging:"
           cat .env
-        displayName: Print .env File Content
+        displayName: 'Print .env File Content'
 
-      # Build and Tag Docker Images
+      # Build and Tag Docker Images (Backend, Frontend)
       - script: |
           set -e
           docker compose --env-file .env -f docker-compose.yml build
+          # Tag images for stableTag AND latest
           docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
           docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:latest
-          docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
-          docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
-        displayName: Build and Tag Images
+        displayName: 'Build and Tag Images'
 
-      # Publish the docker-compose.yml file as an artifact
       - publish: $(Build.SourcesDirectory)/docker-compose.yml
         artifact: compose-artifact
-        displayName: Publish docker-compose.yml Artifact
+        displayName: 'Publish docker-compose.yml Artifact'
 
 # ---------------------------------------------------------------------------
 # Test Stage
@@ -107,18 +105,16 @@ stages:
     displayName: Run Unit and Integration Tests
     steps:
       - checkout: self
-      # Run backend tests
       - script: |
           cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
           dotnet restore
           dotnet test
-        displayName: Run Backend Tests
-      # Run frontend tests
+        displayName: 'Run Backend Tests'
       - script: |
           cd $(Build.SourcesDirectory)/tests/frontend
           npm install
           npm test
-        displayName: Run Frontend Tests
+        displayName: 'Run Frontend Tests'
 
 # ---------------------------------------------------------------------------
 # Deploy Infrastructure Stage
@@ -129,8 +125,6 @@ stages:
   jobs:
   - job: DeployTerraform
     displayName: Deploy Infrastructure with Terraform
-    variables:
-      - group: 'PhotoFlow'
     steps:
       - script: |
           cd $(Build.SourcesDirectory)/Infrastructure
@@ -141,14 +135,18 @@ stages:
             -backend-config="resource_group_name=$(resourceGroupName)" \
             -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
           terraform plan \
-            -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)" \
-            -var="app_service_fqdn=$(appServiceFqdn)" \
+            -var="backend_image_tag=$(Build.BuildId)" \
+            -var="frontend_image_tag=$(Build.BuildId)" \
+            -var="azure_blob_storage=$(AZURE_BLOB_STORAGE)" \
+            -var="certificate_password=$(CERTIFICATE_PASSWORD)" \
+            -var="certificate_path=$(CERTIFICATE_PATH)" \
+            -var="vite_api_base_url=$(VITE_API_BASE_URL)" \
             -out=tfplan
           terraform apply \
             -auto-approve \
             -parallelism=5 \
             -lock-timeout=60s tfplan || exit 1
-        displayName: Authenticate and Apply Terraform with Optimizations
+        displayName: 'Authenticate and Apply Terraform'
 
 # ---------------------------------------------------------------------------
 # Deploy Applications Stage
@@ -160,175 +158,41 @@ stages:
     System.Debug: true
     docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
   jobs:
-  # Push Docker Images to ACR
-  - job: PushDockerImages
-    displayName: Push Docker Images to ACR
-    variables:
-      - group: 'PhotoFlow'
-    steps:
-      - task: Docker@2
-        displayName: Login to ACR
-        inputs:
-          command: login
-          containerRegistry: $(containerRegistryConnection)
-      - script: |
-          echo "Using Container Registry: $(containerRegistryConnection)"
-        displayName: 'Verify Container Registry Variable'
-      - script: |
-          export DOCKER_CONFIG=$HOME/.docker
-          docker context use desktop-linux
-        displayName: 'Set Docker Context with Config'
-      - script: |
-          docker context ls
-        displayName: 'Verify Docker Contexts'
-      - script: |
-          export DOCKER_HOST=$(docker_host)
-          docker ps
-        displayName: 'Test Docker Connection'
-      - download: current
-        artifact: env-artifact
-      - script: |
-          ls -l $(Pipeline.Workspace)/env-artifact/.env
-          cat $(Pipeline.Workspace)/env-artifact/.env  
-          docker compose --env-file $(Pipeline.Workspace)/env-artifact/.env -f docker-compose.yml push
-        displayName: Push Docker Images to ACR
+    # Push Docker Images to ACR
+    - job: PushDockerImages
+      displayName: Push Docker Images to ACR
+      steps:
+        - task: Docker@2
+          displayName: 'Login to ACR'
+          inputs:
+            command: login
+            containerRegistry: $(containerRegistryConnection)
 
-  # Deploy Multi-Container App Service
-  - job: DeployMultiContainers
-    displayName: Deploy Multi-Container App Service
-    dependsOn: PushDockerImages
-    steps:
-      - task: Docker@2
-        displayName: Login to ACR
-        inputs:
-          command: login
-          containerRegistry: $(containerRegistryConnection)
-      - download: current
-        artifact: compose-artifact
+        - script: |
+            echo "Using Container Registry: $(containerRegistry)"
+            echo "Verifying Docker contexts..."
+            export DOCKER_CONFIG=$HOME/.docker
+            docker context use desktop-linux
+            docker context ls
+          displayName: 'Verify Container Registry and Docker Context'
 
-      - script: |
-          echo "Setting global FTP deployment credentials..."
-          az webapp deployment user set --user-name $(ftpUserName) --password $(ftpPassword)
-        displayName: 'Set FTP Deployment Credentials'
+        - script: |
+            export DOCKER_HOST=$(docker_host)
+            docker ps
+          displayName: 'Test Docker Connection'
 
-      - script: |
-          echo "Substituting placeholders in docker-compose.yml using Bash eval..."
-          # Copy the original compose file to a temporary template file
-          cp "$(Pipeline.Workspace)/compose-artifact/docker-compose.yml" "$(Pipeline.Workspace)/compose-artifact/docker-compose.template.yml"
-          
-          # Explicitly set the stableTag environment variable using the pipeline variable
-          export stableTag=$(stableTag)
-          echo "Using stableTag=${stableTag}"
-          
-          # Use eval to perform full Bash parameter expansion (including default value syntax)
-          eval "echo \"$(cat $(Pipeline.Workspace)/compose-artifact/docker-compose.template.yml)\"" > "$(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml"
-          
-          echo "Resulting self-contained docker-compose file:"
-          cat "$(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml"
-        displayName: "Substitute Placeholders in docker-compose File"
-      - script: |
-          echo "Pulling Docker images using substituted docker-compose file..."
-          docker compose -f $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml pull
-        displayName: Pull Docker Images
-      - script: |
-          echo "Creating docker-compose container..."
-          az storage container create \
-              --account-name $(storageAccountName) \
-              --name $(docker-compose-container) \
-              --public-access blob \
-              --auth-mode login
-          echo "Updating storage account to allow public blob access..."
-          az storage account update \
-            --name $(storageAccountName) \
-            --resource-group $(resourceGroupName) \
-            --set allowBlobPublicAccess=true
-          echo "Uploading self-contained docker-compose file to Azure Blob Storage..."
-          az storage blob upload \
-              --account-name $(storageAccountName) \
-              --container-name $(docker-compose-container) \
-              --file $(Pipeline.Workspace)/compose-artifact/docker-compose.final.yml \
-              --name docker-compose.yml \
-              --content-type "text/plain" \
-              --auth-mode key \
-              --overwrite
-        displayName: Upload docker-compose.yml to Azure Blob Storage
-      - script: |
-          echo "Deploying Multi-Container Configuration to Azure App Service..."
-          az resource update \
-            --resource-group $(resourceGroupName) \
-            --name AzurePhotoFlowWebApp \
-            --resource-type "Microsoft.Web/sites" \
-            --set properties.siteConfig.clientCertMode="Optional" \
-            --set properties.siteConfig.linuxFxVersion="COMPOSE|https://$(storageAccountName).blob.core.windows.net/$(docker-compose-container)/docker-compose.yml"
-        displayName: Deploy Multi-Container Configuration
-      - script: |
-          echo "Configuring App Service environment variables..."
-          az webapp config appsettings set \
-            --name AzurePhotoFlowWebApp \
-            --resource-group $(resourceGroupName) \
-            --settings \
-              "AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)" \
-              "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" \
-              "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" \
-              "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" \
-              "NODE_ENV=production" \
-              "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true" \
-              "stableTag=$(Build.BuildId)"
-        displayName: Configure App Service Environment Variables
-      - script: |
-          az webapp log config \
-            --name AzurePhotoFlowWebApp \
-            --resource-group $(resourceGroupName) \
-            --docker-container-logging filesystem \
-            --application-logging filesystem \
-            --level verbose \
-            --web-server-logging filesystem \
-            --detailed-error-messages true \
-            --failed-request-tracing true
-        displayName: Enabling Filesystem Logs
-      - script: |
-          az resource show \
-            --name AzurePhotoFlowWebApp \
-            --resource-group $(resourceGroupName) \
-            --resource-type "Microsoft.Web/sites" \
-            --query "properties.siteConfig.linuxFxVersion"
+        - download: current
+          artifact: env-artifact
 
-          az webapp restart --name AzurePhotoFlowWebApp --resource-group $(resourceGroupName)
-        displayName: Check Deployment Status
+        # Push images individually
+        - script: |
+            echo "Pushing backend and frontend images to ACR..."
+            docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
+            docker push $(containerRegistry)/azurephotoflow-backend:latest
 
-  # Wait For Health Endpoint
-  - job: WaitForHealthEndpoint
-    displayName: Wait For Health Endpoint
-    dependsOn: DeployMultiContainers
-    steps:
-      - script: |
-          echo "Waiting for container to become healthy..."
-          MAX_ATTEMPTS=6
-          SLEEP_BETWEEN=10
-          ATTEMPT=1
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]
-          do
-            echo "Attempt $ATTEMPT: Checking /health endpoint..."
-            curl -s -f https://azurephotoflowwebapp.azurewebsites.net/health && break
-            echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds before retry..."
-            ATTEMPT=$((ATTEMPT+1))
-            sleep $SLEEP_BETWEEN
-          done
-          if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-            echo "Health check failed after $MAX_ATTEMPTS attempts!"
-            exit 1
-          fi
-          echo "Container is healthy!"
-        displayName: Wait for /health Endpoint
-
-  # Perform Health Check
-  - job: PerformHealthCheck
-    displayName: Perform Health Check
-    dependsOn: WaitForHealthEndpoint
-    steps:
-      - script: |
-          curl -I https://azurephotoflowwebapp.azurewebsites.net/health
-        displayName: Check /health Endpoint
+            docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
+            docker push $(containerRegistry)/azurephotoflow-frontend:latest
+          displayName: 'Push Docker Images to ACR'
 
 # ---------------------------------------------------------------------------
 # Validate Stage
@@ -337,11 +201,42 @@ stages:
   displayName: Validation Stage
   dependsOn: DeployApplications
   jobs:
-  - job: SmokeTest
-    displayName: Smoke Test
-    steps:
-      - script: |
-          curl -sSf "https://$(appServiceFqdn)/" | grep "React App"
-          curl -sSf "https://$(appServiceFqdn)/api/health" | grep "Healthy"
-        displayName: Run Smoke Tests
+    - job: WaitForHealthAndSmokeTest
+      displayName: Wait for Health & Smoke Test
+      steps:
+        # Optional: Wait for backend /health endpoint
+        - script: |
+            echo "Waiting for backend container /health to become healthy..."
+            BACKEND_URL="https://${backendWebAppName}.azurewebsites.net/health"
+            MAX_ATTEMPTS=6
+            SLEEP_BETWEEN=10
+            ATTEMPT=1
+            while [ $ATTEMPT -le $MAX_ATTEMPTS ]
+            do
+              echo "Attempt $ATTEMPT: Checking ${BACKEND_URL}"
+              if curl -s -f ${BACKEND_URL}; then
+                echo "Backend is healthy!"
+                break
+              fi
+              echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds..."
+              ATTEMPT=$((ATTEMPT+1))
+              sleep $SLEEP_BETWEEN
+            done
+            if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+              echo "Health check failed after $MAX_ATTEMPTS attempts!"
+              exit 1
+            fi
+          displayName: 'Wait for Backend Health Endpoint'
+
+        # Quick Smoke Test
+        - script: |
+            FRONTEND_URL="https://${frontendWebAppName}.azurewebsites.net"
+            BACKEND_HEALTH_URL="https://${backendWebAppName}.azurewebsites.net/health"
+
+            echo "Checking Frontend at ${FRONTEND_URL}"
+            curl -sSf "${FRONTEND_URL}" | grep "React App" || exit 1
+
+            echo "Checking Backend at ${BACKEND_HEALTH_URL}"
+            curl -sSf "${BACKEND_HEALTH_URL}" | grep "Healthy" || exit 1
+          displayName: 'Smoke Tests'
 

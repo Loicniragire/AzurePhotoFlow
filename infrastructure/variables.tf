@@ -55,27 +55,28 @@ variable "ssl_certificate_password" {
   sensitive   = true
 }
 
-variable "vnet_name" {
-  description = "The name of the Virtual Network (VNet)"
-  default     = "AzurePhotoFlowVNet"
-}
-
-variable "subnet_name" {
-  description = "The name of the subnet in the Virtual Network"
-  default     = "AzurePhotoFlowSubNet"
-}
-
-variable "public_ip_name" {
-  description = "The name of the Public IP resource for the Application Gateway"
-  default     = "AzurePhotoFlowPip"
-}
-
-variable "firewallname" {
-  description = "Firewall name"
-  default     = "AzurePhotoFlowFirewall"
-}
-
-variable "app_service_fqdn" {
-  description = "The FQDN of the App Service to use as the backend pool"
+variable "frontend_web_app_name" {
   type        = string
+  description = "Name for the Frontend Azure Web App"
+}
+
+variable "backend_web_app_name" {
+  type        = string
+  description = "Name for the Backend Azure Web App"
+}
+variable "backend_image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Tag for the backend Docker image"
+}
+
+variable "frontend_image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Tag for the frontend Docker image"
+}
+variable "vite_api_base_url" {
+  type        = string
+  default     = ""
+  description = "API base URL for the frontend"
 }
