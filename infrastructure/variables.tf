@@ -109,3 +109,12 @@ variable "azure_blob_storage" {
   description = "Blob storage connection string or relevant Azure Blob config"
 }
 
+variable "docker_registry_username" {
+  type        = string
+  description = "Container registry Username"
+}
+
+variable "docker_registry_password" {
+  type        = string
+  description = "Password for the Docker registry"
+}

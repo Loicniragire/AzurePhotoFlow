@@ -53,6 +53,8 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
     application_stack {
       docker_image_name = "azurephotoflow-frontend:${var.frontend_image_tag}"
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
+      docker_registry_username = var.docker_registry_username
+      docker_registry_password = var.docker_registry_password
     }
     # any other permissible site_config attributes
   }

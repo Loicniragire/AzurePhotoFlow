@@ -144,6 +144,8 @@ stages:
             -var="backend_web_app_name=$(backendWebAppName)" \
             -var="frontend_web_app_name=$(frontendWebAppName)" \
             -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)" \
+            -var="docker_registry_username=$(ACR_USERNAME)" \
+            -var="docker_registry_password=$(ACR_PASSWORD)" \
             -out=tfplan
           terraform apply \
             -auto-approve \
