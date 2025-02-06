@@ -42,15 +42,8 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
     type = "SystemAssigned"
   }
 
-  # Instead of setting site_config { linux_fx_version = ... }
-  # you define container_settings:
-  container_settings {
-    image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
-    container_registry_use_managed_identity = true
-  }
-
-  # You can still have other site_config properties that do not involve linux_fx_version
   site_config {
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
     always_on = true
     # any other permissible site_config attributes
   }
@@ -80,13 +73,8 @@ resource "azurerm_linux_web_app" "backend_web_app" {
     type = "SystemAssigned"
   }
 
-  container_settings {
-    image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
-    container_registry_use_managed_identity = true
-  }
-
-  # site_config or other blocks as needed
   site_config {
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
     always_on = true
     # No linux_fx_version here
   }
