@@ -20,8 +20,7 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 // Validate Blob Storage Connection Early
-var azureBlobStorageConnectionString = builder.Configuration.GetConnectionString("AzureBlobStorage")
-    ?? Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
 
 if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 {
