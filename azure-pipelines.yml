@@ -142,7 +142,8 @@ stages:
             -var="certificate_path=$(CERTIFICATE_PATH)" \
             -var="vite_api_base_url=$(VITE_API_BASE_URL)" \
             -var="backend_web_app_name=$(backendWebAppName)" \
-            -var="frontend_web_app_name=$(frontendWebAppName)"
+            -var="frontend_web_app_name=$(frontendWebAppName)" \
+            -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)"
             -out=tfplan
           terraform apply \
             -auto-approve \
