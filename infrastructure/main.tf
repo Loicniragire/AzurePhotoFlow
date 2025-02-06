@@ -37,22 +37,28 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.service_plan.id
 
-  # System-assigned identity for pulling from ACR
+  # Enable system-assigned managed identity so it can pull from ACR without credentials
   identity {
     type = "SystemAssigned"
   }
 
-  site_config {
-    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
-    app_command_line = ""
+  # Instead of setting site_config { linux_fx_version = ... }
+  # you define container_settings:
+  container_settings {
+    image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
+    container_registry_use_managed_identity = true
   }
 
-  # Environment variables for the frontend container
+  # You can still have other site_config properties that do not involve linux_fx_version
+  site_config {
+    always_on = true
+    # any other permissible site_config attributes
+  }
+
+  # App settings, environment variables, etc. for the frontend
   app_settings = {
-    "VITE_API_BASE_URL"                  = var.vite_api_base_url
-    "NODE_ENV"                            = "production"
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    # ...other keys as needed...
+    "VITE_API_BASE_URL" = var.vite_api_base_url
+    # ...
   }
 
   tags = {
@@ -70,31 +76,24 @@ resource "azurerm_linux_web_app" "backend_web_app" {
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.service_plan.id
 
-  # System-assigned identity to pull from ACR
   identity {
     type = "SystemAssigned"
   }
 
+  container_settings {
+    image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
+    container_registry_use_managed_identity = true
+  }
+
+  # site_config or other blocks as needed
   site_config {
-    # The DOCKER| prefix is required to specify a custom container for Linux
-    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
-    app_command_line = ""
-    # We could also define startup commands if needed
+    always_on = true
+    # No linux_fx_version here
   }
 
-  # App settings / environment variables for the backend container
   app_settings = {
-    "ASPNETCORE_ENVIRONMENT"         = "Production"
-    "AZURE_BLOB_STORAGE"             = var.azure_blob_storage
-    "CERTIFICATE_PASSWORD"           = var.certificate_password
-    "CERTIFICATE_PATH"               = var.certificate_path
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    # ...other keys as needed...
-  }
-
-  tags = {
-    environment = var.environment
-    project     = "AzurePhotoFlow"
+    "ASPNETCORE_ENVIRONMENT" = "Production"
+    # ...
   }
 }
 
