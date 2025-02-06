@@ -128,7 +128,7 @@ stages:
     steps:
       - script: |
           cd $(Build.SourcesDirectory)/Infrastructure
-          terraform init \
+          terraform init -upgrade \
             -backend-config="storage_account_name=$(storageAccountName)" \
             -backend-config="container_name=$(containerName)" \
             -backend-config="key=$(tfStateFile)" \
