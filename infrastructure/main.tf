@@ -89,6 +89,8 @@ resource "azurerm_linux_web_app" "backend_web_app" {
     application_stack {
         docker_image_name = "azurephotoflow-backend:${var.backend_image_tag}"
         docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
+        docker_registry_username = var.docker_registry_username
+        docker_registry_password = var.docker_registry_password
     }
     # No linux_fx_version here
   }
