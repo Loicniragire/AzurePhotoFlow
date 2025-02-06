@@ -1,6 +1,12 @@
-# Terraform backend and provider configuration
 terraform {
   required_version = ">= 1.3.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.0.0"
+    }
+  }
+  
   backend "azurerm" {
     storage_account_name = "photoflowtfstatedev"
     container_name       = "tfstate"
@@ -42,9 +48,9 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
   identity {
     type = "SystemAssigned"
   }
+
   application_stack {
       docker_image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
-      # Specify the registry URL
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
     }
 
