@@ -48,13 +48,12 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
     type = "SystemAssigned"
   }
 
-  application_stack {
+  site_config {
+    always_on = false
+    application_stack {
       docker_image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-frontend:${var.frontend_image_tag}"
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
     }
-
-  site_config {
-    always_on = true
     # any other permissible site_config attributes
   }
 
@@ -82,13 +81,13 @@ resource "azurerm_linux_web_app" "backend_web_app" {
   identity {
     type = "SystemAssigned"
   }
-  application_stack {
-      docker_image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
-      docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
-  }
 
   site_config {
-    always_on = true
+    always_on = false
+    application_stack {
+        docker_image_name = "${azurerm_container_registry.acr.login_server}/azurephotoflow-backend:${var.backend_image_tag}"
+        docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
+    }
     # No linux_fx_version here
   }
 
