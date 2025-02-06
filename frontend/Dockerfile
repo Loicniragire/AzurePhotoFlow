@@ -28,7 +28,7 @@ RUN npm run build -- --mode $MODE
 #####################################
 # 2) Runtime Stage with Nginx
 #####################################
-FROM nginx:Alpine
+FROM nginx:latest
 
 # (Optional) Install debugging tools
 RUN apt-get update && apt-get install -y \
