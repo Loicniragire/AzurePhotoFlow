@@ -1,3 +1,6 @@
+#################################
+# Existing Variables
+#################################
 variable "environment" {
   description = "The environment in which the resources are deployed (e.g., dev, staging, prod)"
   default     = "dev"
@@ -64,6 +67,7 @@ variable "backend_web_app_name" {
   type        = string
   description = "Name for the Backend Azure Web App"
 }
+
 variable "backend_image_tag" {
   type        = string
   default     = "latest"
@@ -75,8 +79,33 @@ variable "frontend_image_tag" {
   default     = "latest"
   description = "Tag for the frontend Docker image"
 }
+
 variable "vite_api_base_url" {
   type        = string
   default     = ""
   description = "API base URL for the frontend"
 }
+
+
+#################################
+# Added Variables
+#################################
+variable "certificate_password" {
+  type        = string
+  default     = ""
+  description = "Password for an optional certificate the application may need"
+  sensitive   = true
+}
+
+variable "certificate_path" {
+  type        = string
+  default     = ""
+  description = "Path to the certificate within the container or filesystem"
+}
+
+variable "azure_blob_storage" {
+  type        = string
+  default     = ""
+  description = "Blob storage connection string or relevant Azure Blob config"
+}
+
