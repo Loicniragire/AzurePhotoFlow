@@ -50,6 +50,7 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
 
   site_config {
     always_on = false
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true"
     application_stack {
       docker_image_name = "azurephotoflow-frontend:${var.frontend_image_tag}"
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
@@ -86,6 +87,7 @@ resource "azurerm_linux_web_app" "backend_web_app" {
 
   site_config {
     always_on = false
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true"
     application_stack {
         docker_image_name = "azurephotoflow-backend:${var.backend_image_tag}"
         docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
