@@ -137,7 +137,7 @@ resource "azurerm_linux_web_app" "backend_web_app" {
         docker_registry_password = var.docker_registry_password
     }
     cors {
-      allowed_origins     = ["https://${var.backend_web_app_name}.azurewebsites.net"]
+      allowed_origins     = ["https://${var.frontend_web_app_name}.azurewebsites.net"]
     }
   }
 
