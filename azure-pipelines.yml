@@ -233,13 +233,36 @@ stages:
             fi
           displayName: 'Wait for Backend Health Endpoint'
 
+        - script: |
+            echo "waiting for frontend container /health to become healthy..."
+            FRONTEND_URL="https://$(frontendWebAppName).azurewebsites.net/health"
+            MAX_ATTEMPTS=6
+            SLEEP_BETWEEN=10
+            ATTEMPT=1
+            while [ $ATTEMPT -le $MAX_ATTEMPTS ]
+            do
+              echo "Attempt $ATTEMPT: Checking ${FRONTEND_URL}"
+              if curl -s -f ${FRONTEND_URL}; then
+                echo "Frontend is healthy!"
+                break
+              fi
+              echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds..."
+              ATTEMPT=$((ATTEMPT+1))
+              sleep $SLEEP_BETWEEN
+            done
+            if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+              echo "Health check failed after $MAX_ATTEMPTS attempts!"
+              exit 1
+            fi
+          displayName: 'Wait for Frontend Health Endpoint'
+
         # Quick Smoke Test
         - script: |
             FRONTEND_URL="https://$(frontendWebAppName).azurewebsites.net"
             BACKEND_HEALTH_URL="https://$(backendWebAppName).azurewebsites.net/health"
 
             echo "Checking Frontend at ${FRONTEND_URL}"
-            curl -sSf "${FRONTEND_URL}" | grep "React App" || exit 1
+            curl -sSf "${FRONTEND_URL}" | grep "Vite + React" || exit 1
 
             echo "Checking Backend at ${BACKEND_HEALTH_URL}"
             curl -sSf "${BACKEND_HEALTH_URL}" | grep "Healthy" || exit 1
