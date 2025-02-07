@@ -1,41 +1,17 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-  const isProd = mode === 'production';
+  // Load environment variables from the current working directory.
+  // The empty string as the third parameter means we load all variables without any prefix filtering.
+  const env = loadEnv(mode, process.cwd(), '');
 
   return {
     plugins: [react()],
-
-    build: {
-      outDir: 'dist',
-      assetsDir: 'assets',
-      emptyOutDir: true,
-    },
-
-    server: {
-      host: '0.0.0.0',
-      port: 3000,
-      proxy: {
-        '/api': {
-          target: 'http://nginx:80',
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/api/, ''),
-        },
-      },
-    },
-
-    base: isProd ? '/' : '/',
-
-    // If your code references `import.meta.env.VITE_API_BASE_URL`:
     define: {
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        isProd
-          ? 'https://myprodbackend.azurewebsites.net/api'
-          : 'http://localhost:3000/api'
-      ),
-    },
+      // Explicitly define the API base URL from the environment variable.
+      // Ensure that VITE_API_BASE_URL is defined in your .env file or in your process environment.
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(env.VITE_API_BASE_URL)
+    }
   };
 });
-
