@@ -136,11 +136,11 @@ resource "azurerm_linux_web_app" "backend_web_app" {
         docker_registry_username = var.docker_registry_username
         docker_registry_password = var.docker_registry_password
     }
-    # No linux_fx_version here
   }
 
   app_settings = {
     "ASPNETCORE_ENVIRONMENT" = "Production"
+    "AZURE_BLOB_STORAGE" = var.azure_blob_storage
     # ...
   }
 }
