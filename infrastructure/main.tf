@@ -50,15 +50,11 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
 
   # Configure various types of logs
   logs {
-    # Docker container logging (stdout/stderr)
-    # Valid values: "off", "filesystem", "azureBlobStorage"
-    docker_container_logging_enabled = "filesystem"
-
     # Optional: Detailed error messages
-    detailed_error_messages_enabled = true
+    detailed_error_messages = true
 
     # Optional: Failed request tracing
-    failed_request_tracing_enabled = true
+    failed_request_tracing = true
 
     # Optional: Application logs to file system
     application_logs {
@@ -112,15 +108,11 @@ resource "azurerm_linux_web_app" "backend_web_app" {
 
   # Configure various types of logs
   logs {
-    # Docker container logging (stdout/stderr)
-    # Valid values: "off", "filesystem", "azureBlobStorage"
-    docker_container_logging_enabled = "filesystem"
-
     # Optional: Detailed error messages
-    detailed_error_messages_enabled = true
+    detailed_error_messages = true
 
     # Optional: Failed request tracing
-    failed_request_tracing_enabled = true
+    failed_request_tracing = true
 
     # Optional: Application logs to file system
     application_logs {
