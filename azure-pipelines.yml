@@ -34,9 +34,9 @@ variables:
 
   # Web App names as defined in Terraform variables
   - name: backendWebAppName
-    value: "PhotoFlowBackendWebApp"
+    value: "photoflowbackendwebapp"
   - name: frontendWebAppName
-    value: "PhotoFlowFrontendWebApp"
+    value: "photoflowfrontendwebapp"
 
 resources:
   repositories:
