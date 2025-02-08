@@ -47,9 +47,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
-        policyBuilder.WithOrigins(
-                "http://localhost",
-                "https://AzurePhotoFlowWebApp.azurewebsites.net")
+        policyBuilder.WithOrigins("http://localhost")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();

@@ -36,7 +36,7 @@ variables:
   - name: backendWebAppName
     value: "photoflowbackendwebapp"
   - name: frontendWebAppName
-    value: "photoflowfrontendwebapp"
+    value: "loicportraits"
 
 resources:
   repositories:
