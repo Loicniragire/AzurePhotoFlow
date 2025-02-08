@@ -262,7 +262,7 @@ stages:
             BACKEND_HEALTH_URL="https://$(backendWebAppName).azurewebsites.net/health"
 
             echo "Checking Frontend at ${FRONTEND_URL}"
-            curl -sSf "${FRONTEND_URL}" | grep "Vite + React" || exit 1
+            curl -sSf "${FRONTEND_URL}" | grep "Loic Portraits" || exit 1
 
             echo "Checking Backend at ${BACKEND_HEALTH_URL}"
             curl -sSf "${BACKEND_HEALTH_URL}" | grep "Healthy" || exit 1
