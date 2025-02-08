@@ -72,6 +72,7 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
 
   site_config {
     always_on = false
+    https_only = true
     application_stack {
       docker_image_name = "azurephotoflow-frontend:${var.frontend_image_tag}"
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
