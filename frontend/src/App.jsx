@@ -68,7 +68,7 @@ const App = () => {
                     </main>
                 </div>
                 <footer className="app-footer">
-                    <p>&copy; {new Date().getFullYear()} Photo Flow. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} Loic Portraits LLC. All rights reserved.</p>
                 </footer>
             </div>
         </Router>
