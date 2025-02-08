@@ -125,7 +125,7 @@ return (
                     checked={isZipUpload}
                     onChange={() => setIsZipUpload(true)}
                 />
-                Upload Existing .zip File
+                Upload ZIP File
             </label>
         </div>
 
