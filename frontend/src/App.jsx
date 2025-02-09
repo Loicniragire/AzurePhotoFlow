@@ -15,47 +15,71 @@ const App = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
+    const closeSidebar = () => {
+        setIsSidebarOpen(false);
+    };
+
     return (
         <Router>
             <div className="app-container">
                 <header className="app-header">
                     <h1>Loic Portraits</h1>
-                    {/* Hamburger button visible on mobile only */}
                     <button className="hamburger-button" onClick={toggleSidebar}>
                         &#9776;
                     </button>
                 </header>
                 <div className="app-layout">
-                    {/* Sidebar: apply additional class for mobile open state */}
                     <nav className={`app-sidebar ${isSidebarOpen ? 'open' : ''}`}>
                         <ul>
                             <li>
-                                <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active-link' : '')} onClick={() => setIsSidebarOpen(false)}>
+                                <NavLink
+                                    to="/upload"
+                                    className={({ isActive }) => (isActive ? 'active-link' : '')}
+                                    onClick={closeSidebar}
+                                >
                                     Upload
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/search" className={({ isActive }) => (isActive ? 'active-link' : '')} onClick={() => setIsSidebarOpen(false)}>
+                                <NavLink
+                                    to="/search"
+                                    className={({ isActive }) => (isActive ? 'active-link' : '')}
+                                    onClick={closeSidebar}
+                                >
                                     Search
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/naturallanguage" className={({ isActive }) => (isActive ? 'active-link' : '')} onClick={() => setIsSidebarOpen(false)}>
+                                <NavLink
+                                    to="/naturallanguage"
+                                    className={({ isActive }) => (isActive ? 'active-link' : '')}
+                                    onClick={closeSidebar}
+                                >
                                     Natural Language Search
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active-link' : '')} onClick={() => setIsSidebarOpen(false)}>
+                                <NavLink
+                                    to="/dashboard"
+                                    className={({ isActive }) => (isActive ? 'active-link' : '')}
+                                    onClick={closeSidebar}
+                                >
                                     Dashboard
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/facerecognition" className={({ isActive }) => (isActive ? 'active-link' : '')} onClick={() => setIsSidebarOpen(false)}>
+                                <NavLink
+                                    to="/facerecognition"
+                                    className={({ isActive }) => (isActive ? 'active-link' : '')}
+                                    onClick={closeSidebar}
+                                >
                                     Face Recognition
                                 </NavLink>
                             </li>
                         </ul>
                     </nav>
+                    {/* Render overlay only on mobile when the sidebar is open */}
+                    {isSidebarOpen && <div className="overlay" onClick={closeSidebar}></div>}
                     <main className="app-main">
                         <Routes>
                             <Route path="/upload" element={<ImageUpload />} />
