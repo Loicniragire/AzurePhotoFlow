@@ -36,70 +36,52 @@ const App = () => {
   return (
     <Router>
       <div className="app-container">
+        {/* Header with authentication controls */}
         <header className="app-header">
           <h1>Loic Portraits</h1>
+          
+          <div className="auth-controls">
+            {isAuthenticated ? (
+              <LogoutButton onLogout={() => setIsAuthenticated(false)} />
+            ) : (
+              <GoogleLoginButton onLoginSuccess={() => setIsAuthenticated(true)} />
+            )}
+          </div>
+
           <button className="hamburger-button" onClick={toggleSidebar}>
             &#9776;
           </button>
         </header>
+
         <div className="app-layout">
           <nav className={`app-sidebar ${isSidebarOpen ? "open" : ""}`}>
             <ul>
               <li>
-                <NavLink
-                  to="/upload"
-                  className={({ isActive }) => (isActive ? "active-link" : "")}
-                  onClick={closeSidebar}
-                >
+                <NavLink to="/upload" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
                   Upload
                 </NavLink>
               </li>
               <li>
-                <NavLink
-                  to="/search"
-                  className={({ isActive }) => (isActive ? "active-link" : "")}
-                  onClick={closeSidebar}
-                >
+                <NavLink to="/search" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
                   Search
                 </NavLink>
               </li>
               <li>
-                <NavLink
-                  to="/naturallanguage"
-                  className={({ isActive }) => (isActive ? "active-link" : "")}
-                  onClick={closeSidebar}
-                >
+                <NavLink to="/naturallanguage" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
                   Natural Language Search
                 </NavLink>
               </li>
               <li>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) => (isActive ? "active-link" : "")}
-                  onClick={closeSidebar}
-                >
+                <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
                   Dashboard
                 </NavLink>
               </li>
               <li>
-                <NavLink
-                  to="/facerecognition"
-                  className={({ isActive }) => (isActive ? "active-link" : "")}
-                  onClick={closeSidebar}
-                >
+                <NavLink to="/facerecognition" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
                   Face Recognition
                 </NavLink>
               </li>
             </ul>
-
-            {/* Authentication Section */}
-            <div className="auth-section">
-              {isAuthenticated ? (
-                <LogoutButton onLogout={() => setIsAuthenticated(false)} />
-              ) : (
-                <GoogleLoginButton onLoginSuccess={() => setIsAuthenticated(true)} />
-              )}
-            </div>
           </nav>
 
           {isSidebarOpen && <div className="overlay" onClick={closeSidebar}></div>}
@@ -115,6 +97,7 @@ const App = () => {
             </Routes>
           </main>
         </div>
+
         <footer className="app-footer">
           <p>&copy; {new Date().getFullYear()} Loic Portraits LLC. All rights reserved.</p>
         </footer>

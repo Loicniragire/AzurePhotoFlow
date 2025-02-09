@@ -1,12 +1,12 @@
-const LogoutButton = () => {
+const LogoutButton = ({ onLogout }) => {
   const handleLogout = () => {
     fetch(import.meta.env.VITE_API_BASE_URL + "/auth/logout", {
       method: "POST",
-      credentials: "include", // Ensure cookies are sent
+      credentials: "include",
     })
       .then(() => {
         console.log("Logged out successfully!");
-        window.location.reload(); // Refresh to reset session
+        onLogout();
       })
       .catch((err) => console.error("Logout error:", err));
   };
