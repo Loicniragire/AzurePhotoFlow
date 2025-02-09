@@ -6,23 +6,30 @@ import NaturalLanguageSearch from "./components/NaturalLanguageSearch";
 import Dashboard from "./components/Dashboard";
 import FaceRecognition from "./components/FaceRecognition";
 import Home from "./components/Home";
-import GoogleLoginButton from "./components/GoogleLoginButton"; // Import Login Button
-import LogoutButton from "./components/LogoutButton"; // Import Logout Button
+import GoogleLoginButton from "./components/GoogleLoginButton";
+import LogoutButton from "./components/LogoutButton";
 import "./App.css";
 
 const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true); // Track loading state
 
-  // Check authentication status
+  // Check authentication status when the app loads
   useEffect(() => {
     fetch(import.meta.env.VITE_API_BASE_URL + "/auth/check", {
       method: "GET",
-      credentials: "include", // Required to send cookies
+      credentials: "include", // Ensure cookies are sent
     })
       .then((res) => res.json())
-      .then((data) => setIsAuthenticated(data.isAuthenticated))
-      .catch(() => setIsAuthenticated(false));
+      .then((data) => {
+        setIsAuthenticated(data.isAuthenticated);
+        setLoading(false);
+      })
+      .catch(() => {
+        setIsAuthenticated(false);
+        setLoading(false);
+      });
   }, []);
 
   const toggleSidebar = () => {
@@ -41,7 +48,9 @@ const App = () => {
           <h1>Loic Portraits</h1>
           
           <div className="auth-controls">
-            {isAuthenticated ? (
+            {loading ? (
+              <p>Checking authentication...</p>
+            ) : isAuthenticated ? (
               <LogoutButton onLogout={() => setIsAuthenticated(false)} />
             ) : (
               <GoogleLoginButton onLoginSuccess={() => setIsAuthenticated(true)} />
