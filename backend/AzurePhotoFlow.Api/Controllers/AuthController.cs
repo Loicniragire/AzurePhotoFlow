@@ -1,23 +1,26 @@
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Api.Models;
+using Microsoft.AspNetCore.Authentication;
 
 [ApiController]
-[Route("auth")]
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly JwtService _jwtService;
-	private readonly GoogleConfig _googleConfig;
+    private readonly GoogleConfig _googleConfig;
 
     public AuthController(JwtService jwtService, GoogleConfig googleConfig)
-	{
-		_jwtService = jwtService;
-		_googleConfig = googleConfig;
-	}
+    {
+        _jwtService = jwtService;
+        _googleConfig = googleConfig;
+    }
 
-    // Nuget package reference for GoogleLoginRequest
-    // <PackageReference Include="Google.Apis.Auth" Version="1.54.0" />
-
+    /// <summary>
+    /// Login with Google
+    /// </summary>
+    /// <param name="request">GoogleLoginRequest</param>
+    /// <returns>ActionResult</returns>
     [HttpPost("google-login")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
     {
@@ -53,6 +56,34 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new { message = "Invalid Google token", error = ex.Message });
         }
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        // Replace "Cookies" with your specific authentication scheme if different.
+        try
+        {
+            await HttpContext.SignOutAsync("Cookies");
+            return Ok(new { message = "Successfully logged out" });
+        }
+		catch (Exception ex)
+		{
+			return BadRequest(new { message = "Error logging out", error = ex.Message });
+		}
+    }
+
+    [HttpGet("check")]
+    public IActionResult CheckAuthStatus()
+    {
+        var jwt = Request.Cookies["jwt"];
+
+        if (string.IsNullOrEmpty(jwt))
+        {
+            return Ok(new { isAuthenticated = false });
+        }
+
+        return Ok(new { isAuthenticated = true });
     }
 }
 

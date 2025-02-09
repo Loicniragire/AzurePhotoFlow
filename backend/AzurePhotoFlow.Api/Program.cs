@@ -51,7 +51,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
-        policyBuilder.WithOrigins("http://localhost")
+        policyBuilder.WithOrigins("http://localhost:80")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -133,6 +133,11 @@ var googleClientId = Environment.GetEnvironmentVariable("VITE_GOOGLE_CLIENT_ID")
 if (string.IsNullOrEmpty(jwtSecretKey))
 {
     throw new Exception("JWT_SECRET_KEY is not set! Add it as an environment variable.");
+}
+
+if (string.IsNullOrEmpty(googleClientId))
+{
+	throw new Exception("VITE_GOOGLE_CLIENT_ID is not set! Add it as an environment variable.");
 }
 var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
 

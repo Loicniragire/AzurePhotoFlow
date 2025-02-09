@@ -20,6 +20,7 @@ services:
         CERTIFICATE_PASSWORD: ${CERTIFICATE_PASSWORD}
         AZURE_BLOB_STORAGE: ${AZURE_BLOB_STORAGE}
         CERTIFICATE_PATH: ${CERTIFICATE_PATH}
+        JWT_SECRET_KEY: ${JWT_SECRET_KEY}
         MODE: ${MODE}
     container_name: backend
     environment:
@@ -28,6 +29,8 @@ services:
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
       - CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}
       - MODE=${MODE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     networks:
       - app-network
 
