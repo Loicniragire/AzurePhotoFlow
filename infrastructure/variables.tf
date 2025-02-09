@@ -118,3 +118,15 @@ variable "docker_registry_password" {
   type        = string
   description = "Password for the Docker registry"
 }
+
+variable "jwt_secret_key" {
+  type        = string
+  default     = ""
+  description = "Secret key for JWT token"
+}
+
+variable "vite_google_client_id" {
+  type        = string
+  default     = ""
+  description = "Google Client ID for Vite"
+}

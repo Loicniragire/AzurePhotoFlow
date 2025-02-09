@@ -146,6 +146,9 @@ stages:
             -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)" \
             -var="docker_registry_username=$(ACR_USERNAME)" \
             -var="docker_registry_password=$(ACR_PASSWORD)" \
+            -var="vite_google_client_id=$(VITE_GOOGLE_CLIENT_ID)" \
+            -var="jwt_secret=$(JWT_SECRET_KEY)" \
+
             -out=tfplan
           terraform apply \
             -auto-approve \

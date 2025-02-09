@@ -1,11 +1,15 @@
+using System.Text;
 using System.Text.Json;
 using Api.Interfaces;
+using Api.Models;
 using Azure.Storage.Blobs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -121,6 +125,53 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 104_857_600; // 100MB
 });
 
+// Configure JWT Authentication
+// Retrieve JWT secret key from environment variable
+var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+var googleClientId = Environment.GetEnvironmentVariable("VITE_GOOGLE_CLIENT_ID");
+
+if (string.IsNullOrEmpty(jwtSecretKey))
+{
+    throw new Exception("JWT_SECRET_KEY is not set! Add it as an environment variable.");
+}
+var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
+
+builder.Services.AddSingleton(securityKey);
+builder.Services.AddSingleton(new GoogleConfig {ClientId = googleClientId});
+builder.Services.AddSingleton<JwtService>();
+
+// Configure JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "loicportraits.azurewebsites.net",
+            ValidateAudience = true,
+            ValidAudience = "loicportraits.azurewebsites.net",
+            ValidateLifetime = true,
+            IssuerSigningKey = securityKey
+        };
+
+        // Enable reading JWT from cookies
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.ContainsKey("jwt"))
+                {
+                    context.Token = context.Request.Cookies["jwt"];
+                }
+                return Task.CompletedTask;
+            }
+        };
+
+
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // Temporary Logging Middleware to Capture the Host Header
@@ -183,6 +234,7 @@ app.UseExceptionHandler(appError =>
     });
 });
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Health Check Endpoint

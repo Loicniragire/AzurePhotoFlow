@@ -85,6 +85,7 @@ resource "azurerm_linux_web_app" "frontend_web_app" {
   # App settings, environment variables, etc. for the frontend
   app_settings = {
     "VITE_API_BASE_URL" = var.vite_api_base_url
+    "VITE_GOOGLE_CLIENT_ID" = var.vite_google_client_id
     # ...
   }
 
@@ -145,6 +146,8 @@ resource "azurerm_linux_web_app" "backend_web_app" {
   app_settings = {
     "ASPNETCORE_ENVIRONMENT" = "Production"
     "AZURE_BLOB_STORAGE" = var.azure_blob_storage
+    "JWT_SECRET_KEY" = var.jwt_secret_key
+    "VITE_GOOGLE_CLIENT_ID" = var.vite_google_client_id
     # ...
   }
 }
