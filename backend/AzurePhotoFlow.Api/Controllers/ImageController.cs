@@ -1,5 +1,6 @@
 using Api.Interfaces;
 using Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Globalization;
@@ -36,6 +37,7 @@ public class ImageController : ControllerBase
     /// <param name="timeStamp">The timestamp to assign to this upload..</param>
     /// <param name="projectName">The name of the project.</param>
     /// <param name="directoryFile">The zip file containing the directory.</param>
+	[Authorize]
     [HttpPost("raw")]
     public async Task<IActionResult> UploadDirectory(DateTime timeStamp, string projectName, IFormFile directoryFile)
     {
