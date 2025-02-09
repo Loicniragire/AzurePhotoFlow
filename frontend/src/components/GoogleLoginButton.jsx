@@ -11,6 +11,7 @@ const GoogleLoginButton = ({ onLoginSuccess }) => {
       return;
     }
 
+    // Load Google Identity Services
     window.google.accounts.id.initialize({
       client_id: clientId,
       callback: (response) => {
@@ -19,27 +20,31 @@ const GoogleLoginButton = ({ onLoginSuccess }) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: response.credential }),
-          credentials: "include", // Sends cookies for session
+          credentials: "include",
         })
           .then((res) => res.json())
           .then((data) => {
             console.log("Login successful:", data);
-            onLoginSuccess(); // Update authentication state
+            onLoginSuccess();
           })
           .catch((err) => console.error("Login error:", err));
       },
     });
 
-    setIsGoogleLoaded(true); // Set flag when Google SDK is loaded
+    window.google.accounts.id.renderButton(
+      document.getElementById("googleSignInButton"),
+      { theme: "outline", size: "large" }
+    );
+
+    setIsGoogleLoaded(true);
   }, [onLoginSuccess]);
 
   return (
     <div>
-      {/* Ensure the button is always visible */}
       {isGoogleLoaded ? (
         <div id="googleSignInButton"></div>
       ) : (
-        <p>Loading Google Sign-In...</p>
+        <p style={{ color: "red" }}>Error loading Google Sign-In</p>
       )}
     </div>
   );

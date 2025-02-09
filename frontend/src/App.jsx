@@ -11,34 +11,17 @@ import LogoutButton from "./components/LogoutButton";
 import "./App.css";
 
 const App = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true); // Track loading state
 
-  // Check authentication status when the app loads
   useEffect(() => {
     fetch(import.meta.env.VITE_API_BASE_URL + "/auth/check", {
       method: "GET",
-      credentials: "include", // Ensure cookies are sent
+      credentials: "include", // Ensures JWT cookie is sent
     })
       .then((res) => res.json())
-      .then((data) => {
-        setIsAuthenticated(data.isAuthenticated);
-        setLoading(false);
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
-        setLoading(false);
-      });
+      .then((data) => setIsAuthenticated(data.isAuthenticated))
+      .catch(() => setIsAuthenticated(false));
   }, []);
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
 
   return (
     <Router>
@@ -46,54 +29,46 @@ const App = () => {
         {/* Header with authentication controls */}
         <header className="app-header">
           <h1>Loic Portraits</h1>
-          
+
           <div className="auth-controls">
-            {loading ? (
-              <p>Checking authentication...</p>
-            ) : isAuthenticated ? (
+            {isAuthenticated ? (
               <LogoutButton onLogout={() => setIsAuthenticated(false)} />
             ) : (
               <GoogleLoginButton onLoginSuccess={() => setIsAuthenticated(true)} />
             )}
           </div>
-
-          <button className="hamburger-button" onClick={toggleSidebar}>
-            &#9776;
-          </button>
         </header>
 
         <div className="app-layout">
-          <nav className={`app-sidebar ${isSidebarOpen ? "open" : ""}`}>
+          <nav className="app-sidebar">
             <ul>
               <li>
-                <NavLink to="/upload" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
+                <NavLink to="/upload" className={({ isActive }) => (isActive ? "active-link" : "")}>
                   Upload
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/search" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
+                <NavLink to="/search" className={({ isActive }) => (isActive ? "active-link" : "")}>
                   Search
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/naturallanguage" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
+                <NavLink to="/naturallanguage" className={({ isActive }) => (isActive ? "active-link" : "")}>
                   Natural Language Search
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
+                <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active-link" : "")}>
                   Dashboard
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/facerecognition" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={closeSidebar}>
+                <NavLink to="/facerecognition" className={({ isActive }) => (isActive ? "active-link" : "")}>
                   Face Recognition
                 </NavLink>
               </li>
             </ul>
           </nav>
-
-          {isSidebarOpen && <div className="overlay" onClick={closeSidebar}></div>}
 
           <main className="app-main">
             <Routes>
