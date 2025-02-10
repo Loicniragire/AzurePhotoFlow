@@ -22,7 +22,7 @@ const App = () => {
 
   // Check authentication status on mount
   useEffect(() => {
-    fetch(import.meta.env.VITE_API_BASE_URL + "/auth/check", {
+    fetch(import.meta.env.VITE_API_BASE_URL + "api/auth/check", {
       method: "GET",
       credentials: "include", // Ensures JWT cookie is sent
     })

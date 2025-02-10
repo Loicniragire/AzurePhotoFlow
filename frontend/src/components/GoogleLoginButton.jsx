@@ -20,7 +20,7 @@ const GoogleLoginButton = ({ onLoginSuccess }) => {
         callback: (response) => {
           console.log("Google Login Response:", response);
 		  console.log(response.credential);
-          fetch(import.meta.env.VITE_API_BASE_URL + "/auth/google-login", {
+          fetch(import.meta.env.VITE_API_BASE_URL + "api/auth/google-login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: response.credential }),

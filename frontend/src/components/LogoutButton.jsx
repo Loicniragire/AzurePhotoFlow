@@ -1,6 +1,6 @@
 const LogoutButton = ({ onLogout }) => {
   const handleLogout = () => {
-    fetch(import.meta.env.VITE_API_BASE_URL + "/auth/logout", {
+    fetch(import.meta.env.VITE_API_BASE_URL + "api/auth/logout", {
       method: "POST",
       credentials: "include",
     })
