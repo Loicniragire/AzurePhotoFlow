@@ -8,6 +8,7 @@ console.log('API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
 // Create a reusable Axios instance
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '', // Fallback to '' if not defined
+  withCredentials: true,
 });
 
 /**
