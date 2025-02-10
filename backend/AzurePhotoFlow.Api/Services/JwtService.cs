@@ -20,7 +20,9 @@ public class JwtService
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId),
             new Claim(JwtRegisteredClaimNames.Email, email),
-            new Claim("role", "FullAccess") // Adjust for RBAC if needed
+
+			// Adjust for RBAC if needed. Consider integrating ASP.NET Identity for better user management 
+            new Claim("role", "FullAccess")
         };
 
         var creds = new SigningCredentials(_jwtKey, SecurityAlgorithms.HmacSha256);

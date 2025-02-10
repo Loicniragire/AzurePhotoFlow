@@ -37,7 +37,7 @@ public class ImageController : ControllerBase
     /// <param name="timeStamp">The timestamp to assign to this upload..</param>
     /// <param name="projectName">The name of the project.</param>
     /// <param name="directoryFile">The zip file containing the directory.</param>
-	[Authorize]
+	[Authorize(Roles = "FullAccess")]
     [HttpPost("raw")]
     public async Task<IActionResult> UploadDirectory(DateTime timeStamp, string projectName, IFormFile directoryFile)
     {
