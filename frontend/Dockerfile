@@ -16,10 +16,12 @@ COPY . .
 # Build-time arguments (for Vite)
 ARG MODE=production
 ARG VITE_API_BASE_URL
+ARG VITE_GOOGLE_CLIENT_ID
 
 # Inject them as environment variables so Vite can pick them up
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV MODE=$MODE
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 # Build the React app (Vite will read VITE_API_BASE_URL at build time)
 RUN npm run build -- --mode $MODE
