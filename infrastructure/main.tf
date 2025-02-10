@@ -140,6 +140,7 @@ resource "azurerm_linux_web_app" "backend_web_app" {
     }
     cors {
       allowed_origins     = ["https://${var.frontend_web_app_name}.azurewebsites.net"]
+      support_credentials = true
     }
   }
 
