@@ -3,7 +3,7 @@ using System.Text.Json;
 using Api.Interfaces;
 using Api.Models;
 using Azure.Storage.Blobs;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
@@ -51,6 +51,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
+        // Adjust the allowed origin to match your frontend (e.g., including the correct port if needed)
         policyBuilder.WithOrigins("http://localhost:80")
             .AllowAnyMethod()
             .AllowAnyHeader()
@@ -125,8 +126,7 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 104_857_600; // 100MB
 });
 
-// Configure JWT Authentication
-// Retrieve JWT secret key from environment variable
+// Retrieve and Validate Environment Variables
 var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 var googleClientId = Environment.GetEnvironmentVariable("VITE_GOOGLE_CLIENT_ID");
 
@@ -137,42 +137,33 @@ if (string.IsNullOrEmpty(jwtSecretKey))
 
 if (string.IsNullOrEmpty(googleClientId))
 {
-	throw new Exception("VITE_GOOGLE_CLIENT_ID is not set! Add it as an environment variable.");
+    throw new Exception("VITE_GOOGLE_CLIENT_ID is not set! Add it as an environment variable.");
 }
 var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
 
 builder.Services.AddSingleton(securityKey);
-builder.Services.AddSingleton(new GoogleConfig {ClientId = googleClientId});
+builder.Services.AddSingleton(new GoogleConfig { ClientId = googleClientId });
 builder.Services.AddSingleton<JwtService>();
 
-// Configure JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+// Configure Cookie Authentication Middleware
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies", options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.LoginPath = "/api/auth/google-login";
+        options.LogoutPath = "/api/auth/logout";
+        options.Events = new CookieAuthenticationEvents
         {
-            ValidateIssuer = true,
-            ValidIssuer = "loicportraits.azurewebsites.net",
-            ValidateAudience = true,
-            ValidAudience = "loicportraits.azurewebsites.net",
-            ValidateLifetime = true,
-            IssuerSigningKey = securityKey
-        };
-
-        // Enable reading JWT from cookies
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
+            OnRedirectToLogin = context =>
             {
-                if (context.Request.Cookies.ContainsKey("jwt"))
-                {
-                    context.Token = context.Request.Cookies["jwt"];
-                }
+                // Return a 401 Unauthorized status for API calls instead of redirecting
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             }
         };
-
-
     });
 
 builder.Services.AddAuthorization();
@@ -182,14 +173,9 @@ var app = builder.Build();
 // Temporary Logging Middleware to Capture the Host Header
 app.Use(async (context, next) =>
 {
-    // Capture the Host header from the incoming request
     var hostHeader = context.Request.Headers["Host"].ToString();
-
-    // Log the Host header
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("Incoming request Host header: {HostHeader}", hostHeader);
-
-    // Continue processing the request
     await next.Invoke();
 });
 
@@ -215,13 +201,11 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseCors("AllowSpecificOrigin");
 
-// Global Exception Handling
 app.UseExceptionHandler(appError =>
 {
     appError.Run(async context =>
     {
-        var exceptionHandlerPathFeature =
-            context.Features.Get<IExceptionHandlerPathFeature>();
+        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
         var exception = exceptionHandlerPathFeature?.Error;
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
@@ -239,6 +223,7 @@ app.UseExceptionHandler(appError =>
     });
 });
 
+// Activate Authentication and Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
