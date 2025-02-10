@@ -1,14 +1,15 @@
+import React from 'react';
+import { logout } from '../services/authApi';
+
 const LogoutButton = ({ onLogout }) => {
-  const handleLogout = () => {
-    fetch(import.meta.env.VITE_API_BASE_URL + "/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    })
-      .then(() => {
-        console.log("Logged out successfully!");
-        onLogout();
-      })
-      .catch((err) => console.error("Logout error:", err));
+  const handleLogout = async () => {
+    try {
+      const data = await logout();
+      console.log("Logged out successfully:", data);
+      onLogout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
