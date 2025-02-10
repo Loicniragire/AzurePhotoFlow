@@ -150,7 +150,8 @@ builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
     {
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        /* options.Cookie.SecurePolicy = CookieSecurePolicy.Always; */
+		options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.LoginPath = "/api/auth/google-login";
