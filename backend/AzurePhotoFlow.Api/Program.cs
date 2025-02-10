@@ -149,6 +149,7 @@ builder.Services.AddSingleton<JwtService>();
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
     {
+		options.Cookie.Name = "jwt";
         options.Cookie.HttpOnly = true;
         /* options.Cookie.SecurePolicy = CookieSecurePolicy.Always; */
 		options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
