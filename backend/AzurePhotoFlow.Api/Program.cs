@@ -4,6 +4,7 @@ using Api.Interfaces;
 using Api.Models;
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
@@ -145,24 +146,35 @@ builder.Services.AddSingleton(securityKey);
 builder.Services.AddSingleton(new GoogleConfig { ClientId = googleClientId });
 builder.Services.AddSingleton<JwtService>();
 
-// Configure Cookie Authentication Middleware
-builder.Services.AddAuthentication("Cookies")
-    .AddCookie("Cookies", options =>
+// Configure JWT Bearer authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-		options.Cookie.Name = "jwt";
-        options.Cookie.HttpOnly = true;
-        /* options.Cookie.SecurePolicy = CookieSecurePolicy.Always; */
-		options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.LoginPath = "/api/auth/google-login";
-        options.LogoutPath = "/api/auth/logout";
-        options.Events = new CookieAuthenticationEvents
+        // Remove or comment out the Google authority since you are not validating Google-issued tokens.
+        // options.Authority = "https://accounts.google.com";
+
+        // Set the expected audience and issuer to match the values in your generated JWT.
+        options.Audience = "loicportraits.azurewebsites.net";
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            OnRedirectToLogin = context =>
+            ValidateIssuer = true,
+            ValidIssuer = "loicportraits.azurewebsites.net",
+            ValidateAudience = true,
+            ValidAudience = "loicportraits.azurewebsites.net",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            // Use the same secret key that you use to generate your JWT.
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+                Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? string.Empty))
+        };
+
+        // Optional: Add detailed logging to help diagnose authentication failures.
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
             {
-                // Return a 401 Unauthorized status for API calls instead of redirecting
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogError(context.Exception, "JWT Authentication failed.");
                 return Task.CompletedTask;
             }
         };

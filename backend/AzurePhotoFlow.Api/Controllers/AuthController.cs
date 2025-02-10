@@ -1,7 +1,8 @@
 using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Api.Models;
-using Microsoft.AspNetCore.Authentication;
+using System.Threading.Tasks;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -17,35 +18,30 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Login with Google
+    /// Login with Google and obtain a JWT token.
     /// </summary>
-    /// <param name="request">GoogleLoginRequest</param>
-    /// <returns>ActionResult</returns>
+    /// <param name="request">GoogleLoginRequest containing the Google token</param>
+    /// <returns>ActionResult with the JWT token and user information</returns>
+	[AllowAnonymous]
     [HttpPost("google-login")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
     {
         try
         {
+            // Validate the token using Google's libraries.
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.Token, new GoogleJsonWebSignature.ValidationSettings
             {
                 Audience = new[] { _googleConfig.ClientId }
             });
 
-            // Generate JWT Token using JwtService
+            // Generate a JWT token using your JwtService.
             var jwtToken = _jwtService.GenerateJwtToken(payload.Subject, payload.Email);
 
-            // Set HTTP-Only Cookie
-            Response.Cookies.Append("jwt", jwtToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
-
+            // Return the token and user details in the response.
             return Ok(new
             {
                 message = "Login successful",
+                token = jwtToken,
                 googleId = payload.Subject,
                 email = payload.Email,
                 name = payload.Name,
@@ -59,31 +55,17 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
+    public IActionResult Logout()
     {
-        // Replace "Cookies" with your specific authentication scheme if different.
-        try
-        {
-            await HttpContext.SignOutAsync("Cookies");
-            return Ok(new { message = "Successfully logged out" });
-        }
-		catch (Exception ex)
-		{
-			return BadRequest(new { message = "Error logging out", error = ex.Message });
-		}
+        return Ok(new { message = "Logout successful. Please discard the token on the client." });
     }
 
+	[Authorize]
     [HttpGet("check")]
+    [Authorize]
     public IActionResult CheckAuthStatus()
     {
-        var jwt = Request.Cookies["jwt"];
-
-        if (string.IsNullOrEmpty(jwt))
-        {
-            return Ok(new { isAuthenticated = false });
-        }
-
-        return Ok(new { isAuthenticated = true });
+        return Ok(new { isAuthenticated = true, user = User.Identity.Name });
     }
 }
 

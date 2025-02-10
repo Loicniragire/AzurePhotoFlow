@@ -36,21 +36,25 @@ const App = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Check authentication status on mount
-  useEffect(() => {
-    fetch(import.meta.env.VITE_API_BASE_URL + "/api/auth/check", {
-      method: "GET",
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setIsAuthenticated(data.isAuthenticated);
-        setLoading(false);
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
-        setLoading(false);
-      });
-  }, []);
+	useEffect(() => {
+	  const token = localStorage.getItem('jwtToken'); // Retrieve the JWT token from local storage
+	  fetch(import.meta.env.VITE_API_BASE_URL + "/api/auth/check", {
+		method: "GET",
+		headers: {
+		  // Include the token in the Authorization header if it exists
+		  'Authorization': token ? `Bearer ${token}` : '',
+		},
+	  })
+		.then((res) => res.json())
+		.then((data) => {
+		  setIsAuthenticated(data.isAuthenticated);
+		  setLoading(false);
+		})
+		.catch(() => {
+		  setIsAuthenticated(false);
+		  setLoading(false);
+		});
+	}, []);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
