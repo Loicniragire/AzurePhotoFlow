@@ -4,6 +4,7 @@ using Api.Models;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Globalization;
+using System.Collections.Concurrent;
 
 public class ImageUploadService : IImageUploadService
 {
@@ -214,32 +215,37 @@ public class ImageUploadService : IImageUploadService
     public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)
     {
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-        var projects = new List<ProjectInfo>();
+        // Use a thread-safe collection for concurrent updates.
+        var projectsBag = new ConcurrentBag<ProjectInfo>();
 
         // Start recursive processing from the root
-        await ProcessHierarchy(containerClient, string.Empty, projects, year, projectName, timestamp);
+        await ProcessHierarchy(containerClient, string.Empty, projectsBag, year, projectName, timestamp);
 
+        var projects = projectsBag.ToList();
         _log.LogInformation($"Found {projects.Count} projects");
 
         return projects;
     }
 
     private async Task ProcessHierarchy(
-        BlobContainerClient containerClient,
-        string prefix,
-        List<ProjectInfo> projects,
-        string year,
-        string projectName,
-        DateTime? timestamp)
+            BlobContainerClient containerClient,
+            string prefix,
+            ConcurrentBag<ProjectInfo> projects,
+            string year,
+            string projectName,
+            DateTime? timestamp)
     {
+        // List to collect concurrent recursive tasks.
+        var recursiveTasks = new List<Task>();
+
         await foreach (var blobItem in containerClient.GetBlobsByHierarchyAsync(prefix: prefix, delimiter: "/"))
         {
             if (blobItem.IsPrefix)
             {
-                // Extract the blob path structure: year/datestamp/projectname/
+                // Extract parts: year/datestamp/projectname
                 var parts = blobItem.Prefix.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-                if (parts.Length == 3) // year/datestamp/projectname
+                if (parts.Length == 3)
                 {
                     var currentYear = parts[0];
                     var currentDateStamp = parts[1];
@@ -255,32 +261,39 @@ public class ImageUploadService : IImageUploadService
                     }
 
                     // Filter by project name
-                    if (!string.IsNullOrEmpty(projectName) && !currentProjectName.Equals(projectName, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(projectName) &&
+                        !currentProjectName.Equals(projectName, StringComparison.OrdinalIgnoreCase))
                     {
                         _log.LogInformation($"Skipped: retrieved:{currentProjectName} searching:{projectName}");
                         continue;
                     }
 
-                    // Filter by date stamp
+                    // Filter by date stamp if provided
                     if (timestamp.HasValue)
                     {
-                        if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var parsedDate) ||
+                        if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate) ||
                             parsedDate.Date != timestamp.Value.Date)
                         {
                             continue;
                         }
                     }
 
+                    // Parse date only once and reuse the result.
+                    if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var finalParsedDate))
+                    {
+                        _log.LogWarning($"Unable to parse date: {currentDateStamp}");
+                        continue;
+                    }
+
                     _log.LogInformation($"Adding project: {currentProjectName} - {currentDateStamp}");
 
-                    // Create a ProjectInfo object
                     var projectInfo = new ProjectInfo
                     {
                         Name = currentProjectName,
-                        Datestamp = DateTime.ParseExact(currentDateStamp, "yyyy-MM-dd", null)
+                        Datestamp = finalParsedDate
                     };
 
-                    // Add directory details
+                    // Build the project prefix for retrieving directory details.
                     var projectPrefix = $"{currentYear}/{currentDateStamp}/{currentProjectName}/";
                     projectInfo.Directories = await GetDirectoryDetails(containerClient, projectPrefix);
 
@@ -289,13 +302,18 @@ public class ImageUploadService : IImageUploadService
                 }
                 else
                 {
-                    // Drill down further into the hierarchy
-                    await ProcessHierarchy(containerClient, blobItem.Prefix, projects, year, projectName, timestamp);
+                    // Process sub-hierarchy concurrently.
+                    recursiveTasks.Add(ProcessHierarchy(containerClient, blobItem.Prefix, projects, year, projectName, timestamp));
                 }
             }
         }
-    }
 
+        // Await all concurrently launched recursive tasks.
+        if (recursiveTasks.Count > 0)
+        {
+            await Task.WhenAll(recursiveTasks);
+        }
+    }
     private async Task<List<ProjectDirectory>> GetDirectoryDetails(BlobContainerClient containerClient, string projectPrefix)
     {
         var directories = new List<ProjectDirectory>();

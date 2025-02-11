@@ -74,7 +74,6 @@ public class ImageController : ControllerBase
 	/// processed files. Suppose a project have 5 rolls of film named roll1, roll2,,roll5. This parameter states the
 	/// roll to associate these processed files.</param>
 	/// <param name="directoryFile">The zip file containing the directory.</param>
-	///
     [HttpPost("processed")]
     public async Task<IActionResult> UploadProcessedFiles(DateTime timeStamp, string projectName, string rawfileDirectoryName, IFormFile directoryFile)
     {
@@ -114,7 +113,6 @@ public class ImageController : ControllerBase
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
     }
-
 
     /// <summary>
     /// Deletes a project and all its associated files.

@@ -1,91 +1,60 @@
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend
-);
-
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useMemo } from 'react';
+import { useQuery } from 'react-query';
+import { getProjects } from '../services/imageUploadApi';
 import '../styles/Dashboard.css';
 
+const fetchProjects = async () => {
+  const projectsData = await getProjects();
+  return projectsData || [];
+};
+
 const Dashboard = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+  // Configure React Query with a key, fetch function, and caching parameters.
+  const { data: projects, isLoading, error } = useQuery('projects', fetchProjects, {
+    staleTime: 60000,    // Cached data is considered fresh for 60 seconds
+    cacheTime: 300000,   // Unused cached data is garbage collected after 5 minutes
+    refetchOnWindowFocus: false, // Prevents refetching when window regains focus
+  });
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const response = await axios.get('/api/dashboard');
-                setData(response.data);
-            } catch (err) {
-                setError('Failed to load dashboard data. Please try again later.');
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDashboardData();
-    }, []);
-
-    if (loading) return <p>Loading dashboard data...</p>;
-    if (error) return <p className="error-message">{error}</p>;
-
-	const tagFrequencyData = {
-		labels: data.tagFrequency?.map((item) => item.tag) || [], // Fallback to empty array
-		datasets: [
-			{
-				label: 'Tag Frequency',
-				data: data.tagFrequency?.map((item) => item.count) || [],
-				backgroundColor: 'rgba(75, 192, 192, 0.2)',
-				borderColor: 'rgba(75, 192, 192, 1)',
-				borderWidth: 1,
-			},
-		],
-	};
-
-    const options = {
-        scales: {
-            y: {
-                beginAtZero: true,
-            },
-        },
-    };
-
-    return (
-        <div className="dashboard">
-            <h2>Dashboard</h2>
-
-            <div className="chart-container">
-                <h3>Tag Frequency</h3>
-                <Bar data={tagFrequencyData} options={options} />
-            </div>
-
-            <div className="stats-container">
-                <h3>Summary Statistics</h3>
-                <ul>
-                    <li>Total Images Processed: {data.totalImages}</li>
-                    <li>Average Processing Time: {data.avgProcessingTime} seconds</li>
-                    <li>Model Accuracy: {data.modelAccuracy}%</li>
-                </ul>
-            </div>
-        </div>
+  // Memoized summary calculation
+  const summary = useMemo(() => {
+    if (!projects || !projects.length) return null;
+    return projects.reduce(
+      (acc, project) => {
+        project.Directories.forEach((directory) => {
+          acc.totalRawFiles += directory.RawFilesCount || 0;
+          acc.totalProcessedFiles += directory.ProcessedFilesCount || 0;
+        });
+        acc.totalProjects += 1;
+        return acc;
+      },
+      { totalRawFiles: 0, totalProcessedFiles: 0, totalProjects: 0 }
     );
+  }, [projects]);
+
+  if (isLoading) return <p>Loading dashboard data...</p>;
+  if (error) return <p className="error-message">Failed to load dashboard data.</p>;
+  if (!summary) return <p>No project data available.</p>;
+
+  return (
+    <div className="dashboard">
+      <h2>Dashboard</h2>
+      <div className="stats-container">
+        <h3>Project Summary</h3>
+        <ul>
+          <li>
+            <strong>Total Projects:</strong> {summary.totalProjects}
+          </li>
+          <li>
+            <strong>Total Raw Files:</strong> {summary.totalRawFiles}
+          </li>
+          <li>
+            <strong>Total Processed Files:</strong> {summary.totalProcessedFiles}
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
 };
 
 export default Dashboard;
