@@ -164,7 +164,6 @@ stages:
   dependsOn: DeployInfrastructure
   variables:
     System.Debug: true
-    docker_host: 'unix:///Users/loicniragire/.docker/run/docker.sock'
   jobs:
     # Push Docker Images to ACR
     - job: PushDockerImages
@@ -180,14 +179,15 @@ stages:
             echo "Using Container Registry: $(containerRegistry)"
             echo "Verifying Docker contexts..."
             export DOCKER_CONFIG=$HOME/.docker
+            # Ensure we are using the same Docker context as during the build.
             docker context use desktop-linux
             docker context ls
-          displayName: 'Verify Container Registry and Docker Context'
+          displayName: 'Verify Docker Context'
 
         - script: |
-            export DOCKER_HOST=$(docker_host)
-            docker ps
-          displayName: 'Test Docker Connection'
+            echo "Listing Docker images available locally..."
+            docker images
+          displayName: 'List Docker Images'
 
         - download: current
           artifact: env-artifact
@@ -197,7 +197,6 @@ stages:
             echo "Pushing backend and frontend images to ACR..."
             docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
             docker push $(containerRegistry)/azurephotoflow-backend:latest
-
             docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
             docker push $(containerRegistry)/azurephotoflow-frontend:latest
           displayName: 'Push Docker Images to ACR'
