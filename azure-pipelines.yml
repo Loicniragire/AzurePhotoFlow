@@ -123,6 +123,21 @@ stages:
           docker tag "$(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)" "$(containerRegistry)/azurephotoflow-frontend:latest"
         displayName: 'Build and Tag Images'
 
+      - script: |
+          echo "Saving images to tar files..."
+          docker save -o backend.tar "$(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)"
+          docker save -o backend_latest.tar "$(containerRegistry)/azurephotoflow-backend:latest"
+          docker save -o frontend.tar "$(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)"
+          docker save -o frontend_latest.tar "$(containerRegistry)/azurephotoflow-frontend:latest"
+        displayName: 'Save Docker Images to tar Files'
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Docker Tar Artifacts'
+        inputs:
+          PathtoPublish: '$(Build.SourcesDirectory)' # or a subfolder if you move *.tar there
+          ArtifactName: 'docker-tars'
+          publishLocation: 'Container'
+
 # ---------------------------------------------------------------------------
 # Test Stage
 # ---------------------------------------------------------------------------
@@ -193,7 +208,6 @@ stages:
   variables:
     System.Debug: true
   jobs:
-    # Push Docker Images to ACR
     - job: PushDockerImages
       displayName: Push Docker Images to ACR
       steps:
@@ -212,14 +226,34 @@ stages:
           displayName: 'Verify Docker Context'
 
         - script: |
-            echo "Listing Docker images available locally..."
+            echo "Listing Docker images available locally BEFORE load..."
             docker images
-          displayName: 'List Docker Images'
+          displayName: 'List Docker Images (before load)'
 
-        - download: current
-          artifact: env-artifact
+        # <-- Download the docker-tars artifact that was published in the Build job
+        - task: DownloadBuildArtifacts@0
+          displayName: 'Download Docker Tar Files'
+          inputs:
+            buildType: 'current'
+            downloadType: 'single'
+            artifactName: 'docker-tars'
+            downloadPath: '$(Build.SourcesDirectory)/docker-tars'
 
-        # Push images individually
+        # <-- Load the images from the .tar files
+        - script: |
+            cd $(Build.SourcesDirectory)/docker-tars
+            echo "Loading Docker images from tar files..."
+            docker load -i backend.tar
+            docker load -i backend_latest.tar
+            docker load -i frontend.tar
+            docker load -i frontend_latest.tar
+          displayName: 'Load Docker Images from tar Files'
+
+        - script: |
+            echo "Listing Docker images available locally AFTER load..."
+            docker images
+          displayName: 'List Docker Images (after load)'
+
         - script: |
             echo "Pushing backend and frontend images to ACR..."
             docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
