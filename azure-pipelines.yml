@@ -179,7 +179,6 @@ stages:
             echo "Using Container Registry: $(containerRegistry)"
             echo "Verifying Docker contexts..."
             export DOCKER_CONFIG=$HOME/.docker
-            # Ensure we are using the same Docker context as during the build.
             docker context use desktop-linux
             docker context ls
           displayName: 'Verify Docker Context'
