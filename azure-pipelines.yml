@@ -94,7 +94,7 @@ stages:
             --build-arg MODE=$(MODE) \
             -f ./backend/AzurePhotoFlow.Api/Dockerfile \
             -t $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) \
-            ./backend/AzurePhotoFlow.Api
+            "./backend/AzurePhotoFlow.Api"
 
           echo "Building frontend image using Buildx with --load..."
           docker buildx build --load \
@@ -103,7 +103,7 @@ stages:
             --build-arg VITE_GOOGLE_CLIENT_ID=$(VITE_GOOGLE_CLIENT_ID) \
             -f ./frontend/Dockerfile \
             -t $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) \
-            ./frontend
+            "./frontend"
 
           echo "Tagging images for latest..."
           docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
