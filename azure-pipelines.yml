@@ -85,12 +85,6 @@ stages:
       # Build and Tag Docker Images (Backend, Frontend) using Buildx (BuildKit enabled)
       - script: |
           set -e
-          echo "Switching Docker context to desktop-linux..."
-          docker context use desktop-linux
-
-          echo "Switching to Buildx builder 'desktop-linux'..."
-          docker buildx use desktop-linux
-
           echo "Building backend image using Buildx with --load..."
           docker buildx build --load \
             --build-arg CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD) \
