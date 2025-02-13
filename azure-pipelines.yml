@@ -46,11 +46,43 @@ resources:
       endpoint: 'github.com_Loicniragire'
 
 stages:
+- stage: DeployRegistry
+  displayName: Deploy Registry
+  jobs:
+  - job: ProvisionRegistry
+    displayName: Provision Azure Container Registry
+    steps:
+      - checkout: self
+
+      - script: |
+          cd $(Build.SourcesDirectory)/Infrastructure
+
+          # Initialize Terraform
+          terraform init \
+            -backend-config="storage_account_name=$(storageAccountName)" \
+            -backend-config="container_name=$(containerName)" \
+            -backend-config="key=$(tfStateFile)" \
+            -backend-config="resource_group_name=$(resourceGroupName)" \
+            -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
+
+          # Plan for only the ACR resource
+          terraform plan \
+            -target=azurerm_container_registry.acr \
+            -var="container_registry_username=$(ACR_USERNAME)" \
+            -var="container_registry_password=$(ACR_PASSWORD)" \
+            -var="container_registry_name=$(containerRegistryName)" \
+            # etc for other variables needed
+            -out=tfplan-acr
+
+          # Apply only the ACR resource
+          terraform apply -auto-approve tfplan-acr
+        displayName: 'Terraform Apply for ACR Only'
 # ---------------------------------------------------------------------------
 # Build Stage
 # ---------------------------------------------------------------------------
 - stage: Build
   displayName: Build Stage
+  dependsOn: DeployRegistry
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images
