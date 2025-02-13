@@ -46,6 +46,9 @@ resources:
       endpoint: 'github.com_Loicniragire'
 
 stages:
+# ---------------------------------------------------------------------------
+# Deploy Registry Stage
+# ---------------------------------------------------------------------------
 - stage: DeployRegistry
   displayName: Deploy Registry
   jobs:
@@ -203,10 +206,6 @@ stages:
             -parallelism=5 \
             -lock-timeout=60s tfplan || exit 1
         displayName: 'Authenticate and Apply Terraform'
-
-# ---------------------------------------------------------------------------
-# Deploy Applications Stage
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Validate Stage
