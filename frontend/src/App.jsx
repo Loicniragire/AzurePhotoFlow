@@ -15,7 +15,7 @@ import {
   Container,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import { QueryClient, QueryClientProvider } from "react-query"; // Import React Query components
+import { QueryClient, QueryClientProvider } from "react-query"; 
 import Home from "./components/Home";
 import ImageUpload from "./components/ImageUpload";
 import ImageSearch from "./components/ImageSearch";
@@ -25,7 +25,7 @@ import FaceRecognition from "./components/FaceRecognition";
 import LoginPage from "./components/LoginPage";
 import LogoutButton from "./components/LogoutButton";
 import RequireAuth from "./components/RequireAuth";
-import { checkAuthStatus } from "./services/authApi";
+import jwt_decode from "jwt-decode";
 
 const drawerWidth = 240;
 
@@ -42,19 +42,36 @@ const App = () => {
 
   // Check authentication status on mount
   useEffect(() => {
-    const fetchAuthStatus = async () => {
-      try {
-        const data = await checkAuthStatus();
-        setIsAuthenticated(data.isAuthenticated);
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAuthStatus();
-  }, []);
+	  const getTokenStatus = () => {
+		const token = localStorage.getItem("jwtToken");
+		if (!token) {
+		  return { isAuthenticated: false };
+		}
+		try {
+		  const decoded = jwt_decode(token);
+		  // Check if token has expired
+		  if (decoded.exp * 1000 < Date.now()) {
+			localStorage.removeItem("jwtToken");
+			return { isAuthenticated: false };
+		  }
+		  return { isAuthenticated: true, decoded };
+		} catch (error) {
+		  console.error("Token decoding failed:", error);
+		  localStorage.removeItem("jwtToken");
+		  return { isAuthenticated: false };
+		}
+	  };
+
+	  // 1. Fetch the status
+	  const status = getTokenStatus();
+
+	  // 2. Update the component state
+	  setIsAuthenticated(status.isAuthenticated);
+
+	  // 3. Signal that loading is complete
+	  setLoading(false);
+
+	}, []);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
