@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.Interfaces;
 using Api.Models;
 using Azure.Storage.Blobs;
+using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
@@ -121,6 +122,7 @@ builder.Services.AddSingleton(x =>
 });
 
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
+builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {

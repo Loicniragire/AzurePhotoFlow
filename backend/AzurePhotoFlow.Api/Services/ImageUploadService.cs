@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Globalization;
 using System.Collections.Concurrent;
+using MetadataExtractor;
 
 public class ImageUploadService : IImageUploadService
 {
@@ -18,17 +19,6 @@ public class ImageUploadService : IImageUploadService
     {
         _blobServiceClient = blobServiceClient;
         _log = logger;
-    }
-
-    public async Task<string> UploadFileWithPathAsync(IFormFile file, string blobPath)
-    {
-        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-        var blobClient = containerClient.GetBlobClient(blobPath);
-
-        await using var stream = file.OpenReadStream();
-        await blobClient.UploadAsync(stream, true);
-
-        return blobClient.Uri.ToString(); // Return the URL of the uploaded blob
     }
 
     public async Task Delete(string projectName, DateTime timestamp)
@@ -80,8 +70,9 @@ public class ImageUploadService : IImageUploadService
 
         using var zipStream = directoryFile.OpenReadStream();
         using var archive = new System.IO.Compression.ZipArchive(zipStream);
+        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
 
-        foreach (var entry in archive.Entries)
+        foreach (ZipArchiveEntry? entry in archive.Entries)
         {
             try
             {
@@ -107,10 +98,7 @@ public class ImageUploadService : IImageUploadService
                 var blobPath = $"{destinationPath}/{relativePath}";
 
                 using var entryStream = entry.Open();
-
-                var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
                 var blobClient = containerClient.GetBlobClient(blobPath);
-
                 await blobClient.UploadAsync(entryStream, overwrite: true);
 
                 // Add the blob URL to the results
@@ -125,6 +113,37 @@ public class ImageUploadService : IImageUploadService
         }
 
         return uploadResults;
+    }
+
+	/// <summary>
+	/// Extracts metadata from the image file and returns the extracted metadata.
+	/// </summary>
+	private void MetadataExtract(Stream image)
+	{
+		var directories = ImageMetadataReader.ReadMetadata(image);
+		foreach (MetadataExtractor.Directory directory in directories)
+		{
+			foreach (var tag in directory.Tags)
+			{
+				_log.LogInformation($"{directory.Name} - {tag.Name} = {tag.Description}");
+			}
+		}
+
+	}
+
+    public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)
+    {
+        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+        // Use a thread-safe collection for concurrent updates.
+        var projectsBag = new ConcurrentBag<ProjectInfo>();
+
+        // Start recursive processing from the root
+        await ProcessHierarchy(containerClient, string.Empty, projectsBag, year, projectName, timestamp);
+
+        var projects = projectsBag.ToList();
+        _log.LogInformation($"Found {projects.Count} projects");
+
+        return projects;
     }
 
     private bool IsDirectDescendant(ZipArchiveEntry entry, string directoryName)
@@ -212,20 +231,6 @@ public class ImageUploadService : IImageUploadService
         return ALLOWED_EXTENSIONS.Contains(fileExtension);
     }
 
-    public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)
-    {
-        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-        // Use a thread-safe collection for concurrent updates.
-        var projectsBag = new ConcurrentBag<ProjectInfo>();
-
-        // Start recursive processing from the root
-        await ProcessHierarchy(containerClient, string.Empty, projectsBag, year, projectName, timestamp);
-
-        var projects = projectsBag.ToList();
-        _log.LogInformation($"Found {projects.Count} projects");
-
-        return projects;
-    }
 
     private async Task ProcessHierarchy(
             BlobContainerClient containerClient,

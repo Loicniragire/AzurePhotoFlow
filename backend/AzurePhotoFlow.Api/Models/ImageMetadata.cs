@@ -1,8 +1,27 @@
+using Newtonsoft.Json;
+
 namespace Api.Models;
 
 public class ImageMetadata
 {
-	public string FileName { get; set; }
-	public string Url { get; set; }
-	public DateTime UploadedAt { get; set; }
+    [JsonProperty("id")]
+    public string Id { get; set; }
+
+    [JsonProperty("blobUri")]
+    public string BlobUri { get; set; }
+
+    [JsonProperty("uploadedBy")]
+    public string UploadedBy { get; set; }
+
+    [JsonProperty("tags")]
+    public List<string> Tags { get; set; }
+
+    [JsonProperty("description")]
+    public string Description { get; set; }
+
+    [JsonProperty("uploadDate")]
+    public DateTime UploadDate { get; set; }
+
+	[JsonProperty("cameraGeneratedMetadata")]
+	public CameraGeneratedMetadata CameraGeneratedMetadata { get; set; }
 }
