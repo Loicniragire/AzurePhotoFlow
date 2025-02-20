@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using AzurePhotoFlow.Services;
-using Moq;
 namespace UnitTests;
 
 [TestFixture]
@@ -24,12 +23,14 @@ public class MetadataExtractorServiceTests
         _extractorService = new MetadataExtractorService(_logger);
     }
 
-    [Test]
-    public void GetCameraGeneratedMetadata_ShouldReturnCameraGeneratedMetadata()
+    [TestCase("digital/1A8A9011.jpg")]
+	[TestCase("film/img20220920_0124.jpg")]
+    [TestCase("raw/1A8A9109.CR3")]
+    public void Should_retrieve_camera_generated_metadata_from_digitally_processed_image(string path)
     {
         // Arrange:
         // get the image
-        var imagePath = "Images/digital/1A8A9011.jpg";
+        var imagePath = $"Images/{path}";
         var image = TestHelper.GetEmbeddedResource(imagePath);
 
         // Act
@@ -43,10 +44,6 @@ public class MetadataExtractorServiceTests
 
         // print the camera generated metadata to the console
         Console.WriteLine(cameraGeneratedMetadata);
-
-
-
-
     }
 
 }
