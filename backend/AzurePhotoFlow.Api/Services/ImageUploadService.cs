@@ -55,10 +55,10 @@ public class ImageUploadService : IImageUploadService
         var destinationPath = GetDestinationPath(timestamp, projectName, isRawFiles ? directoryName : rawfileDirectoryName, isRawFiles);
 
         // If uploading processed files, check that the corresponding raw files path exists
+        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
         if (!isRawFiles)
         {
             var rawFilesPath = GetDestinationPath(timestamp, projectName, rawfileDirectoryName, isRawFiles);
-            var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
 
             // Ensure the raw files path exists
             var rawFilesExist = await DoesPathExistAsync(containerClient, rawFilesPath, "ProcessedFiles");
@@ -70,7 +70,6 @@ public class ImageUploadService : IImageUploadService
 
         using var zipStream = directoryFile.OpenReadStream();
         using var archive = new System.IO.Compression.ZipArchive(zipStream);
-        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
 
         foreach (ZipArchiveEntry? entry in archive.Entries)
         {
