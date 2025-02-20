@@ -5,7 +5,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Globalization;
 using System.Collections.Concurrent;
-using MetadataExtractor;
+using AzurePhotoFlow.Services;
 
 public class ImageUploadService : IImageUploadService
 {
@@ -14,11 +14,13 @@ public class ImageUploadService : IImageUploadService
 
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<ImageUploadService> _log;
+	private readonly MetadataExtractorService _metadataExtractorService;
 
-    public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient)
-    {
-        _blobServiceClient = blobServiceClient;
-        _log = logger;
+    public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient, MetadataExtractorService metadataExtractorService)
+	{
+		_blobServiceClient = blobServiceClient;
+		_log = logger;
+		_metadataExtractorService = metadataExtractorService;
     }
 
     public async Task Delete(string projectName, DateTime timestamp)
@@ -43,7 +45,7 @@ public class ImageUploadService : IImageUploadService
         }
     }
 
-    public async Task<List<string>> ExtractAndUploadImagesAsync(
+    public async Task<List<ImageMetadata>> ExtractAndUploadImagesAsync(
         IFormFile directoryFile,
         string projectName,
         string directoryName,
@@ -51,7 +53,7 @@ public class ImageUploadService : IImageUploadService
         bool isRawFiles = true,
            string rawfileDirectoryName = "")
     {
-        var uploadResults = new List<string>();
+        var uploadResults = new List<ImageMetadata>();
         var destinationPath = GetDestinationPath(timestamp, projectName, isRawFiles ? directoryName : rawfileDirectoryName, isRawFiles);
 
         // If uploading processed files, check that the corresponding raw files path exists
@@ -98,10 +100,19 @@ public class ImageUploadService : IImageUploadService
 
                 using var entryStream = entry.Open();
                 var blobClient = containerClient.GetBlobClient(blobPath);
-                await blobClient.UploadAsync(entryStream, overwrite: true);
+                BlobContentInfo uploadResponse = await blobClient.UploadAsync(entryStream, overwrite: true);
+                ImageMetadata metadata = new ImageMetadata()
+                {
+                    Id = uploadResponse.VersionId,
+                    BlobUri = blobClient.Uri.ToString(),
+					UploadedBy = "Admin",
+					UploadDate = uploadResponse.LastModified,
+					CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(entryStream)
+                };
+
 
                 // Add the blob URL to the results
-                uploadResults.Add(blobClient.Uri.ToString());
+                uploadResults.Add(metadata);
 
                 _log.LogInformation($"Uploaded: {blobPath}");
             }
@@ -113,22 +124,6 @@ public class ImageUploadService : IImageUploadService
 
         return uploadResults;
     }
-
-	/// <summary>
-	/// Extracts metadata from the image file and returns the extracted metadata.
-	/// </summary>
-	private void MetadataExtract(Stream image)
-	{
-		var directories = ImageMetadataReader.ReadMetadata(image);
-		foreach (MetadataExtractor.Directory directory in directories)
-		{
-			foreach (var tag in directory.Tags)
-			{
-				_log.LogInformation($"{directory.Name} - {tag.Name} = {tag.Description}");
-			}
-		}
-
-	}
 
     public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)
     {

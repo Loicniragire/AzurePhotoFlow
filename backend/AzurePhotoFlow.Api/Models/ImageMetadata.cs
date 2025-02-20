@@ -20,7 +20,7 @@ public class ImageMetadata
     public string Description { get; set; }
 
     [JsonProperty("uploadDate")]
-    public DateTime UploadDate { get; set; }
+    public DateTimeOffset UploadDate { get; set; }
 
 	[JsonProperty("cameraGeneratedMetadata")]
 	public CameraGeneratedMetadata CameraGeneratedMetadata { get; set; }

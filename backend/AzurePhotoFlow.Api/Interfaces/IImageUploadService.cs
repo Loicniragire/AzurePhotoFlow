@@ -17,7 +17,7 @@ public interface IImageUploadService
     /// Ignores subdirectory files.
     /// </summary>
     ///
-    Task<List<string>> ExtractAndUploadImagesAsync(IFormFile directoryFile,
+    Task<List<ImageMetadata>> ExtractAndUploadImagesAsync(IFormFile directoryFile,
                                                           string projectName,
                                                        string directoryName,
                                                        DateTime timestamp,
