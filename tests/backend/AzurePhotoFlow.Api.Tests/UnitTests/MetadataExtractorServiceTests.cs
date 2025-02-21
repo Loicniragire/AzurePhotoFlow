@@ -1,11 +1,12 @@
 using Microsoft.Extensions.Logging;
 using AzurePhotoFlow.Services;
+using Api.Models;
 namespace UnitTests;
 
 [TestFixture]
 public class MetadataExtractorServiceTests
 {
-    private ILogger <MetadataExtractorService> _logger;
+    private ILogger<MetadataExtractorService> _logger;
     private MetadataExtractorService _extractorService;
 
     [SetUp]
@@ -24,7 +25,7 @@ public class MetadataExtractorServiceTests
     }
 
     [TestCase("digital/1A8A9011.jpg")]
-	[TestCase("film/img20220920_0124.jpg")]
+    [TestCase("film/img20220920_0124.jpg")]
     [TestCase("raw/1A8A9109.CR3")]
     public void Should_retrieve_camera_generated_metadata_from_digitally_processed_image(string path)
     {
@@ -44,6 +45,34 @@ public class MetadataExtractorServiceTests
 
         // print the camera generated metadata to the console
         Console.WriteLine(cameraGeneratedMetadata);
+    }
+
+    [TestCase("digital/1A8A9011.jpg")]
+    [TestCase("film/img20220920_0124.jpg")]
+    [TestCase("raw/1A8A9109.CR3")]
+    public void Metadata_size_should_fit_64KB(string path)
+    {
+        // Arrange:
+        // get the image
+        var imagePath = $"Images/{path}";
+        var image = TestHelper.GetEmbeddedResource(imagePath);
+
+        // Act
+        // get the camera generated metadata
+        var metadata = new ImageMetadata()
+        {
+            Id = Guid.NewGuid().ToString(),
+            BlobUri = "https://photoflow.blob.core.windows.net/images/1A8A9011.jpg",
+            UploadedBy = "testuser",
+            UploadDate = DateTime.Now,
+            CameraGeneratedMetadata = _extractorService.GetCameraGeneratedMetadata(image)
+        };
+
+        // Assert
+        // check if the camera generated metadata size is less than or equal to 64KB
+        var size = ObjectSizeCalculator.GetSerializedSizeInKB(metadata);
+        Console.WriteLine($"Metadata size: {size} KB");
+        Assert.LessOrEqual(size, 64);
     }
 
 }

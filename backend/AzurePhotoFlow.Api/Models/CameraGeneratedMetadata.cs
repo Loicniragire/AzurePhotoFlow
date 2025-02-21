@@ -103,13 +103,14 @@ public class CameraGeneratedMetadata
     public string DetectedMimeType { get; set; }
     public string ExpectedFileNameExtension { get; set; }
 
+	/// <summary>
+	/// Returns a string representation of the camera generated metadata.
+	/// Removes properties with null values to reduce size.
+	/// </summary>
     public override string ToString()
     {
-        var properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        return string.Join(Environment.NewLine, properties.Select(p =>
-        {
-            var value = p.GetValue(this);
-            return $"{p.Name}: {(value != null ? value.ToString() : "null")}";
-        }));
+        var properties = GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        var nonNullProperties = properties.Where(p => p.GetValue(this) != null);
+        return string.Join(Environment.NewLine, nonNullProperties.Select(p => $"{p.Name}: {p.GetValue(this)}"));
     }
 }

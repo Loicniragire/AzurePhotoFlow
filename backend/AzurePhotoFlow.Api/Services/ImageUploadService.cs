@@ -13,14 +13,16 @@ public class ImageUploadService : IImageUploadService
     private string[] ALLOWED_EXTENSIONS = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".CR3" };
 
     private readonly BlobServiceClient _blobServiceClient;
+	private readonly IMessageQueueingService _messageQueueingService;
     private readonly ILogger<ImageUploadService> _log;
-	private readonly MetadataExtractorService _metadataExtractorService;
+    private readonly MetadataExtractorService _metadataExtractorService;
 
-    public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient, MetadataExtractorService metadataExtractorService)
-	{
-		_blobServiceClient = blobServiceClient;
-		_log = logger;
-		_metadataExtractorService = metadataExtractorService;
+    public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient, MetadataExtractorService metadataExtractorService, IMessageQueueingService messageQueueingService)
+    {
+        _blobServiceClient = blobServiceClient;
+        _log = logger;
+        _metadataExtractorService = metadataExtractorService;
+		_messageQueueingService = messageQueueingService;
     }
 
     public async Task Delete(string projectName, DateTime timestamp)
@@ -101,17 +103,18 @@ public class ImageUploadService : IImageUploadService
                 using var entryStream = entry.Open();
                 var blobClient = containerClient.GetBlobClient(blobPath);
                 BlobContentInfo uploadResponse = await blobClient.UploadAsync(entryStream, overwrite: true);
-                ImageMetadata metadata = new ImageMetadata()
+                var metadata = new ImageMetadata()
                 {
                     Id = uploadResponse.VersionId,
                     BlobUri = blobClient.Uri.ToString(),
-					UploadedBy = "Admin",
-					UploadDate = uploadResponse.LastModified,
-					CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(entryStream)
+                    UploadedBy = "Admin",
+                    UploadDate = uploadResponse.LastModified,
+                    CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(entryStream)
                 };
-
+				await _messageQueueingService.PublishMessageAsync(metadata);
 
                 // Add the blob URL to the results
+				// TODO: no need to return metadata collection...
                 uploadResults.Add(metadata);
 
                 _log.LogInformation($"Uploaded: {blobPath}");
