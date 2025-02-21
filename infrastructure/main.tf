@@ -232,3 +232,8 @@ resource "azurerm_monitor_diagnostic_setting" "storage_diagnostics" {
   enabled_log { category = "StorageWrite" }
   enabled_log { category = "StorageDelete" }
 }
+
+resource "azurerm_storage_queue" "queue" {
+  name                 = var.metadata_queue
+  storage_account_name = data.azurerm_storage_account.storage.name
+}

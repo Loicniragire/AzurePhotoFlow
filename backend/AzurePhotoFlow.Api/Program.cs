@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.Interfaces;
 using Api.Models;
 using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,6 +28,8 @@ builder.WebHost.ConfigureKestrel(options =>
 
 // Validate Blob Storage Connection Early
 var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+var queueStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image_metadata_queue";
 
 if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 {
@@ -119,6 +122,31 @@ builder.Services.AddSingleton(x =>
         logger.LogCritical(ex, "Failed to initialize Blob Service Client");
         throw;
     }
+});
+
+// Secure Queue Client Initialization
+builder.Services.AddSingleton(x =>
+{
+    try
+    {
+           return new QueueServiceClient(
+            queueStorageConnectionString,
+               new QueueClientOptions { Retry = { MaxRetries = 3 } });
+    }
+       catch (Exception ex)
+    {
+           var logger = x.GetRequiredService<ILogger<Program>>();
+           logger.LogCritical(ex, "Failed to initialize Queue Service Client");
+        throw;
+       }
+});
+
+// Register MessageQueueingService
+builder.Services.AddScoped<IMessageQueueingService>(x =>
+{
+       var queueServiceClient = x.GetRequiredService<QueueServiceClient>();
+       var logger = x.GetRequiredService<ILogger<MessageQueueingService>>();
+       return new MessageQueueingService(queueServiceClient, metadataQueueName, logger);
 });
 
 builder.Services.AddScoped<IImageUploadService, ImageUploadService>();

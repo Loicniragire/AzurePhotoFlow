@@ -111,7 +111,7 @@ public class ImageUploadService : IImageUploadService
                     UploadDate = uploadResponse.LastModified,
                     CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(entryStream)
                 };
-				await _messageQueueingService.PublishMessageAsync(metadata);
+				await _messageQueueingService.EnqueueMessageAsync(metadata.ToString());
 
                 // Add the blob URL to the results
 				// TODO: no need to return metadata collection...

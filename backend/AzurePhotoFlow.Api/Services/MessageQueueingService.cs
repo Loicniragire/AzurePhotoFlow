@@ -2,25 +2,21 @@ using Api.Interfaces;
 using Azure.Storage.Queues;
 
 namespace AzurePhotoFlow.Services;
+
 public class MessageQueueingService : IMessageQueueingService
 {
     private readonly QueueClient _queueClient;
+    private readonly ILogger<MessageQueueingService> _logger;
 
-    /// <summary>
-    /// Initializes the service and ensures the queue exists.
-    /// </summary>
-    /// <param name="connectionString">The Azure Storage connection string.</param>
-    /// <param name="queueName">The name of the queue.</param>
-    public MessageQueueingService(string connectionString, string queueName)
+    public MessageQueueingService(QueueServiceClient queueServiceClient, string queueName, ILogger<MessageQueueingService> logger)
     {
-        if (string.IsNullOrWhiteSpace(connectionString))
-            throw new ArgumentException("Connection string cannot be null or empty.", nameof(connectionString));
-        if (string.IsNullOrWhiteSpace(queueName))
-            throw new ArgumentException("Queue name cannot be null or empty.", nameof(queueName));
+        if (queueServiceClient == null)
+            throw new ArgumentNullException(nameof(queueServiceClient));
+           _logger = logger;
 
-        _queueClient = new QueueClient(connectionString, queueName);
-        // Create the queue if it does not exist.
+        _queueClient = queueServiceClient.GetQueueClient(queueName);
         _queueClient.CreateIfNotExists();
+        _logger.LogInformation("Using queue: {QueueName}", queueName);
     }
 
     /// <summary>
@@ -32,8 +28,6 @@ public class MessageQueueingService : IMessageQueueingService
         if (string.IsNullOrWhiteSpace(message))
             throw new ArgumentException("Message cannot be null or whitespace.", nameof(message));
 
-        // Send the message to the queue.
         await _queueClient.SendMessageAsync(message);
     }
 }
-

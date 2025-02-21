@@ -108,6 +108,11 @@ variable "azure_blob_storage" {
   default     = ""
   description = "Blob storage connection string or relevant Azure Blob config"
 }
+variable "metadata_queue" {
+  type        = string
+  default     = ""
+  description = "Queue connection string"
+}
 
 variable "docker_registry_username" {
   type        = string
