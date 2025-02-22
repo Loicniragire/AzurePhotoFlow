@@ -16,11 +16,10 @@ public interface IImageUploadService
     /// Uploads a zipped file to the Azure Blob Storage. 
     /// Ignores subdirectory files.
     /// </summary>
-    ///
-    Task<List<ImageMetadata>> ExtractAndUploadImagesAsync(IFormFile directoryFile,
+    Task<UploadResponse> ExtractAndUploadImagesAsync(IFormFile directoryFile,
                                                           string projectName,
-                                                       string directoryName,
-                                                       DateTime timestamp,
+														  string directoryName,
+														  DateTime timestamp,
                                                           bool isRawFiles = true,
                                                           string rawfileDirectoryName = "");
 

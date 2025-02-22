@@ -13,16 +13,19 @@ public class ImageUploadService : IImageUploadService
     private string[] ALLOWED_EXTENSIONS = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".CR3" };
 
     private readonly BlobServiceClient _blobServiceClient;
-	private readonly IMessageQueueingService _messageQueueingService;
+    private readonly IMessageQueueingService _messageQueueingService;
     private readonly ILogger<ImageUploadService> _log;
     private readonly MetadataExtractorService _metadataExtractorService;
 
-    public ImageUploadService(ILogger<ImageUploadService> logger, BlobServiceClient blobServiceClient, MetadataExtractorService metadataExtractorService, IMessageQueueingService messageQueueingService)
+    public ImageUploadService(ILogger<ImageUploadService> logger,
+               BlobServiceClient blobServiceClient,
+               MetadataExtractorService metadataExtractorService,
+               IMessageQueueingService messageQueueingService)
     {
         _blobServiceClient = blobServiceClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
-		_messageQueueingService = messageQueueingService;
+        _messageQueueingService = messageQueueingService;
     }
 
     public async Task Delete(string projectName, DateTime timestamp)
@@ -47,7 +50,7 @@ public class ImageUploadService : IImageUploadService
         }
     }
 
-    public async Task<List<ImageMetadata>> ExtractAndUploadImagesAsync(
+    public async Task<UploadResponse> ExtractAndUploadImagesAsync(
         IFormFile directoryFile,
         string projectName,
         string directoryName,
@@ -55,8 +58,10 @@ public class ImageUploadService : IImageUploadService
         bool isRawFiles = true,
            string rawfileDirectoryName = "")
     {
-        var uploadResults = new List<ImageMetadata>();
-        var destinationPath = GetDestinationPath(timestamp, projectName, isRawFiles ? directoryName : rawfileDirectoryName, isRawFiles);
+        var destinationPath = GetDestinationPath(timestamp,
+                       projectName,
+                          isRawFiles ? directoryName : rawfileDirectoryName,
+                          isRawFiles);
 
         // If uploading processed files, check that the corresponding raw files path exists
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
@@ -72,8 +77,10 @@ public class ImageUploadService : IImageUploadService
             }
         }
 
+		var uploadedCount = 0;
         using var zipStream = directoryFile.OpenReadStream();
         using var archive = new System.IO.Compression.ZipArchive(zipStream);
+		var totalCount = archive.Entries.Count();
 
         foreach (ZipArchiveEntry? entry in archive.Entries)
         {
@@ -111,13 +118,10 @@ public class ImageUploadService : IImageUploadService
                     UploadDate = uploadResponse.LastModified,
                     CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(entryStream)
                 };
-				await _messageQueueingService.EnqueueMessageAsync(metadata.ToString());
-
-                // Add the blob URL to the results
-				// TODO: no need to return metadata collection...
-                uploadResults.Add(metadata);
+                await _messageQueueingService.EnqueueMessageAsync(metadata.ToString());
 
                 _log.LogInformation($"Uploaded: {blobPath}");
+				uploadedCount++;
             }
             catch (Exception ex)
             {
@@ -125,7 +129,11 @@ public class ImageUploadService : IImageUploadService
             }
         }
 
-        return uploadResults;
+        return new UploadResponse
+		{
+			UploadedCount = uploadedCount,
+			OriginalCount = totalCount
+		};
     }
 
     public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)

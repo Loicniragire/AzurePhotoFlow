@@ -8,11 +8,13 @@ public class MessageQueueingService : IMessageQueueingService
     private readonly QueueClient _queueClient;
     private readonly ILogger<MessageQueueingService> _logger;
 
-    public MessageQueueingService(QueueServiceClient queueServiceClient, string queueName, ILogger<MessageQueueingService> logger)
+    public MessageQueueingService(QueueServiceClient queueServiceClient,
+                                       string queueName,
+                                       ILogger<MessageQueueingService> logger)
     {
         if (queueServiceClient == null)
             throw new ArgumentNullException(nameof(queueServiceClient));
-           _logger = logger;
+        _logger = logger;
 
         _queueClient = queueServiceClient.GetQueueClient(queueName);
         _queueClient.CreateIfNotExists();
