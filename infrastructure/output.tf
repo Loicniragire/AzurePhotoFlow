@@ -13,3 +13,6 @@ output "container_registry_login_server" {
   value       = azurerm_container_registry.acr.login_server
 }
 
+output "cosmosdb_connection_string" {
+  value = azurerm_cosmosdb_account.cosmos.primary_master_key
+}

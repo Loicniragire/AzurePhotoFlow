@@ -237,3 +237,18 @@ resource "azurerm_storage_queue" "queue" {
   name                 = var.metadata_queue
   storage_account_name = data.azurerm_storage_account.storage.name
 }
+
+resource "azurerm_cosmosdb_account" "cosmos" {
+  name                = "loicportraits-cosmosdb"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  offer_type          = "Standard"
+  kind                = "GlobalDocumentDB"
+  consistency_policy {
+    consistency_level = "Session"
+  }
+  geo_location {
+    location          = var.location
+    failover_priority = 0
+  }
+}

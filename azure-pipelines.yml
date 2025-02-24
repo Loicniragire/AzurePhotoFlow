@@ -208,6 +208,22 @@ stages:
             -lock-timeout=60s tfplan || exit 1
         displayName: 'Authenticate and Apply Terraform'
 
+      # Inject CosmosDB Connection String into Function App
+      - task: AzureCLI@2
+        displayName: 'Inject CosmosDB Connection String into Function App'
+        inputs:
+          azureSubscription: $(azureSubscription)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            cd $(Build.SourcesDirectory)/Infrastructure
+            cosmosConnString=$(terraform output -raw cosmosdb_connection_string)
+            echo "Updating Function App settings with CosmosDB connection string."
+            az functionapp config appsettings set \
+              --name $(backendWebAppName) \
+              --resource-group $(resourceGroupName) \
+              --settings CosmosDBConnectionString="$cosmosConnString"
+
 # ---------------------------------------------------------------------------
 # Validate Stage
 # ---------------------------------------------------------------------------
