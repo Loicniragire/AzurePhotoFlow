@@ -238,7 +238,7 @@ resource "azurerm_storage_queue" "queue" {
   storage_account_name = data.azurerm_storage_account.storage.name
 }
 
-resource "azurerm_cosmosdb_account" "cosmos" {
+resource "azurerm_cosmosdb_account" "db" {
   name                = "loicportraits-cosmosdb"
   location            = var.location
   resource_group_name = var.resource_group_name
