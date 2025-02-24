@@ -29,7 +29,7 @@ builder.WebHost.ConfigureKestrel(options =>
 // Validate Blob Storage Connection Early
 var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
 var queueStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
-var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image_metadata_queue";
+var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image-metadata-queue";
 
 if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 {
@@ -149,8 +149,8 @@ builder.Services.AddScoped<IMessageQueueingService>(x =>
        return new MessageQueueingService(queueServiceClient, metadataQueueName, logger);
 });
 
-builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
+builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -319,4 +319,3 @@ appLifetime.ApplicationStopping.Register(() =>
 });
 
 app.Run();
-

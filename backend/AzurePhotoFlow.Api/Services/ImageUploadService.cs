@@ -5,7 +5,8 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Globalization;
 using System.Collections.Concurrent;
-using AzurePhotoFlow.Services;
+using System.IO.Compression;
+using Newtonsoft.Json;
 
 public class ImageUploadService : IImageUploadService
 {
@@ -15,11 +16,11 @@ public class ImageUploadService : IImageUploadService
     private readonly BlobServiceClient _blobServiceClient;
     private readonly IMessageQueueingService _messageQueueingService;
     private readonly ILogger<ImageUploadService> _log;
-    private readonly MetadataExtractorService _metadataExtractorService;
+    private readonly IMetadataExtractorService _metadataExtractorService;
 
     public ImageUploadService(ILogger<ImageUploadService> logger,
                BlobServiceClient blobServiceClient,
-               MetadataExtractorService metadataExtractorService,
+               IMetadataExtractorService metadataExtractorService,
                IMessageQueueingService messageQueueingService)
     {
         _blobServiceClient = blobServiceClient;
@@ -56,20 +57,22 @@ public class ImageUploadService : IImageUploadService
         string directoryName,
         DateTime timestamp,
         bool isRawFiles = true,
-           string rawfileDirectoryName = "")
+        string rawfileDirectoryName = "")
     {
-        var destinationPath = GetDestinationPath(timestamp,
-                       projectName,
-                          isRawFiles ? directoryName : rawfileDirectoryName,
-                          isRawFiles);
+        // Construct destination path based on parameters.
+        var destinationPath = GetDestinationPath(
+            timestamp,
+            projectName,
+            isRawFiles ? directoryName : rawfileDirectoryName,
+            isRawFiles);
 
-        // If uploading processed files, check that the corresponding raw files path exists
+        // Get blob container client.
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+
+        // For processed files, ensure corresponding raw files path exists.
         if (!isRawFiles)
         {
             var rawFilesPath = GetDestinationPath(timestamp, projectName, rawfileDirectoryName, isRawFiles);
-
-            // Ensure the raw files path exists
             var rawFilesExist = await DoesPathExistAsync(containerClient, rawFilesPath, "ProcessedFiles");
             if (!rawFilesExist)
             {
@@ -77,51 +80,88 @@ public class ImageUploadService : IImageUploadService
             }
         }
 
-		var uploadedCount = 0;
+        int uploadedCount = 0;
+        int totalCount = 0;
         using var zipStream = directoryFile.OpenReadStream();
-        using var archive = new System.IO.Compression.ZipArchive(zipStream);
-		var totalCount = archive.Entries.Count();
+        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
 
-        foreach (ZipArchiveEntry? entry in archive.Entries)
+        foreach (var entry in archive.Entries)
         {
             try
             {
-                // Log the entry being processed
                 _log.LogInformation($"Processing entry: {entry.FullName}");
 
-                // Validate entry against the parent directory
+                // Validate the entry is a direct descendant of the provided directory.
                 if (!IsDirectDescendant(entry, directoryName))
                 {
                     _log.LogInformation($"Skipped: {entry.FullName} (Not a direct descendant of '{directoryName}')");
-                    continue; // Skip invalid entries
+                    continue;
                 }
 
-                // Check if the entry is a valid image file
+                // Process only valid image files.
                 if (!IsImageFile(entry.Name))
                 {
                     _log.LogInformation($"Skipped: {entry.FullName} (Invalid image file)");
                     continue;
                 }
 
-                // Construct blob path
-                var relativePath = GetRelativePath(entry.FullName, directoryName);
-                var blobPath = $"{destinationPath}/{relativePath}";
+                // Increment the total count for valid entries.
+                totalCount++;
 
-                using var entryStream = entry.Open();
-                var blobClient = containerClient.GetBlobClient(blobPath);
-                BlobContentInfo uploadResponse = await blobClient.UploadAsync(entryStream, overwrite: true);
-                var metadata = new ImageMetadata()
+                // Construct the blob path.
+                string relativePath = GetRelativePath(entry.FullName, directoryName);
+                string blobPath = $"{destinationPath}/{relativePath}";
+
+                // Use a temporary file to buffer the entry, reducing memory usage for large files.
+                var tempFilePath = Path.GetTempFileName();
+                try
                 {
-                    Id = uploadResponse.VersionId,
-                    BlobUri = blobClient.Uri.ToString(),
-                    UploadedBy = "Admin",
-                    UploadDate = uploadResponse.LastModified,
-                    CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(entryStream)
-                };
-                await _messageQueueingService.EnqueueMessageAsync(metadata.ToString());
+                    // Copy the entry stream to the temporary file.
+                    using (var entryStream = entry.Open())
+                    using (var tempFileStream = new FileStream(
+                        tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
+                    {
+                        await entryStream.CopyToAsync(tempFileStream);
+                        await tempFileStream.FlushAsync();
+                    }
 
-                _log.LogInformation($"Uploaded: {blobPath}");
-				uploadedCount++;
+                    // Open the temporary file as a seekable stream.
+                    using (var bufferedStream = new FileStream(
+                        tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true))
+                    {
+                        var blobClient = containerClient.GetBlobClient(blobPath);
+
+                        // Upload the file stream to blob storage.
+                        BlobContentInfo uploadResponse = await blobClient.UploadAsync(bufferedStream, overwrite: true);
+
+                        // Reset the stream position for metadata extraction.
+                        bufferedStream.Position = 0;
+                        var metadata = new ImageMetadata
+                        {
+                            Id = uploadResponse.VersionId,
+                            BlobUri = blobClient.Uri.ToString(),
+                            UploadedBy = "Admin",
+                            UploadDate = uploadResponse.LastModified,
+                            CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(bufferedStream)
+                        };
+
+                        var serializedMetadata = JsonConvert.SerializeObject(metadata, new JsonSerializerSettings
+                        {
+                            NullValueHandling = NullValueHandling.Ignore
+                        });
+                        await _messageQueueingService.EnqueueMessageAsync(serializedMetadata);
+                        _log.LogInformation($"Uploaded: {blobPath}");
+                        uploadedCount++;
+                    }
+                }
+                finally
+                {
+                    // Ensure the temporary file is deleted.
+                    if (File.Exists(tempFilePath))
+                    {
+                        File.Delete(tempFilePath);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -130,10 +170,10 @@ public class ImageUploadService : IImageUploadService
         }
 
         return new UploadResponse
-		{
-			UploadedCount = uploadedCount,
-			OriginalCount = totalCount
-		};
+        {
+            UploadedCount = uploadedCount,
+            OriginalCount = totalCount
+        };
     }
 
     public async Task<List<ProjectInfo>> GetProjects(string? year, string? projectName, DateTime? timestamp = null)

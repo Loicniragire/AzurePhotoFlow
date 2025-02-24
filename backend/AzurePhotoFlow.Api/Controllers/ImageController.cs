@@ -49,12 +49,10 @@ public class ImageController : ControllerBase
         try
         {
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
+			_logger.LogInformation($"Uploading directory {directoryName} for project {projectName} at timestamp {timeStamp}", directoryName, projectName, timeStamp);
 
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, projectName, directoryName, timeStamp);
 
-			// TODO 
-			// Upload now returns a list of ImageMetadata objects.
-			// Metadata storage...
             return Ok(new
             {
                 Message = "Directory uploaded and files extracted successfully.",

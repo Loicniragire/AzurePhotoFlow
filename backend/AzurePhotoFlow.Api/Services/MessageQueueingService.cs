@@ -17,8 +17,9 @@ public class MessageQueueingService : IMessageQueueingService
         _logger = logger;
 
         _queueClient = queueServiceClient.GetQueueClient(queueName);
+		_logger.LogInformation($"Creating queue if it does not exist. QueueName: {queueName}");
         _queueClient.CreateIfNotExists();
-        _logger.LogInformation("Using queue: {QueueName}", queueName);
+        _logger.LogInformation($"Using queue: QueueName: {queueName}");
     }
 
     /// <summary>
