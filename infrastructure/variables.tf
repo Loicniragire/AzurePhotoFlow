@@ -140,3 +140,9 @@ variable "backend_function_app_name" {
   type        = string
   description = "Name for the Backend Azure Function App"
 }
+
+variable "backend_function_image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Tag for the function app Docker image"
+}

@@ -195,6 +195,7 @@ stages:
           terraform plan \
             -var="backend_image_tag=$(Build.BuildId)" \
             -var="frontend_image_tag=$(Build.BuildId)" \
+            -var="backend_function_image_tag=$(Build.BuildId)" \
             -var="azure_blob_storage=$(AZURE_BLOB_STORAGE)" \
             -var="metadata_queue=$(METADATA_QUEUE)" \
             -var="certificate_password=$(CERTIFICATE_PASSWORD)" \
