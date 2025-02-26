@@ -252,3 +252,41 @@ resource "azurerm_cosmosdb_account" "db" {
     failover_priority = 0
   }
 }
+
+
+resource "azurerm_linux_function_app" "backend_function_app" {
+  name                       = var.backend_function_app_name
+  resource_group_name        = var.resource_group_name
+  location                   = var.location
+  service_plan_id            = azurerm_service_plan.service_plan.id
+  storage_account_name       = azurerm_storage_account.storage.name
+  storage_account_access_key = azurerm_storage_account.storage.primary_access_key
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    container_registry_use_managed_identity = true
+    application_stack {
+      docker{
+        registry_url = "https://${azurerm_container_registry.acr.login_server}"
+        image_name = "azurephotoflow-function"
+        image_tag = var.backend_function_image_tag
+        # registry_username = var.docker_registry_username
+
+      }
+  }
+
+  app_settings = {
+    FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
+    WEBSITES_PORT            = "80"
+    CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_connection_string
+    # Add any additional application settings here.
+  }
+
+  tags = {
+    environment = var.environment
+    project     = "AzurePhotoFlow"
+  }
+}

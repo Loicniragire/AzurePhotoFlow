@@ -73,6 +73,7 @@ stages:
             -target=azurerm_container_registry.acr \
             -var="backend_image_tag=$(Build.BuildId)" \
             -var="frontend_image_tag=$(Build.BuildId)" \
+            -var="backend_function_image_tag=$(Build.BuildId)" \
             -var="azure_blob_storage=$(AZURE_BLOB_STORAGE)" \
             -var="certificate_password=$(CERTIFICATE_PASSWORD)" \
             -var="certificate_path=$(CERTIFICATE_PATH)" \
@@ -126,6 +127,7 @@ stages:
           docker compose --env-file .env -f docker-compose.yml build
           docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
           docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:latest
+          docker tag $(containerRegistry)/azurephotoflow-function:$(Build.BuildId) $(containerRegistry)/azurephotoflow-function:latest
         displayName: 'Build and Tag Images'
 
       # Login to ACR and Push Images
@@ -139,8 +141,12 @@ stages:
           echo "Pushing backend and frontend images to ACR..."
           docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-backend:latest
+
           docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-frontend:latest
+
+          docker push $(containerRegistry)/azurephotoflow-function:$(Build.BuildId)
+          docker push $(containerRegistry)/azurephotoflow-function:latest
         displayName: 'Push Docker Images to ACR'
 
       - publish: $(Build.SourcesDirectory)/docker-compose.yml
@@ -201,34 +207,13 @@ stages:
             -var="docker_registry_password=$(ACR_PASSWORD)" \
             -var="vite_google_client_id=$(VITE_GOOGLE_CLIENT_ID)" \
             -var="jwt_secret_key=$(JWT_SECRET_KEY)" \
+            -var="backend_function_app_name"=$(BACKEND_FUNCTION_APP_NAME)" \
             -out=tfplan
           terraform apply \
             -auto-approve \
             -parallelism=5 \
             -lock-timeout=60s tfplan || exit 1
         displayName: 'Authenticate and Apply Terraform'
-
-      # Inject CosmosDB Connection String into Function App
-      - task: AzureCLI@2
-        displayName: 'Inject CosmosDB Connection String into Function App'
-        inputs:
-          azureSubscription: $(azureSubscription)
-          scriptType: bash
-          scriptLocation: inlineScript
-          inlineScript: |
-            # Explicitly export ARM environment variables (if not already exported)
-            export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-            export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-            export ARM_TENANT_ID=$(ARM_TENANT_ID)
-            export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-            
-            cd $(Build.SourcesDirectory)/Infrastructure
-            cosmosConnString=$(terraform output -raw cosmosdb_connection_string)
-            echo "Updating Function App settings with CosmosDB connection string."
-            az functionapp config appsettings set \
-              --name $(backendWebAppName) \
-              --resource-group $(resourceGroupName) \
-              --settings CosmosDBConnectionString="$cosmosConnString"
 
 # ---------------------------------------------------------------------------
 # Validate Stage

@@ -51,6 +51,15 @@ services:
     networks:
       - app-network
 
+  function:
+    image: "${CONTAINER_REGISTRY}/azurephotoflow-function:${stableTag:-latest}"
+    build:
+      context: ./backend/AzurePhotoFlow.Functions
+      dockerfile: Dockerfile
+    networks:
+        - app-network
+
+
 networks:
   app-network:
     driver: bridge

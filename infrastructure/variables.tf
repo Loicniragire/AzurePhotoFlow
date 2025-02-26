@@ -135,3 +135,8 @@ variable "vite_google_client_id" {
   default     = ""
   description = "Google Client ID for Vite"
 }
+
+variable "backend_function_app_name" {
+  type        = string
+  description = "Name for the Backend Azure Function App"
+}
