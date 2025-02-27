@@ -1,9 +1,8 @@
-using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-
 public class BlobTrigger
 {
-    [FunctionName("ProcessUploadedImage")]
+    [Function("ProcessUploadedImage")]
     public async Task Run(
         [BlobTrigger("images/{name}", Connection = "AzureWebJobsStorage")] Stream blobStream,
         string name,
