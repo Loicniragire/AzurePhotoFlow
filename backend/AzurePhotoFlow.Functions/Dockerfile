@@ -21,6 +21,10 @@ COPY --from=build /out .
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
+# Enable logging (ensure that application writes logs to stdout/stderr)
+ENV AzureWebJobsDashboard=Console
+ENV AzureWebJobsStorage=Console
+
 # Start the Azure Functions host
 CMD ["dotnet", "AzurePhotoFlow.Functions.dll"]
 

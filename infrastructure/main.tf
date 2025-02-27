@@ -248,6 +248,19 @@ resource "azurerm_monitor_diagnostic_setting" "storage_diagnostics" {
   enabled_log { category = "StorageDelete" }
 }
 
+
+resource "azurerm_monitor_diagnostic_setting" "function_app_diagnostics" {
+  name                       = "function-app-diagnostics"
+  target_resource_id         = azurerm_linux_function_app.backend_function_app.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
+
+  enabled_log { category = "FunctionAppLogs"}
+  enabled_log { category = "AppServiceAppLogs"}
+  enabled_log { category = "AppServiceAuditLogs"}
+  metric { category = "AllMetrics"}
+}
+
+
 resource "azurerm_storage_queue" "queue" {
   name                 = var.metadata_queue
   storage_account_name = data.azurerm_storage_account.storage.name
