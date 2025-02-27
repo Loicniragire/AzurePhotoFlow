@@ -259,8 +259,8 @@ resource "azurerm_linux_function_app" "backend_function_app" {
   resource_group_name        = var.resource_group_name
   location                   = var.location
   service_plan_id            = azurerm_service_plan.service_plan.id
-  storage_account_name       = azurerm_storage_account.storage.name
-  storage_account_access_key = azurerm_storage_account.storage.primary_access_key
+  storage_account_name       = data.azurerm_storage_account.storage.name
+  storage_account_access_key = data.azurerm_storage_account.storage.primary_access_key
 
   identity {
     type = "SystemAssigned"
