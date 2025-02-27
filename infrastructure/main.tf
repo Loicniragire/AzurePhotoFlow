@@ -308,6 +308,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
 
   app_settings = {
     WEBSITES_PORT            = "80"
+    AzureWebJobsStorage = data.azurerm_storage_account.storage.primary_connection_string
     CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_sql_connection_string
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
     DOCKER_ENABLE_LOGGING  = "true"

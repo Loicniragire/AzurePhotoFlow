@@ -12,7 +12,7 @@ public class Program
     {
         DotNetEnv.Env.Load();
         var host = new HostBuilder()
-            .ConfigureFunctionsWorkerDefaults()
+            .ConfigureFunctionsWorkerDefaults() //checks for AzureWebJobsStorage in the environment variables/app settings
             .ConfigureServices((hostContext, services) =>
             {
                 // Retrieve the Cosmos DB connection string from environment variables.
