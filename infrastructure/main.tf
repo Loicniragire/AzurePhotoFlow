@@ -255,7 +255,6 @@ resource "azurerm_monitor_diagnostic_setting" "function_app_diagnostics" {
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
   enabled_log { category = "FunctionAppLogs"}
-  enabled_log { category = "FunctionAppConsoleLogs"}
   metric { category = "AllMetrics"}
 }
 
