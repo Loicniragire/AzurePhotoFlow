@@ -25,7 +25,7 @@ public class Program
                 });
 
                 // Register services
-                services.AddSingleton<IMetadataProcessor, MetadataProcessor>();
+                services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
             })
             .Build();
 

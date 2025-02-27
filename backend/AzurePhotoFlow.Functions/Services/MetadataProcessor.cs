@@ -1,10 +1,11 @@
+using Functions.Interfaces;
 using Functions.Models;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 
 namespace Functions.Services;
 
-public class ImageMetadataProcessor
+public class ImageMetadataProcessor: IMetadataProcessor
 {
 	private const string DatabaseName = "loicportraits-cosmosdb";
 	private const string ContainerName = "MetadataContainer";

@@ -4,5 +4,5 @@ using Microsoft.Extensions.Logging;
 namespace Functions.Interfaces;
 public interface IMetadataProcessor
 {
-	Task ProcessAsync(ImageMetadata metadata, ILogger log);
+	Task ProcessAsync(ImageMetadata metadata);
 }
