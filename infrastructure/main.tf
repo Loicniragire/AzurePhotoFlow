@@ -285,7 +285,6 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     always_on = true
     application_insights_connection_string = azurerm_application_insights.app_insights.connection_string
     application_stack {
-      use_dotnet_isolated_runtime = true
       docker{
         registry_url = "https://${azurerm_container_registry.acr.login_server}"
         image_name = "azurephotoflow-function"
