@@ -255,6 +255,7 @@ resource "azurerm_monitor_diagnostic_setting" "function_app_diagnostics" {
   log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
 
   enabled_log { category = "FunctionAppLogs"}
+  enabled_log { category = "ContainerLogs" }
   metric { category = "AllMetrics"}
 }
 
@@ -313,6 +314,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
     DOCKER_ENABLE_LOGGING  = "true"
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true"
+    FUNCTIONS_EXTENSION_VERSION = "~4"
     # Add any additional application settings here.
   }
 
