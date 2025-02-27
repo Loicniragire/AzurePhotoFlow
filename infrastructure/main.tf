@@ -201,6 +201,14 @@ resource "azurerm_log_analytics_workspace" "log_workspace" {
   }
 }
 
+resource "azurerm_application_insights" "app_insights" {
+  name                = "pf-app-insights"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  application_type    = "web"
+  workspace_id        = azurerm_log_analytics_workspace.log_workspace.id
+}
+
 # Diagnostic for Frontend Web App
 resource "azurerm_monitor_diagnostic_setting" "frontend_webapp_diagnostics" {
   name                       = "frontend-webapp-diagnostics"
@@ -281,7 +289,8 @@ resource "azurerm_linux_function_app" "backend_function_app" {
         registry_url = "https://${azurerm_container_registry.acr.login_server}"
         image_name = "azurephotoflow-function"
         image_tag = var.backend_function_image_tag
-        # registry_username = var.docker_registry_username
+        registry_username = var.docker_registry_username
+        registry_password = var.docker_registry_password
       }
     }
   }
@@ -290,6 +299,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
     WEBSITES_PORT            = "80"
     CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_sql_connection_string
+    APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
     # Add any additional application settings here.
   }
 
