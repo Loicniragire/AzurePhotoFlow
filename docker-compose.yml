@@ -57,7 +57,7 @@ services:
       context: ./backend/AzurePhotoFlow.Functions
       dockerfile: Dockerfile
     environment:
-        - CosmosDBConnectionString=${CosmosDBConnectionString}
+      - CosmosDBConnectionString=${CosmosDBConnectionString}
     networks:
         - app-network
 
