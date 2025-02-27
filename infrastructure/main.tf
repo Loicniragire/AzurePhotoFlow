@@ -167,6 +167,12 @@ resource "azurerm_role_assignment" "frontend_acr_pull" {
   principal_id         = azurerm_linux_web_app.frontend_web_app.identity[0].principal_id
 }
 
+resource "azurerm_role_assignment" "function_app_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_function_app.backend_function_app.identity[0].principal_id
+}
+
 resource "azurerm_container_registry" "acr" {
   name                = var.container_registry_name
   resource_group_name = var.resource_group_name
@@ -268,6 +274,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
   }
 
   site_config {
+    always_on = true
     container_registry_use_managed_identity = true
     application_stack {
       docker{
