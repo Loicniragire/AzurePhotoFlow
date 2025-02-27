@@ -18,7 +18,7 @@ public class ProcessQueueMessage
 
     [FunctionName("ProcessMetadataQueueMessage")]
     public async Task Run(
-        [QueueTrigger("metadataqueue", Connection = "AzureWebJobsStorage")] string queueItem,
+        [QueueTrigger("image-metadata-queue", Connection = "AzureWebJobsStorage")] string queueItem,
         ILogger log)
     {
         log.LogInformation($"Processing queue item: {queueItem}");
