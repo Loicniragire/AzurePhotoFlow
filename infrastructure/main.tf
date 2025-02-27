@@ -278,7 +278,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     }
   }
 
-  app_settings {
+  app_settings = {
     FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
     WEBSITES_PORT            = "80"
     CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_connection_string
