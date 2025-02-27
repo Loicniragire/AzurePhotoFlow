@@ -310,6 +310,8 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     WEBSITES_PORT            = "80"
     CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_sql_connection_string
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
+    DOCKER_ENABLE_LOGGING  = "true"
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "true"
     # Add any additional application settings here.
   }
 
