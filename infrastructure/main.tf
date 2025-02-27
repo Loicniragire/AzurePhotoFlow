@@ -290,3 +290,4 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     project     = "AzurePhotoFlow"
   }
 }
+
