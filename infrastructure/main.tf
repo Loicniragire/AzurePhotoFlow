@@ -274,11 +274,11 @@ resource "azurerm_linux_function_app" "backend_function_app" {
         image_name = "azurephotoflow-function"
         image_tag = var.backend_function_image_tag
         # registry_username = var.docker_registry_username
-
       }
+    }
   }
 
-  app_settings = {
+  app_settings {
     FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
     WEBSITES_PORT            = "80"
     CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_connection_string
