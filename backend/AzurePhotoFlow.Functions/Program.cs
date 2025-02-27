@@ -18,6 +18,11 @@ public class Program
                 // Retrieve the Cosmos DB connection string from environment variables.
                 string cosmosConnectionString = Environment.GetEnvironmentVariable("CosmosDBConnectionString");
 
+                if (string.IsNullOrEmpty(cosmosConnectionString))
+                {
+                    throw new ArgumentNullException("CosmosDBConnectionString", "The Cosmos DB connection string is required.");
+                }
+
                 // Register CosmosClient as a singleton.
                 services.AddSingleton<CosmosClient>(sp =>
                 {
