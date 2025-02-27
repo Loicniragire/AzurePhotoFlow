@@ -31,6 +31,6 @@ namespace Functions.Triggers;
             }
 
             // Process the metadata using the injected service.
-            await _metadataProcessor.ProcessAsync(metadata, log);
+            await _metadataProcessor.ProcessAsync(metadata);
         }
     }

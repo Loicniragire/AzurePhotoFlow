@@ -1,3 +1,0 @@
-- Resource group and storage account are created outside of Terraform
-so that terraform.backend can reference them.
-
