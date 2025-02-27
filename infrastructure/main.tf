@@ -284,6 +284,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
   site_config {
     always_on = true
     container_registry_use_managed_identity = true
+    application_insights_connection_string = azurerm_application_insights.app_insights.connection_string
     application_stack {
       docker{
         registry_url = "https://${azurerm_container_registry.acr.login_server}"
@@ -296,7 +297,6 @@ resource "azurerm_linux_function_app" "backend_function_app" {
   }
 
   app_settings = {
-    FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
     WEBSITES_PORT            = "80"
     CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_sql_connection_string
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
