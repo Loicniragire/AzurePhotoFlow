@@ -1,13 +1,8 @@
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Azure.Cosmos;
 using Functions.Interfaces;
 using Functions.Services;
-using Microsoft.Extensions.Configuration;
-using System.Text.Json;
-using Azure.Core.Serialization;
-using System.Text.Json.Serialization;
 
 namespace AzurePhotoFlow.Functions;
 
@@ -15,49 +10,46 @@ public class Program
 {
     public static void Main()
     {
-        // Load environment variables first
-        DotNetEnv.Env.Load();
-        
-        var host = new HostBuilder()
-            .ConfigureFunctionsWorkerDefaults(worker => 
-            {
-                // Configure JSON serializer options if needed
-                worker.Serializer = new JsonObjectSerializer(
-                    new JsonSerializerOptions
+        try
+        {
+            DotNetEnv.Env.Load();
+            var host = new HostBuilder()
+                .ConfigureFunctionsWorkerDefaults()
+                .ConfigureServices((context, services) =>
+                {
+                    ConfigureServices(context, services);
+                })
+                .Build();
+
+            host.Run();
+        }
+        catch (Exception ex)
+        {
+            // Critical error logging
+            File.WriteAllText("/home/logs/startup_error.txt",
+                $"[{DateTime.UtcNow:o}] FATAL ERROR: {ex}");
+            throw;
+        }
+    }
+
+    private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
+    {
+        // Move your service configuration here
+        var cosmosConnectionString = context.Configuration["CosmosDBConnectionString"]
+            ?? throw new InvalidOperationException("Missing CosmosDB connection string");
+
+        services.AddSingleton<CosmosClient>(serviceProvider =>
+            new CosmosClient(
+                connectionString: cosmosConnectionString,
+                new CosmosClientOptions
+                {
+                    SerializerOptions = new CosmosSerializationOptions
                     {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                    });
-            })
-            .ConfigureServices((hostContext, services) =>
-            {
-                // Get configuration from host context
-                var configuration = hostContext.Configuration;
+                        PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+                    },
+                }));
 
-                // Get Cosmos DB connection string
-                var cosmosConnectionString = configuration.GetValue<string>("CosmosDBConnectionString") 
-                    ?? throw new InvalidOperationException(
-                        "Missing 'CosmosDBConnectionString' in configuration. " +
-                        "Check your application settings or environment variables.");
-
-                // Register CosmosClient with configuration
-                services.AddSingleton<CosmosClient>(serviceProvider => 
-                    new CosmosClient(
-                        connectionString: cosmosConnectionString,
-                        new CosmosClientOptions
-                        {
-                            SerializerOptions = new CosmosSerializationOptions
-                            {
-                                PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-                            },
-                        }));
-
-                // Register application services
-                services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
-            })
-            .Build();
-
-        host.Run();
+        // Register application services
+        services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
     }
 }

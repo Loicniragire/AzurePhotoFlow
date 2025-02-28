@@ -313,6 +313,12 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
     DOCKER_ENABLE_LOGGING  = "true"
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
+    FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
+    
+    # Runtime configuration
+    ASPNETCORE_URLS = "http://+:80"
+    DOTNET_ENVIRONMENT = "Production"
     # Add any additional application settings here.
   }
 
