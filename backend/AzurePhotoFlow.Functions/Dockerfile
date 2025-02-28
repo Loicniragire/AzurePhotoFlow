@@ -15,11 +15,6 @@ RUN dotnet publish -c Release -o /out
 
 
 FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0-slim
-
-# Explicit health check
-HEALTHCHECK --interval=10s --timeout=3s --start-period=30s \
-  CMD curl --fail http://localhost:80/ || exit 1
-
 WORKDIR /home/site/wwwroot
 
 # Copy built application from the build stage

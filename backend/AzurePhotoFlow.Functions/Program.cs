@@ -1,55 +1,58 @@
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Azure.Cosmos;
 using Functions.Interfaces;
 using Functions.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AzurePhotoFlow.Functions;
 
-public class Program
+class Program
 {
-    public static void Main()
+    static async Task Main(string[] args)
     {
-        try
-        {
-            DotNetEnv.Env.Load();
-            var host = new HostBuilder()
-                .ConfigureFunctionsWorkerDefaults()
-                .ConfigureServices((context, services) =>
-                {
-                    ConfigureServices(context, services);
-                })
-                .Build();
+        DotNetEnv.Env.Load();
+        var host = new HostBuilder()
+            .ConfigureFunctionsWorkerDefaults()
+            .ConfigureServices(ConfigureServices)
+            .Build();
 
-            host.Run();
-        }
-        catch (Exception ex)
-        {
-            // Critical error logging
-            File.WriteAllText("/home/logs/startup_error.txt",
-                $"[{DateTime.UtcNow:o}] FATAL ERROR: {ex}");
-            throw;
-        }
+        await host.RunAsync();
     }
 
     private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
     {
-        // Move your service configuration here
-        var cosmosConnectionString = context.Configuration["CosmosDBConnectionString"]
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
+        services.Configure<LoggerFilterOptions>(options =>
+        {
+            LoggerFilterRule? toRemove = options.Rules.FirstOrDefault(rule => rule.ProviderName
+                == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
+
+            if (toRemove is not null)
+            {
+                options.Rules.Remove(toRemove);
+            }
+        });
+
+        // Cosmos DB configuration
+        var cosmosConnectionString = context.Configuration.GetValue<string>("CosmosDBConnectionString")
             ?? throw new InvalidOperationException("Missing CosmosDB connection string");
 
-        services.AddSingleton<CosmosClient>(serviceProvider =>
-            new CosmosClient(
-                connectionString: cosmosConnectionString,
-                new CosmosClientOptions
+        services.AddSingleton<CosmosClient>(_ => new CosmosClient(
+            cosmosConnectionString,
+            new CosmosClientOptions
+            {
+                SerializerOptions = new CosmosSerializationOptions
                 {
-                    SerializerOptions = new CosmosSerializationOptions
-                    {
-                        PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-                    },
-                }));
+                    PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+                }
+            }));
 
-        // Register application services
+        // Application services
         services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
+
     }
 }
