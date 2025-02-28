@@ -14,7 +14,7 @@ RUN dotnet publish -c Release -o /out
 # FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
 
 
-FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0-slim
+FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
 WORKDIR /home/site/wwwroot
 
 # Copy built application from the build stage
@@ -25,4 +25,4 @@ ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
 # Start the Azure Functions host
-CMD ["dotnet", "AzurePhotoFlow.Functions.dll"]
+CMD ["func", "start", "--verbose"]
