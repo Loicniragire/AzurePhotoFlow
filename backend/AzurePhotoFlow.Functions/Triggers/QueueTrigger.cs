@@ -1,7 +1,6 @@
 using Functions.Interfaces;
 using Functions.Models;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 namespace Functions.Triggers;
@@ -16,7 +15,7 @@ public class ProcessQueueMessage
         _metadataProcessor = metadataProcessor;
     }
 
-    [FunctionName("ProcessMetadataQueueMessage")]
+    [Function("ProcessMetadataQueueMessage")]
     public async Task Run(
         [QueueTrigger("image-metadata-queue", Connection = "AzureWebJobsStorage")] string queueItem,
         ILogger log)
