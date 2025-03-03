@@ -58,8 +58,14 @@ services:
       dockerfile: Dockerfile
     environment:
       - CosmosDBConnectionString=${CosmosDBConnectionString}
+      - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+      - DOTNET_RUNNING_IN_CONTAINER=true
+      - GRPC_WORKER__GRPC_LISTEN=0.0.0.0:80
+      - FUNCTIONS__WORKER__HOSTENDPOINT=http://0.0.0.0:80
+      - FUNCTIONS__WORKER__ID=worker-1
+      - FUNCTIONS_WORKER_ID=worker-1
     ports:
-      - "50051:50051"
+      - "8080:80"
     networks:
         - app-network
 

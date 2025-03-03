@@ -1,0 +1,19 @@
+{
+  "language": "dotnet-isolated",
+  "worker": {
+    "description": {
+      "defaultExecutablePath": "dotnet",
+      "defaultWorkingDirectory": ".",
+      "arguments": [
+        "Azure.Functions.Worker.dll"
+      ]
+    },
+    "extensions": {
+      "queues": {
+        "batchSize": 16,
+        "maxDequeueCount": 5
+      }
+    }
+  }
+}
+

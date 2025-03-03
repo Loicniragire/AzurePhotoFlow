@@ -14,12 +14,27 @@ class Program
     static async Task Main(string[] args)
     {
         DotNetEnv.Env.Load();
+
+        // Print all environment variables for debugging
+        foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
+        {
+            Console.WriteLine($"{envVar.Key} = {envVar.Value}");
+        }
+
         var host = new HostBuilder()
             .ConfigureFunctionsWorkerDefaults()
             .ConfigureServices(ConfigureServices)
             .Build();
+        try
+        {
 
-        await host.RunAsync();
+            await host.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
     private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)

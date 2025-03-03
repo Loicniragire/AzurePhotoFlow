@@ -315,6 +315,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
     SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
     FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
+    FUNCTION_WORKER_ID = "worker-1"
     
     # Runtime configuration
     ASPNETCORE_URLS = "http://+:80"
