@@ -14,14 +14,6 @@
   FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
   WORKDIR /home/site/wwwroot
 
-  # Install Azure Functions Core Tools
-  RUN apt-get update && \
-      apt-get install -y wget gnupg && \
-      wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add - && \
-      echo "deb [arch=amd64] https://packages.microsoft.com/azure-functions-core-tools/debian stable main" > /etc/apt/sources.list.d/azure-functions.list && \
-      apt-get update && \
-      apt-get install -y azure-functions-core-tools-4
-
   # Copy built application from the build stage
   COPY --from=build /out .
 
