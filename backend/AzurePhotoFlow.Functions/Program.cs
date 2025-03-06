@@ -1,6 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
 using Functions.Interfaces;
@@ -15,46 +15,41 @@ foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironment
     Console.WriteLine($"{envVar.Key} = {envVar.Value}");
 }
 
-// Create the builder using the ASP.NET Core integration model (preview)
-var builder = FunctionsWebApplication.CreateBuilder(args);
-
-// Configure Application Insights and logging
-builder.Services.AddApplicationInsightsTelemetryWorkerService();
-builder.Services.ConfigureFunctionsApplicationInsights();
-builder.Services.Configure<LoggerFilterOptions>(options =>
-{
-    var ruleToRemove = options.Rules.FirstOrDefault(rule => 
-        rule.ProviderName == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
-    if (ruleToRemove is not null)
+var host = new HostBuilder()
+    .ConfigureFunctionsWorkerDefaults() // Use the standard isolated worker defaults.
+    .ConfigureServices((context, services) =>
     {
-        options.Rules.Remove(ruleToRemove);
-    }
-});
-
-// Cosmos DB configuration: Retrieve the connection string from configuration
-var cosmosConnectionString = builder.Configuration["CosmosDBConnectionString"] 
-    ?? throw new InvalidOperationException("Missing CosmosDB connection string");
-
-// Register the CosmosClient as a singleton
-builder.Services.AddSingleton(new CosmosClient(
-    cosmosConnectionString,
-    new CosmosClientOptions
-    {
-        SerializerOptions = new CosmosSerializationOptions
+        // Configure Application Insights and logging
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
+        services.Configure<LoggerFilterOptions>(options =>
         {
-            PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-        }
-    }));
+            var ruleToRemove = options.Rules.FirstOrDefault(rule =>
+                rule.ProviderName == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
+            if (ruleToRemove is not null)
+            {
+                options.Rules.Remove(ruleToRemove);
+            }
+        });
 
-// Register custom application services
-builder.Services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
+        // Cosmos DB configuration: Retrieve the connection string from configuration
+        var cosmosConnectionString = context.Configuration["CosmosDBConnectionString"]
+            ?? throw new InvalidOperationException("Missing CosmosDB connection string");
 
-// Build the application with ASP.NET Core integration enabled
-var app = builder.Build();
+        services.AddSingleton(new CosmosClient(
+            cosmosConnectionString,
+            new CosmosClientOptions
+            {
+                SerializerOptions = new CosmosSerializationOptions
+                {
+                    PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+                }
+            }));
 
-// Map all function endpoints into the ASP.NET Core middleware pipeline
-app.MapFunctions();
+        // Register custom application services
+        services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
+    })
+    .Build();
 
-// Run the application
-app.Run();
+host.Run();
 
