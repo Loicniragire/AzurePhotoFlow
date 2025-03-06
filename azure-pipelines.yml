@@ -258,7 +258,7 @@ stages:
   - job: DeployFunctionZip
     displayName: "Deploy Function App via Zip Package"
     pool:
-      vmImage: 'SelfHostedPool'
+      name: 'Azure Pipelines'
     steps:
       - download: current
         artifact: functionapp-zip
