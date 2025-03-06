@@ -31,12 +31,14 @@ variables:
     value: 'azurephotoflow.tfstate'
   - name: stableTag
     value: "$(Build.BuildId)"
-
   # Web App names as defined in Terraform variables
   - name: backendWebAppName
     value: "photoflowbackendwebapp"
   - name: frontendWebAppName
     value: "loicportraits"
+  # Function App name for zip deployment (update as necessary)
+  - name: backend_function_app_name
+    value: "photoflowfunction"
 
 resources:
   repositories:
@@ -85,12 +87,13 @@ stages:
             -var="docker_registry_password=$(ACR_PASSWORD)" \
             -var="vite_google_client_id=$(VITE_GOOGLE_CLIENT_ID)" \
             -var="jwt_secret_key=$(JWT_SECRET_KEY)" \
-            -var="backend_function_app_name=$(BACKEND_FUNCTION_APP_NAME)" \
+            -var="backend_function_app_name=$(backend_function_app_name)" \
             -out=tfplan-acr
 
           # Apply only the ACR resource
           terraform apply -auto-approve tfplan-acr
         displayName: 'Terraform Apply for ACR Only'
+
 # ---------------------------------------------------------------------------
 # Build Stage
 # ---------------------------------------------------------------------------
@@ -99,7 +102,7 @@ stages:
   dependsOn: DeployRegistry
   jobs:
   - job: BuildDockerImages
-    displayName: Build Docker Images
+    displayName: Build Docker Images (Backend & Frontend)
     steps:
       - checkout: github_repo
 
@@ -122,16 +125,16 @@ stages:
         artifact: env-artifact
         displayName: 'Publish .env File Artifact'
 
-      # Build and Tag Docker Images
+      # Build and Tag Docker Images for backend and frontend only
       - script: |
           set -e
-          docker compose --env-file .env -f docker-compose.yml build
+          # Build only backend and frontend services (exclude function service)
+          docker compose --env-file .env -f docker-compose.yml build backend frontend
           docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
           docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:latest
-          docker tag $(containerRegistry)/azurephotoflow-function:$(Build.BuildId) $(containerRegistry)/azurephotoflow-function:latest
-        displayName: 'Build and Tag Images'
+        displayName: 'Build and Tag Backend & Frontend Images'
 
-      # Login to ACR and Push Images
+      # Login to ACR and Push Images for backend and frontend
       - task: Docker@2
         displayName: 'Login to ACR'
         inputs:
@@ -145,14 +148,42 @@ stages:
 
           docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-frontend:latest
-
-          docker push $(containerRegistry)/azurephotoflow-function:$(Build.BuildId)
-          docker push $(containerRegistry)/azurephotoflow-function:latest
         displayName: 'Push Docker Images to ACR'
 
       - publish: $(Build.SourcesDirectory)/docker-compose.yml
         artifact: compose-artifact
         displayName: 'Publish docker-compose.yml Artifact'
+
+  - job: BuildFunctionZip
+    displayName: "Build Azure Function Zip Package"
+    steps:
+      - checkout: github_repo
+
+      # Publish the Azure Function App
+      - task: DotNetCoreCLI@2
+        displayName: 'Publish Function App'
+        inputs:
+          command: publish
+          publishWebProjects: false
+          projects: 'backend/AzurePhotoFlow.Functions/AzurePhotoFlow.Functions.csproj'
+          arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/function_publish'
+          zipAfterPublish: false
+
+      # Archive the published output into a zip package
+      - task: ArchiveFiles@2
+        displayName: 'Archive Function App into Zip'
+        inputs:
+          rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/function_publish'
+          includeRootFolder: false
+          archiveType: 'zip'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/functionapp.zip'
+          replaceExistingArchive: true
+
+      # Publish the zip package as an artifact
+      - publish: '$(Build.ArtifactStagingDirectory)/functionapp.zip'
+        artifact: functionapp-zip
+        displayName: 'Publish Function Zip Artifact'
+
 # ---------------------------------------------------------------------------
 # Test Stage
 # ---------------------------------------------------------------------------
@@ -209,7 +240,7 @@ stages:
             -var="docker_registry_password=$(ACR_PASSWORD)" \
             -var="vite_google_client_id=$(VITE_GOOGLE_CLIENT_ID)" \
             -var="jwt_secret_key=$(JWT_SECRET_KEY)" \
-            -var="backend_function_app_name=$(BACKEND_FUNCTION_APP_NAME)" \
+            -var="backend_function_app_name=$(backend_function_app_name)" \
             -out=tfplan
           terraform apply \
             -auto-approve \
@@ -218,12 +249,38 @@ stages:
         displayName: 'Authenticate and Apply Terraform'
 
 # ---------------------------------------------------------------------------
+# Deploy Function Stage
+# ---------------------------------------------------------------------------
+- stage: DeployFunction
+  displayName: "Deploy Function Zip Package"
+  dependsOn: DeployInfrastructure
+  jobs:
+  - job: DeployFunctionZip
+    displayName: "Deploy Function App via Zip Package"
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - download: current
+        artifact: functionapp-zip
+
+      - task: AzureCLI@2
+        displayName: 'Deploy Function Zip Package to Azure Function'
+        inputs:
+          azureSubscription: $(azureSubscription)
+          scriptType: 'bash'
+          scriptLocation: 'inlineScript'
+          inlineScript: |
+            az functionapp deployment source config-zip \
+              --resource-group $(resourceGroupName) \
+              --name $(backend_function_app_name) \
+              --src $(Pipeline.Workspace)/functionapp-zip/functionapp.zip
+
+# ---------------------------------------------------------------------------
 # Validate Stage
 # ---------------------------------------------------------------------------
 - stage: Validate
   displayName: Validation Stage
-  # dependsOn: DeployApplications
-  dependsOn: DeployInfrastructure
+  dependsOn: DeployFunction
   jobs:
     - job: WaitForHealthAndSmokeTest
       displayName: Wait for Health & Smoke Test
