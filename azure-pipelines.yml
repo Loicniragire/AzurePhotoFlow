@@ -31,12 +31,10 @@ variables:
     value: 'azurephotoflow.tfstate'
   - name: stableTag
     value: "$(Build.BuildId)"
-  # Web App names as defined in Terraform variables
   - name: backendWebAppName
     value: "photoflowbackendwebapp"
   - name: frontendWebAppName
     value: "loicportraits"
-  # Function App name for zip deployment (update as necessary)
   - name: backend_function_app_name
     value: "photoflowfunction"
 
@@ -255,26 +253,61 @@ stages:
   displayName: "Deploy Function Zip Package"
   dependsOn: DeployInfrastructure
   jobs:
-  - job: DeployFunctionZip
-    displayName: "Deploy Function App via Zip Package"
-    pool:
-      name: 'Default'
+  - job: UploadFunctionZipToStorage
+    displayName: "Upload Function Zip to Storage"
+    dependsOn: DeployInfrastructure
     steps:
       - download: current
         artifact: functionapp-zip
 
       - task: AzureCLI@2
-        displayName: 'Deploy Function Zip Package to Azure Function'
+        displayName: 'Upload Zip Package to Azure Blob Storage and Generate SAS URL'
         inputs:
           azureSubscription: $(azureSubscription)
           scriptType: 'bash'
           scriptLocation: 'inlineScript'
           inlineScript: |
-            az functionapp deployment source config-zip \
+            # Define variables
+            STORAGE_ACCOUNT_NAME=$(storageAccountName)
+            CONTAINER_NAME="function-deployments"
+            ZIP_FILE="$(Pipeline.Workspace)/functionapp-zip/functionapp.zip"
+            BLOB_NAME="functionapp-$(Build.BuildId).zip"
+
+            # Create container if it doesn't exist
+            az storage container create \
+              --name $CONTAINER_NAME \
+              --account-name $STORAGE_ACCOUNT_NAME
+
+            # Upload the zip file
+            az storage blob upload \
+              --account-name $STORAGE_ACCOUNT_NAME \
+              --container-name $CONTAINER_NAME \
+              --name $BLOB_NAME \
+              --file $ZIP_FILE
+
+            # Generate a SAS URL valid for 24 hours
+            SAS_URL=$(az storage blob generate-sas \
+              --account-name $STORAGE_ACCOUNT_NAME \
+              --container-name $CONTAINER_NAME \
+              --name $BLOB_NAME \
+              --permissions r \
+              --expiry $(date -u -d "tomorrow" '+%Y-%m-%dT%H:%MZ') \
+              --output tsv)
+
+            FULL_URL="https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${BLOB_NAME}?${SAS_URL}"
+            echo "##vso[task.setvariable variable=WEBSITE_RUN_FROM_PACKAGE_URL]$FULL_URL"
+
+      - task: AzureCLI@2
+        displayName: 'Update WEBSITE_RUN_FROM_PACKAGE setting'
+        inputs:
+          azureSubscription: $(azureSubscription)
+          scriptType: 'bash'
+          scriptLocation: 'inlineScript'
+          inlineScript: |
+            az functionapp config appsettings set \
               --resource-group $(resourceGroupName) \
               --name $(backend_function_app_name) \
-              --src $(Pipeline.Workspace)/functionapp-zip/functionapp.zip
-
+              --settings WEBSITE_RUN_FROM_PACKAGE=$(WEBSITE_RUN_FROM_PACKAGE_URL)
 # ---------------------------------------------------------------------------
 # Validate Stage
 # ---------------------------------------------------------------------------
