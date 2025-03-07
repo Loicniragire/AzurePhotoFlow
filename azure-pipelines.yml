@@ -271,6 +271,7 @@ stages:
             CONTAINER_NAME="function-deployments"
             ZIP_FILE="$(Pipeline.Workspace)/functionapp-zip/functionapp.zip"
             BLOB_NAME="functionapp-$(Build.BuildId).zip"
+            EXPIRY_DATE=$(date -u -v+1d '+%Y-%m-%dT%H:%MZ')
 
             # Create container if it doesn't exist
             az storage container create \
@@ -290,7 +291,7 @@ stages:
               --container-name $CONTAINER_NAME \
               --name $BLOB_NAME \
               --permissions r \
-              --expiry $(date -u -d "tomorrow" '+%Y-%m-%dT%H:%MZ') \
+              --expiry $EXPIRY_DATE \
               --output tsv)
 
             FULL_URL="https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${BLOB_NAME}?${SAS_URL}"
