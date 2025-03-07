@@ -298,6 +298,7 @@ stages:
             FULL_URL="https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${BLOB_NAME}?${SAS_URL}"
             echo "Generated SAS URL: $FULL_URL"
             echo "##vso[task.setvariable variable=WEBSITE_RUN_FROM_PACKAGE_URL]$FULL_URL"
+            echo "WEBSITE_RUN_FROM_PACKAGE set to $FULL_URL"
 
       - task: AzureCLI@2
         displayName: 'Update WEBSITE_RUN_FROM_PACKAGE setting'
@@ -309,7 +310,7 @@ stages:
             az functionapp config appsettings set \
               --resource-group $(resourceGroupName) \
               --name $(backend_function_app_name) \
-              --settings WEBSITE_RUN_FROM_PACKAGE=$(WEBSITE_RUN_FROM_PACKAGE_URL)
+              --settings "WEBSITE_RUN_FROM_PACKAGE=$(WEBSITE_RUN_FROM_PACKAGE_URL)"
 # ---------------------------------------------------------------------------
 # Validate Stage
 # ---------------------------------------------------------------------------
