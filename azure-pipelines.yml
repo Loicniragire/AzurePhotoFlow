@@ -294,7 +294,9 @@ stages:
               --expiry $EXPIRY_DATE \
               --output tsv)
 
+
             FULL_URL="https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${BLOB_NAME}?${SAS_URL}"
+            echo "Generated SAS URL: $FULL_URL"
             echo "##vso[task.setvariable variable=WEBSITE_RUN_FROM_PACKAGE_URL]$FULL_URL"
 
       - task: AzureCLI@2
