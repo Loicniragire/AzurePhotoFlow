@@ -311,7 +311,7 @@ resource "azurerm_linux_function_app" "backend_function_app" {
     FUNCTIONS_WORKER_RUNTIME                = "dotnet-isolated"
     ASPNETCORE_URLS                         = "http://+:80"
     DOTNET_ENVIRONMENT                      = "Production"
-    WEBSITES_RUN_FROM_PACKAGE               = "1"
+    WEBSITE_RUN_FROM_PACKAGE                = "1"
   }
 
   tags = {
