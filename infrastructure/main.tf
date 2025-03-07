@@ -295,32 +295,20 @@ resource "azurerm_linux_function_app" "backend_function_app" {
   site_config {
     always_on = true
     application_insights_connection_string = azurerm_application_insights.app_insights.connection_string
-    application_stack {
-      docker{
-        registry_url = "https://${azurerm_container_registry.acr.login_server}"
-        image_name = "azurephotoflow-function"
-        image_tag = var.backend_function_image_tag
-        registry_username = var.docker_registry_username
-        registry_password = var.docker_registry_password
-      }
-    }
   }
 
   app_settings = {
-    WEBSITES_PORT            = "80"
-    AzureWebJobsStorage = data.azurerm_storage_account.storage.primary_connection_string
-    CosmosDBConnectionString = azurerm_cosmosdb_account.db.primary_sql_connection_string
-    APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
-    DOCKER_ENABLE_LOGGING  = "true"
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
-    SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
-    FUNCTIONS_WORKER_RUNTIME = "dotnet-isolated"
-    FUNCTION_WORKER_ID = "worker-1"
-    
-    # Runtime configuration
-    ASPNETCORE_URLS = "http://+:80"
-    DOTNET_ENVIRONMENT = "Production"
-    # Add any additional application settings here.
+    WEBSITES_PORT                           = "80"
+    AzureWebJobsStorage                     = data.azurerm_storage_account.storage.primary_connection_string
+    CosmosDBConnectionString                = azurerm_cosmosdb_account.db.primary_sql_connection_string
+    APPLICATIONINSIGHTS_CONNECTION_STRING   = azurerm_application_insights.app_insights.connection_string
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE     = "false"
+    SCM_DO_BUILD_DURING_DEPLOYMENT          = "false" 
+    FUNCTIONS_WORKER_RUNTIME                = "dotnet-isolated"
+    FUNCTION_WORKER_ID                      = "worker-1"
+    ASPNETCORE_URLS                         = "http://+:80"
+    DOTNET_ENVIRONMENT                      = "Production"
+    WEBSITES_RUN_FROM_PACKAGE               = "1"
   }
 
   tags = {
