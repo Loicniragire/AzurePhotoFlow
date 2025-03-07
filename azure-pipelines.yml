@@ -255,7 +255,6 @@ stages:
   jobs:
   - job: UploadFunctionZipToStorage
     displayName: "Upload Function Zip to Storage"
-    dependsOn: DeployInfrastructure
     steps:
       - download: current
         artifact: functionapp-zip
