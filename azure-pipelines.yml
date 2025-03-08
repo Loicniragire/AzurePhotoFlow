@@ -271,7 +271,7 @@ stages:
             CONTAINER_NAME="function-deployments"
             ZIP_FILE="$(Pipeline.Workspace)/functionapp-zip/functionapp.zip"
             BLOB_NAME="functionapp-$(Build.BuildId).zip"
-            EXPIRY_DATE=$(date -u -v+1d '+%Y-%m-%dT%H:%MZ')
+            EXPIRY_DATE=$(date -u -v+7d '+%Y-%m-%dT%H:%MZ')
 
             # Create container if it doesn't exist
             az storage container create \
@@ -296,9 +296,7 @@ stages:
 
 
             FULL_URL="https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${BLOB_NAME}?${SAS_URL}"
-            echo "Generated SAS URL: $FULL_URL"
             echo "##vso[task.setvariable variable=WEBSITE_RUN_FROM_PACKAGE_URL]$FULL_URL"
-            echo "WEBSITE_RUN_FROM_PACKAGE set to $FULL_URL"
 
       - task: AzureCLI@2
         displayName: 'Update WEBSITE_RUN_FROM_PACKAGE setting'
@@ -311,6 +309,12 @@ stages:
               --resource-group $(resourceGroupName) \
               --name $(backend_function_app_name) \
               --settings "WEBSITE_RUN_FROM_PACKAGE=$(WEBSITE_RUN_FROM_PACKAGE_URL)"
+
+            # Restart the function app
+            az functionapp restart \
+              --name $(backend_function_app_name) \
+              --resource-group $(resourceGroupName)
+
 # ---------------------------------------------------------------------------
 # Validate Stage
 # ---------------------------------------------------------------------------
