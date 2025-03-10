@@ -385,3 +385,4 @@ stages:
             echo "Checking Backend at ${BACKEND_HEALTH_URL}"
             curl -sSf "${BACKEND_HEALTH_URL}" | grep "Healthy" || exit 1
           displayName: 'Smoke Tests'
+
