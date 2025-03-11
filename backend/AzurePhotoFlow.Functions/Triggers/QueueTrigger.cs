@@ -1,3 +1,4 @@
+using Azure.Storage.Queues;
 using Functions.Interfaces;
 using Functions.Models;
 using Microsoft.Azure.Functions.Worker;
@@ -8,11 +9,13 @@ namespace Functions.Triggers;
 public class ProcessQueueMessage
 {
     private readonly IMetadataProcessor _metadataProcessor;
+	private readonly QueueClient _queueClient;
 
     // Dependencies are injected via the constructor.
-    public ProcessQueueMessage(IMetadataProcessor metadataProcessor)
-    {
-        _metadataProcessor = metadataProcessor;
+    public ProcessQueueMessage(IMetadataProcessor metadataProcessor, QueueClient queueClient)
+	{
+		_metadataProcessor = metadataProcessor;
+		_queueClient = queueClient;
     }
 
     [Function("ProcessMetadataQueueMessage")]
@@ -21,6 +24,9 @@ public class ProcessQueueMessage
         ILogger log)
     {
         log.LogInformation($"Processing queue item: {queueItem}");
+
+		var properties = await _queueClient.GetPropertiesAsync();
+		log.LogInformation($"Queue length: {properties.Value.ApproximateMessagesCount}");
 
         // Deserialize the message into a metadata object.
         var metadata = JsonConvert.DeserializeObject<ImageMetadata>(queueItem);
