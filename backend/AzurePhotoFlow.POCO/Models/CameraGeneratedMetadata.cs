@@ -1,7 +1,5 @@
-using System.Reflection;
 using MetadataExtractor;
-
-namespace Api.Models;
+namespace AzurePhotoFlow.POCO.Models;
 
 public class CameraGeneratedMetadata
 {

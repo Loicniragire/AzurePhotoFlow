@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Api.Models;
+namespace AzurePhotoFlow.POCO.Models;
 
 public class ImageMetadata
 {
@@ -25,3 +25,5 @@ public class ImageMetadata
 	[JsonProperty("cameraGeneratedMetadata")]
 	public CameraGeneratedMetadata CameraGeneratedMetadata { get; set; }
 }
+
+

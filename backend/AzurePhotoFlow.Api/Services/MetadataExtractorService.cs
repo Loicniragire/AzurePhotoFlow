@@ -9,6 +9,7 @@ using MetadataExtractor.Formats.Adobe;
 using MetadataExtractor.Formats.FileType;
 using Api.Interfaces;
 using Api.Models;
+using AzurePhotoFlow.POCO.Models;
 using MetadataDirectory = MetadataExtractor.Directory;
 
 

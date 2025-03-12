@@ -20,4 +20,8 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.4.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AzurePhotoFlow.POCO\AzurePhotoFlow.POCO.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -5,16 +5,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
 using Functions.Interfaces;
 using Functions.Services;
-using Azure.Storage.Queues;
-
-// Load environment variables from a .env file (for local development)
-DotNetEnv.Env.Load();
-
-// Print all environment variables for debugging
-foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
-{
-    Console.WriteLine($"{envVar.Key} = {envVar.Value}");
-}
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
@@ -46,17 +36,6 @@ var host = new HostBuilder()
                     PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
                 }
             }));
-
-        services.AddSingleton<QueueClient>(s =>
-             {
-                 var queueConnectionString = context.Configuration["AzureWebJobsStorage"]
-                        ?? throw new InvalidOperationException("Missing Queue connection string");
-                 var queueName = context.Configuration["image-queue-name"];
-
-                var queueClient = new QueueClient(queueConnectionString, queueName);
-                 queueClient.CreateIfNotExists();
-                 return queueClient;
-             });
 
         // Register custom application services
         services.AddSingleton<IMetadataProcessor, ImageMetadataProcessor>();
