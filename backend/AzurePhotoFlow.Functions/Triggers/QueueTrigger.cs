@@ -21,6 +21,7 @@ public class ProcessQueueMessage
         [QueueTrigger("image-metadata-queue", Connection = "AzureWebJobsStorage")] ImageMetadata[] queueItems)
     {
 
+		_logger.LogInformation($"{nameof(MetadataBatchProcessor)} Processing {queueItems.Count()} queue items.");
         foreach (var queueItem in queueItems)
         {
             try

@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzurePhotoFlow.Api.Tests", "AzurePhotoFlow.Api.Tests\AzurePhotoFlow.Api.Tests.csproj", "{BB94178B-4134-4E76-A97B-5CE19FF07D0F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzurePhotoFlow.Functions.Tests", "AzurePhotoFlow.Functions.Tests\AzurePhotoFlow.Functions.Tests.csproj", "{B802EE95-E212-41D5-8F60-95AE05C97A72}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{BB94178B-4134-4E76-A97B-5CE19FF07D0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB94178B-4134-4E76-A97B-5CE19FF07D0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB94178B-4134-4E76-A97B-5CE19FF07D0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
