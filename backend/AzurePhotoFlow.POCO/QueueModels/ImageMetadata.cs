@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace AzurePhotoFlow.POCO.Models;
+namespace AzurePhotoFlow.POCO.QueueModels;
 
 public class ImageMetadata
 {

@@ -1,4 +1,4 @@
-using AzurePhotoFlow.POCO.Models;
+using AzurePhotoFlow.POCO.QueueModels;
 
 namespace Functions.Interfaces;
 public interface IMetadataProcessor

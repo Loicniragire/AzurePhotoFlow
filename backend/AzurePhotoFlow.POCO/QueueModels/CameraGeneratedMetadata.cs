@@ -1,5 +1,5 @@
 using MetadataExtractor;
-namespace AzurePhotoFlow.POCO.Models;
+namespace AzurePhotoFlow.POCO.QueueModels;
 
 public class CameraGeneratedMetadata
 {

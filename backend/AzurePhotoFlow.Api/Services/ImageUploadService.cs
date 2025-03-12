@@ -6,7 +6,7 @@ using Azure.Storage.Blobs.Models;
 using System.Globalization;
 using System.Collections.Concurrent;
 using Newtonsoft.Json;
-using AzurePhotoFlow.POCO.Models;
+using AzurePhotoFlow.POCO.QueueModels;
 
 public class ImageUploadService : IImageUploadService
 {

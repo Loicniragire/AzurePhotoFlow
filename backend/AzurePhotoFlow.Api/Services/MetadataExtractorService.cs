@@ -8,8 +8,7 @@ using MetadataExtractor.Formats.Xmp;
 using MetadataExtractor.Formats.Adobe;
 using MetadataExtractor.Formats.FileType;
 using Api.Interfaces;
-using Api.Models;
-using AzurePhotoFlow.POCO.Models;
+using AzurePhotoFlow.POCO.QueueModels;
 using MetadataDirectory = MetadataExtractor.Directory;
 
 
@@ -28,20 +27,6 @@ public class MetadataExtractorService : IMetadataExtractorService
             imageStream.Position = 0;
 
         var directories = ImageMetadataReader.ReadMetadata(imageStream);
-
-        // (Optional) Logging has been commented out.
-        /*
-        foreach (var directory in directories)
-        {
-            _log.LogInformation($"Directory: {directory.Name}");
-            _log.LogInformation($"  Directory Type: {directory.GetType().Name}");
-            foreach (var tag in directory.Tags)
-            {
-                _log.LogInformation($"  {tag.Name} = {tag.Description}");
-            }
-        }
-        */
-
         var metadata = new CameraGeneratedMetadata();
 
         // JPEG Directory

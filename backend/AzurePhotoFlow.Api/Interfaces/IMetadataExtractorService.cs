@@ -1,4 +1,5 @@
-using AzurePhotoFlow.POCO.Models;
+using AzurePhotoFlow.POCO.QueueModels;
+
 namespace Api.Interfaces;
 
 public interface IMetadataExtractorService

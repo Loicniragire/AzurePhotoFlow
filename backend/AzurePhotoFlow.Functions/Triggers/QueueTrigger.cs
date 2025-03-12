@@ -1,4 +1,4 @@
-using AzurePhotoFlow.POCO.Models;
+using AzurePhotoFlow.POCO.QueueModels;
 using Functions.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
