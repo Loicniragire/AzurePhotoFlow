@@ -40,5 +40,9 @@
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\AzurePhotoFlow.POCO\AzurePhotoFlow.POCO.csproj" />
+  </ItemGroup>
 </Project>
 

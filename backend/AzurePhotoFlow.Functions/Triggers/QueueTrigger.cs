@@ -1,8 +1,8 @@
+using AzurePhotoFlow.POCO.Models;
 using Functions.Interfaces;
-using Functions.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+
 namespace Functions.Triggers;
 
 public class ProcessQueueMessage
@@ -18,23 +18,15 @@ public class ProcessQueueMessage
 
     [Function(nameof(MetadataBatchProcessor))]
     public async Task MetadataBatchProcessor(
-        [QueueTrigger("image-metadata-queue", Connection = "AzureWebJobsStorage")] string[] queueItems)
+        [QueueTrigger("image-metadata-queue", Connection = "AzureWebJobsStorage")] ImageMetadata[] queueItems)
     {
 
         foreach (var queueItem in queueItems)
         {
             try
             {
-                // Deserialize the message into a metadata object.
-                var metadata = JsonConvert.DeserializeObject<ImageMetadata>(queueItem);
-                if (metadata == null)
-                {
-                    _logger.LogError("Failed to deserialize queue message.");
-                    continue;
-                }
-
                 // Process the metadata using the injected service.
-                await _metadataProcessor.ProcessAsync(metadata);
+                await _metadataProcessor.ProcessAsync(queueItem);
             }
             catch (Exception ex)
             {
