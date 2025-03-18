@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzurePhotoFlow.Api.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzurePhotoFlow.Functions.Tests", "AzurePhotoFlow.Functions.Tests\AzurePhotoFlow.Functions.Tests.csproj", "{B802EE95-E212-41D5-8F60-95AE05C97A72}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzurePhotoFlow.Tests.Utilities", "AzurePhotoFlow.Tests.Utilities\AzurePhotoFlow.Tests.Utilities.csproj", "{35371686-88E0-4701-A0BA-860DE1DC5E41}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B802EE95-E212-41D5-8F60-95AE05C97A72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35371686-88E0-4701-A0BA-860DE1DC5E41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35371686-88E0-4701-A0BA-860DE1DC5E41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35371686-88E0-4701-A0BA-860DE1DC5E41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35371686-88E0-4701-A0BA-860DE1DC5E41}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

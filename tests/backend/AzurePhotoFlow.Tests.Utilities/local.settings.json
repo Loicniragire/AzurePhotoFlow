@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "CosmosDBConnectionString": "your-cosmos-db-connection-string",
+	"METADATA_QUEUE": "image-metadata-queue",
+	"CosmosKey": "your-cosmos-key",
+    "CosmosDatabase": "YourDatabaseName",
+    "CosmosContainer": "YourContainerName"
+  }
+}
+
+
