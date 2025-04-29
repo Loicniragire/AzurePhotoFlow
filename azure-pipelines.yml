@@ -17,8 +17,8 @@ variables:
   - name: location
     value: 'eastus'
 
-  - name: containerRegistry
-    value: 'ghcr.io/Loicniragire/PhotoFlow'
+  # - name: containerRegistry
+    # value: 'ghcr.io/Loicniragire/PhotoFlow'
 
 
   - name: storageAccountName
