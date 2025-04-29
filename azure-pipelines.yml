@@ -11,14 +11,16 @@ variables:
     value: 'AZ_PhotoFlow_connection'
   - name: subscriptionId
     value: 'ebe2acfb-f4a5-4f6b-8f30-252c571813f9'
-  - name: containerRegistryConnection
-    value: 'AzurePhotoFlowACR_connection'
+
   - name: resourceGroupName
     value: 'AzurePhotoFlow-RG'
   - name: location
     value: 'eastus'
+
   - name: containerRegistry
-    value: 'azurephotoflowacr.azurecr.io'
+    value: 'ghcr.io/Loicniragire/PhotoFlow'
+
+
   - name: storageAccountName
     value: 'photoflowtfstatedev'
   - name: containerName
@@ -47,57 +49,10 @@ resources:
 
 stages:
 # ---------------------------------------------------------------------------
-# Deploy Registry Stage
-# ---------------------------------------------------------------------------
-- stage: DeployRegistry
-  displayName: Deploy Registry
-  jobs:
-  - job: ProvisionRegistry
-    displayName: Provision Azure Container Registry
-    steps:
-      - checkout: self
-
-      - script: |
-          cd $(Build.SourcesDirectory)/Infrastructure
-
-          # Initialize Terraform
-          terraform init \
-            -backend-config="storage_account_name=$(storageAccountName)" \
-            -backend-config="container_name=$(containerName)" \
-            -backend-config="key=$(tfStateFile)" \
-            -backend-config="resource_group_name=$(resourceGroupName)" \
-            -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-
-          # Plan for only the ACR resource
-          terraform plan \
-            -target=azurerm_container_registry.acr \
-            -var="backend_image_tag=$(Build.BuildId)" \
-            -var="frontend_image_tag=$(Build.BuildId)" \
-            -var="backend_function_image_tag=$(Build.BuildId)" \
-            -var="azure_blob_storage=$(AZURE_BLOB_STORAGE)" \
-            -var="certificate_password=$(CERTIFICATE_PASSWORD)" \
-            -var="certificate_path=$(CERTIFICATE_PATH)" \
-            -var="vite_api_base_url=$(VITE_API_BASE_URL)" \
-            -var="backend_web_app_name=$(backendWebAppName)" \
-            -var="frontend_web_app_name=$(frontendWebAppName)" \
-            -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)" \
-            -var="docker_registry_username=$(ACR_USERNAME)" \
-            -var="docker_registry_password=$(ACR_PASSWORD)" \
-            -var="vite_google_client_id=$(VITE_GOOGLE_CLIENT_ID)" \
-            -var="jwt_secret_key=$(JWT_SECRET_KEY)" \
-            -var="backend_function_app_name=$(backend_function_app_name)" \
-            -out=tfplan-acr
-
-          # Apply only the ACR resource
-          terraform apply -auto-approve tfplan-acr
-        displayName: 'Terraform Apply for ACR Only'
-
-# ---------------------------------------------------------------------------
 # Build Stage
 # ---------------------------------------------------------------------------
 - stage: Build
   displayName: Build Stage
-  dependsOn: DeployRegistry
   jobs:
   - job: BuildDockerImages
     displayName: Build Docker Images (Backend & Frontend)
@@ -133,19 +88,21 @@ stages:
         displayName: 'Build and Tag Backend & Frontend Images'
 
       # Login to ACR and Push Images for backend and frontend
-      - task: Docker@2
-        displayName: 'Login to ACR'
-        inputs:
-          command: login
-          containerRegistry: $(containerRegistryConnection)
+      - script: |
+            echo "$(GHCR_TOKEN)" | docker login ghcr.io \
+              --username "$(GHCR_USERNAME)" \
+              --password-stdin
+        displayName: 'Login to GitHub Container Registry'
 
       - script: |
           echo "Pushing backend and frontend images to ACR..."
+
           docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-backend:latest
 
           docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-frontend:latest
+
         displayName: 'Push Docker Images to ACR'
 
       - publish: $(Build.SourcesDirectory)/docker-compose.yml
