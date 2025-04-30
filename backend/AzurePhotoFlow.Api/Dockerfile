@@ -5,8 +5,15 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 # Create and switch to a new working directory for the build
 WORKDIR /src
-COPY AzurePhotoFlow.Api.csproj ./ 
-COPY ../AzurePhotoFlow.POCO/AzurePhotoFlow.POCO.csproj ./AzurePhotoFlow.POCO/
+# 1) Copy the entire POCO project folder into /src/AzurePhotoFlow.POCO
+COPY backend/AzurePhotoFlow.POCO ./AzurePhotoFlow.POCO
+
+# 2) Copy the entire API project folder into /src/AzurePhotoFlow.Api
+COPY backend/AzurePhotoFlow.Api ./AzurePhotoFlow.Api
+
+# 3) Switch into the API folder (so restore/publish runs in the right place)
+WORKDIR /src/AzurePhotoFlow.Api
+
 
 # Restore dependencies
 RUN dotnet restore AzurePhotoFlow.Api.csproj
@@ -23,7 +30,9 @@ ENV CERTIFICATE_PASSWORD=$CERTIFICATE_PASSWORD
 ENV CERTIFICATE_PATH=$CERTIFICATE_PATH
 
 # Publish the application in Release mode to the "out" folder
-RUN dotnet publish -c Release -o /app/out
+RUN dotnet publish backend/AzurePhotoFlow.Api/AzurePhotoFlow.Api.csproj \
+    -c Release \
+    -o /app/out 
 
 
 #############################################

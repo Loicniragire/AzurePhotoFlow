@@ -14,7 +14,6 @@ services:
   backend:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
     build:
-      # context: ./backend/AzurePhotoFlow.Api
       context: .
       dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
       args:
