@@ -14,8 +14,9 @@ services:
   backend:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
     build:
-      context: ./backend/AzurePhotoFlow.Api
-      dockerfile: Dockerfile
+      # context: ./backend/AzurePhotoFlow.Api
+      context: .
+      dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
       args:
         CERTIFICATE_PASSWORD: ${CERTIFICATE_PASSWORD}
         AZURE_BLOB_STORAGE: ${AZURE_BLOB_STORAGE}

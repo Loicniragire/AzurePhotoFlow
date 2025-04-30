@@ -6,6 +6,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 # Create and switch to a new working directory for the build
 WORKDIR /src
 COPY AzurePhotoFlow.Api.csproj ./ 
+COPY ../AzurePhotoFlow.POCO/AzurePhotoFlow.POCO.csproj ./AzurePhotoFlow.POCO/
 
 # Restore dependencies
 RUN dotnet restore AzurePhotoFlow.Api.csproj
