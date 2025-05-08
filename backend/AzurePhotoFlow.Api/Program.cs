@@ -20,10 +20,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
-// Configure Kestrel to listen on port 80
+// Configure Kestrel to listen on port 8080
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(80);
+    options.ListenAnyIP(8080);
 });
 
 // Validate Blob Storage Connection Early
@@ -37,27 +37,29 @@ if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
 }
 
 // Configure Services
-builder.Services.AddHealthChecks()
-    .AddCheck("BlobStorage", () =>
-    {
-        try
-        {
-            var client = new BlobServiceClient(azureBlobStorageConnectionString);
-            client.GetBlobContainers().AsPages().GetEnumerator().MoveNext();
-            return HealthCheckResult.Healthy();
-        }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy("Blob Storage connection failed", ex);
-        }
-    });
+builder.Services.AddHealthChecks();
+
+/* builder.Services.AddHealthChecks() */
+/*     .AddCheck("BlobStorage", () => */
+/*     { */
+/*         try */
+/*         { */
+/*             var client = new BlobServiceClient(azureBlobStorageConnectionString); */
+/*             client.GetBlobContainers().AsPages().GetEnumerator().MoveNext(); */
+/*             return HealthCheckResult.Healthy(); */
+/*         } */
+/*         catch (Exception ex) */
+/*         { */
+/*             return HealthCheckResult.Unhealthy("Blob Storage connection failed", ex); */
+/*         } */
+/*     }); */
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
         // Adjust the allowed origin to match your frontend (e.g., including the correct port if needed)
-        policyBuilder.WithOrigins("http://localhost:80")
+        policyBuilder.WithOrigins("http://localhost:8080")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -297,18 +299,18 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 app.MapControllers();
 
 // Startup Validation
-try
-{
-    using var scope = app.Services.CreateScope();
-    var blobClient = scope.ServiceProvider.GetRequiredService<BlobServiceClient>();
-    blobClient.GetBlobContainers().AsPages().GetEnumerator().MoveNext();
-    app.Logger.LogInformation("All critical services initialized successfully");
-}
-catch (Exception ex)
-{
-    app.Logger.LogCritical(ex, "Critical service initialization failed");
-    throw;
-}
+/* try */
+/* { */
+/*     using var scope = app.Services.CreateScope(); */
+/*     var blobClient = scope.ServiceProvider.GetRequiredService<BlobServiceClient>(); */
+/*     blobClient.GetBlobContainers().AsPages().GetEnumerator().MoveNext(); */
+/*     app.Logger.LogInformation("All critical services initialized successfully"); */
+/* } */
+/* catch (Exception ex) */
+/* { */
+/*     app.Logger.LogCritical(ex, "Critical service initialization failed"); */
+/*     throw; */
+/* } */
 
 // Graceful Shutdown Handling
 var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
