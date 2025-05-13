@@ -13,7 +13,7 @@ public interface IImageUploadService
     Task Delete(string projectName, DateTime timestamp);
 
     /// <summary>
-    /// Uploads a zipped file to the Azure Blob Storage. 
+    /// Uploads a zipped file to storage
     /// Ignores subdirectory files.
     /// </summary>
     Task<UploadResponse> ExtractAndUploadImagesAsync(IFormFile directoryFile,

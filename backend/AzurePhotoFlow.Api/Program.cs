@@ -4,6 +4,7 @@ using Api.Interfaces;
 using Api.Models;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
+using AzurePhotoFlow.Api.Services;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Minio;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,6 +111,24 @@ builder.Logging.AddJsonConsole(options =>
     options.JsonWriterOptions = new JsonWriterOptions { Indented = true };
 });
 
+// Configure MinIO Client
+builder.Services.AddSingleton(x =>
+{
+	var minioEndpoint = Environment.GetEnvironmentVariable("MINIO_ENDPOINT");
+	var minioAccessKey = Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY");
+	var minioSecretKey = Environment.GetEnvironmentVariable("MINIO_SECRET_KEY");
+
+	if (string.IsNullOrEmpty(minioEndpoint) || string.IsNullOrEmpty(minioAccessKey) || string.IsNullOrEmpty(minioSecretKey))
+	{
+		throw new InvalidOperationException("MinIO configuration is missing.");
+	}
+
+	return new MinioClient()
+	.WithEndpoint(minioEndpoint)
+	.WithCredentials(minioAccessKey, minioSecretKey)
+	.Build();
+});
+
 // Secure Blob Client Initialization
 /* builder.Services.AddSingleton(x => */
 /* { */
@@ -152,7 +172,7 @@ builder.Logging.AddJsonConsole(options =>
 /* }); */
 
 /* builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>(); */
-/* builder.Services.AddScoped<IImageUploadService, ImageUploadService>(); */
+builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
