@@ -27,14 +27,14 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 // Validate Blob Storage Connection Early
-var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
-var queueStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE");
+/* var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
+/* var queueStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
 var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image-metadata-queue";
 
-if (string.IsNullOrEmpty(azureBlobStorageConnectionString))
-{
-    throw new InvalidOperationException("Azure Blob Storage Connection String is missing.");
-}
+/* if (string.IsNullOrEmpty(azureBlobStorageConnectionString)) */
+/* { */
+/*     throw new InvalidOperationException("Azure Blob Storage Connection String is missing."); */
+/* } */
 
 // Configure Services
 builder.Services.AddHealthChecks();
@@ -59,7 +59,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
         // Adjust the allowed origin to match your frontend (e.g., including the correct port if needed)
-        policyBuilder.WithOrigins("http://localhost:8080")
+        policyBuilder.WithOrigins("http://localhost:80", "http://localhost")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -110,49 +110,49 @@ builder.Logging.AddJsonConsole(options =>
 });
 
 // Secure Blob Client Initialization
-builder.Services.AddSingleton(x =>
-{
-    try
-    {
-        return new BlobServiceClient(
-            azureBlobStorageConnectionString,
-            new BlobClientOptions { Retry = { MaxRetries = 3 } });
-    }
-    catch (Exception ex)
-    {
-        var logger = x.GetRequiredService<ILogger<Program>>();
-        logger.LogCritical(ex, "Failed to initialize Blob Service Client");
-        throw;
-    }
-});
+/* builder.Services.AddSingleton(x => */
+/* { */
+/*     try */
+/*     { */
+/*         return new BlobServiceClient( */
+/*             azureBlobStorageConnectionString, */
+/*             new BlobClientOptions { Retry = { MaxRetries = 3 } }); */
+/*     } */
+/*     catch (Exception ex) */
+/*     { */
+/*         var logger = x.GetRequiredService<ILogger<Program>>(); */
+/*         logger.LogCritical(ex, "Failed to initialize Blob Service Client"); */
+/*         throw; */
+/*     } */
+/* }); */
 
 // Secure Queue Client Initialization
-builder.Services.AddSingleton(x =>
-{
-    try
-    {
-           return new QueueServiceClient(
-            queueStorageConnectionString,
-               new QueueClientOptions { Retry = { MaxRetries = 3 } });
-    }
-       catch (Exception ex)
-    {
-           var logger = x.GetRequiredService<ILogger<Program>>();
-           logger.LogCritical(ex, "Failed to initialize Queue Service Client");
-        throw;
-       }
-});
+/* builder.Services.AddSingleton(x => */
+/* { */
+/*     try */
+/*     { */
+/*            return new QueueServiceClient( */
+/*             queueStorageConnectionString, */
+/*                new QueueClientOptions { Retry = { MaxRetries = 3 } }); */
+/*     } */
+/*        catch (Exception ex) */
+/*     { */
+/*            var logger = x.GetRequiredService<ILogger<Program>>(); */
+/*            logger.LogCritical(ex, "Failed to initialize Queue Service Client"); */
+/*         throw; */
+/*        } */
+/* }); */
 
 // Register MessageQueueingService
-builder.Services.AddScoped<IMessageQueueingService>(x =>
-{
-       var queueServiceClient = x.GetRequiredService<QueueServiceClient>();
-       var logger = x.GetRequiredService<ILogger<MessageQueueingService>>();
-       return new MessageQueueingService(queueServiceClient, metadataQueueName, logger);
-});
+/* builder.Services.AddScoped<IMessageQueueingService>(x => */
+/* { */
+/*        var queueServiceClient = x.GetRequiredService<QueueServiceClient>(); */
+/*        var logger = x.GetRequiredService<ILogger<MessageQueueingService>>(); */
+/*        return new MessageQueueingService(queueServiceClient, metadataQueueName, logger); */
+/* }); */
 
-builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
-builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
+/* builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>(); */
+/* builder.Services.AddScoped<IImageUploadService, ImageUploadService>(); */
 
 builder.Services.Configure<FormOptions>(options =>
 {
