@@ -6,6 +6,7 @@ using Minio;
 using Minio.DataModel.Args;
 using Newtonsoft.Json;
 using AzurePhotoFlow.POCO.QueueModels;
+using System.Text.RegularExpressions;
 
 namespace AzurePhotoFlow.Services;
 
@@ -21,7 +22,7 @@ public class MinIOImageUploadService : IImageUploadService
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
         IMetadataExtractorService metadataExtractorService)
-        /* IMessageQueueingService messageQueueingService) */
+    /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
@@ -41,6 +42,11 @@ public class MinIOImageUploadService : IImageUploadService
         if (!await _minioClient.BucketExistsAsync(
                 new BucketExistsArgs().WithBucket(BucketName)))
         {
+			if(!IsValidBucketName(BucketName))
+				throw new InvalidOperationException(
+					$"Invalid bucket name '{BucketName}'. " +
+					$"Bucket names must be lowercase and match the regex: {IsValidBucketName(BucketName)}");
+
             await _minioClient.MakeBucketAsync(
                 new MakeBucketArgs().WithBucket(BucketName));
         }
@@ -104,6 +110,9 @@ public class MinIOImageUploadService : IImageUploadService
                                      .WithStreamData(uploadStream)
                                      .WithObjectSize(uploadStream.Length)
                                      .WithContentType(GetMimeType(entry.Name));
+
+					// Log putArgs for debugging
+					_log.LogDebug("PutArgs: {PutArgs}", putArgs);
 
                     await _minioClient.PutObjectAsync(putArgs);
 
@@ -254,5 +263,13 @@ public class MinIOImageUploadService : IImageUploadService
             .Replace("..", string.Empty)
             .Trim('/')
             .Replace("  ", " ");   // collapse double spaces, optional
+    }
+
+    private static bool IsValidBucketName(string name)
+    {
+        const string pattern =
+            @"^(?!xn--)(?!sthree-)(?!amzn-s3-demo-)(?!.*\.(?:mrap)$)(?!.*--(?:ol|x|table)-s3$)(?!\d{1,3}(?:\.\d{1,3}){3}$)[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$";
+
+        return Regex.IsMatch(name, pattern, RegexOptions.Compiled);
     }
 }

@@ -30,7 +30,7 @@ builder.WebHost.ConfigureKestrel(options =>
 // Validate Blob Storage Connection Early
 /* var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
 /* var queueStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
-var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image-metadata-queue";
+/* var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image-metadata-queue"; */
 
 /* if (string.IsNullOrEmpty(azureBlobStorageConnectionString)) */
 /* { */

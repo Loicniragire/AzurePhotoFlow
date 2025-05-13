@@ -22,6 +22,9 @@ services:
         CERTIFICATE_PATH: ${CERTIFICATE_PATH}
         JWT_SECRET_KEY: ${JWT_SECRET_KEY}
         MODE: ${MODE}
+        MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+        MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+        MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
     container_name: backend
     environment:
       - ASPNETCORE_URLS=http://+:80
