@@ -4,7 +4,6 @@ using Api.Interfaces;
 using Api.Models;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
-using AzurePhotoFlow.Api.Services;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -171,7 +170,7 @@ builder.Services.AddSingleton(x =>
 /*        return new MessageQueueingService(queueServiceClient, metadataQueueName, logger); */
 /* }); */
 
-/* builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>(); */
+builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
 
 builder.Services.Configure<FormOptions>(options =>

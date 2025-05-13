@@ -7,7 +7,7 @@ using Minio.DataModel.Args;
 using Newtonsoft.Json;
 using AzurePhotoFlow.POCO.QueueModels;
 
-namespace AzurePhotoFlow.Api.Services;
+namespace AzurePhotoFlow.Services;
 
 public class MinIOImageUploadService : IImageUploadService
 {
@@ -15,18 +15,18 @@ public class MinIOImageUploadService : IImageUploadService
     private readonly IMinioClient _minioClient;
     private readonly ILogger<MinIOImageUploadService> _log;
     private readonly IMetadataExtractorService _metadataExtractorService;
-    private readonly IMessageQueueingService _messageQueueingService;
+    /* private readonly IMessageQueueingService _messageQueueingService; */
 
     public MinIOImageUploadService(
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
-        IMetadataExtractorService metadataExtractorService,
-        IMessageQueueingService messageQueueingService)
+        IMetadataExtractorService metadataExtractorService)
+        /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
-        _messageQueueingService = messageQueueingService;
+        /* _messageQueueingService = messageQueueingService; */
     }
 
     public async Task<UploadResponse> ExtractAndUploadImagesAsync(
@@ -129,7 +129,7 @@ public class MinIOImageUploadService : IImageUploadService
                         metadata,
                         new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
-                    await _messageQueueingService.EnqueueMessageAsync(serialized);
+                    /* await _messageQueueingService.EnqueueMessageAsync(serialized); */
 
                     _log.LogInformation("Uploaded: {Key}", objectKey);
                     uploadedCount++;

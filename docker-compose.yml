@@ -31,6 +31,9 @@ services:
       - MODE=${MODE}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
     networks:
       - app-network
 
