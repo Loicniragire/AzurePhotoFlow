@@ -9,7 +9,6 @@ using MetadataExtractor.Formats.Adobe;
 using MetadataExtractor.Formats.FileType;
 using Api.Interfaces;
 using AzurePhotoFlow.POCO.QueueModels;
-using MetadataDirectory = MetadataExtractor.Directory;
 
 
 namespace AzurePhotoFlow.Services;
@@ -26,40 +25,57 @@ public class MetadataExtractorService : IMetadataExtractorService
         if (imageStream.CanSeek)
             imageStream.Position = 0;
 
-        var directories = ImageMetadataReader.ReadMetadata(imageStream);
         var metadata = new CameraGeneratedMetadata();
+        var directories = ImageMetadataReader.ReadMetadata(imageStream);
 
-        // JPEG Directory
         var jpegDirectory = directories.OfType<JpegDirectory>().FirstOrDefault();
+        var exifIfd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
+        var exifSubIfdDirectory = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
+        var gpsDirectory = directories.OfType<GpsDirectory>().FirstOrDefault();
+        var xmpDirectory = directories.OfType<XmpDirectory>().FirstOrDefault();
+        var iccDirectory = directories.OfType<IccDirectory>().FirstOrDefault();
+        var photoshopDirectory = directories.OfType<PhotoshopDirectory>().FirstOrDefault();
+        var iptcDirectory = directories.OfType<IptcDirectory>().FirstOrDefault();
+        var adobeJpegDirectory = directories.OfType<AdobeJpegDirectory>().FirstOrDefault();
+        var fileTypeDirectory = directories.OfType<FileTypeDirectory>().FirstOrDefault();
+
+        var actions = new List<Action>();
+
         if (jpegDirectory != null)
         {
-            metadata.ImageWidth = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagImageWidth);
-            metadata.ImageHeight = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagImageHeight);
-            metadata.CompressionType = MetadataHelper.SafeGetDescription(jpegDirectory, JpegDirectory.TagCompressionType);
-            metadata.DataPrecision = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagDataPrecision);
-            metadata.NumberOfComponents = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagNumberOfComponents);
+            actions.Add(() =>
+            {
+                metadata.ImageWidth = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagImageWidth);
+                metadata.ImageHeight = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagImageHeight);
+                metadata.CompressionType = MetadataHelper.SafeGetDescription(jpegDirectory, JpegDirectory.TagCompressionType);
+                metadata.DataPrecision = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagDataPrecision);
+                metadata.NumberOfComponents = MetadataHelper.SafeGetInt32(jpegDirectory, JpegDirectory.TagNumberOfComponents);
+            });
         }
 
-        // Exif IFD0 Directory
-        var exifIfd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
         if (exifIfd0Directory != null)
         {
-            metadata.CameraMake = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagMake);
-            metadata.CameraModel = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagModel);
-            metadata.Orientation = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagOrientation);
-            Rational? xres = MetadataHelper.SafeGetRational(exifIfd0Directory, ExifDirectoryBase.TagXResolution);
-            Rational? yres = MetadataHelper.SafeGetRational(exifIfd0Directory, ExifDirectoryBase.TagYResolution);
-            metadata.XResolution = xres?.ToDouble();
-            metadata.YResolution = yres?.ToDouble();
-            metadata.ResolutionUnit = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagResolutionUnit);
-            metadata.Software = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagSoftware);
-            metadata.Artist = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagArtist);
+            actions.Add(() =>
+         {
+             metadata.CameraMake = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagMake);
+             metadata.CameraModel = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagModel);
+             metadata.Orientation = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagOrientation);
+             Rational? xres = MetadataHelper.SafeGetRational(exifIfd0Directory, ExifDirectoryBase.TagXResolution);
+             Rational? yres = MetadataHelper.SafeGetRational(exifIfd0Directory, ExifDirectoryBase.TagYResolution);
+             metadata.XResolution = xres?.ToDouble();
+             metadata.YResolution = yres?.ToDouble();
+             metadata.ResolutionUnit = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagResolutionUnit);
+             metadata.Software = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagSoftware);
+             metadata.Artist = MetadataHelper.SafeGetDescription(exifIfd0Directory, ExifDirectoryBase.TagArtist);
+
+         });
+
         }
 
-        // Exif SubIFD Directory
-        var exifSubIfdDirectory = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
         if (exifSubIfdDirectory != null)
         {
+            actions.Add(() =>
+         {
             metadata.DateTimeOriginal = MetadataHelper.SafeGetDateTime(exifSubIfdDirectory, ExifDirectoryBase.TagDateTimeOriginal);
             metadata.DateTimeDigitized = MetadataHelper.SafeGetDateTime(exifSubIfdDirectory, ExifDirectoryBase.TagDateTimeDigitized);
 
@@ -91,12 +107,14 @@ public class MetadataExtractorService : IMetadataExtractorService
             metadata.MeteringMode = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagMeteringMode);
             Rational? focalLength = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalLength);
             metadata.FocalLength = focalLength?.ToDouble();
+
+         });
         }
 
-        // GPS Directory
-        var gpsDirectory = directories.OfType<GpsDirectory>().FirstOrDefault();
         if (gpsDirectory != null)
         {
+            actions.Add(() =>
+         {
             var location = gpsDirectory.GetGeoLocation();
             if (location != null)
             {
@@ -105,19 +123,23 @@ public class MetadataExtractorService : IMetadataExtractorService
             }
             Rational? altitude = MetadataHelper.SafeGetRational(gpsDirectory, GpsDirectory.TagAltitude);
             metadata.GpsAltitude = altitude?.ToDouble();
+
+         });
         }
 
-        // XMP Directory
-        var xmpDirectory = directories.OfType<XmpDirectory>().FirstOrDefault();
-        if (xmpDirectory != null && xmpDirectory.XmpMeta != null)
+        if (xmpDirectory != null)
         {
-			 metadata.XmpValueCount = xmpDirectory.XmpMeta.Properties.Count();
+            actions.Add(() =>
+         {
+            metadata.XmpValueCount = xmpDirectory.XmpMeta.Properties.Count();
+
+         });
         }
 
-        // ICC Profile Directory
-        var iccDirectory = directories.OfType<IccDirectory>().FirstOrDefault();
         if (iccDirectory != null)
         {
+            actions.Add(() =>
+         {
             // Example: if (iccDirectory.ContainsTag(IccDirectory.TagProfileSize)) { ... }
             metadata.IccCmmType = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagCmmType);
             metadata.IccColorSpace = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagColorSpace);
@@ -129,20 +151,23 @@ public class MetadataExtractorService : IMetadataExtractorService
             }
             metadata.IccDeviceModel = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagDeviceModel);
             metadata.IccTagCount = MetadataHelper.SafeGetInt32(iccDirectory, IccDirectory.TagTagCount);
+
+         });
         }
 
-        // Photoshop Directory
-        var photoshopDirectory = directories.OfType<PhotoshopDirectory>().FirstOrDefault();
         if (photoshopDirectory != null)
         {
+            actions.Add(() =>
+         {
             metadata.PhotoshopResolutionInfo = MetadataHelper.SafeGetDescription(photoshopDirectory, PhotoshopDirectory.TagResolutionInfo);
             metadata.PhotoshopCaptionDigest = MetadataHelper.SafeGetDescription(photoshopDirectory, PhotoshopDirectory.TagCaptionDigest);
+         });
         }
 
-        // IPTC Directory
-        var iptcDirectory = directories.OfType<IptcDirectory>().FirstOrDefault();
         if (iptcDirectory != null)
         {
+            actions.Add(() =>
+         {
             metadata.IptcCodedCharacterSet = MetadataHelper.SafeGetDescription(iptcDirectory, IptcDirectory.TagCodedCharacterSet);
             metadata.IptcApplicationRecordVersion = MetadataHelper.SafeGetInt32(iptcDirectory, IptcDirectory.TagApplicationRecordVersion);
             metadata.IptcDateCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDateCreated);
@@ -150,27 +175,36 @@ public class MetadataExtractorService : IMetadataExtractorService
             metadata.IptcDigitalDateCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDigitalDateCreated);
             metadata.IptcDigitalTimeCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDigitalTimeCreated);
             metadata.IptcByLine = MetadataHelper.SafeGetDescription(iptcDirectory, IptcDirectory.TagByLine);
+
+         });
         }
 
-        // Adobe JPEG Directory
-        var adobeJpegDirectory = directories.OfType<AdobeJpegDirectory>().FirstOrDefault();
         if (adobeJpegDirectory != null)
         {
+            actions.Add(() =>
+         {
             metadata.AdobeDctEncodeVersion = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagDctEncodeVersion);
             metadata.AdobeFlags0 = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagApp14Flags0);
             metadata.AdobeFlags1 = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagApp14Flags1);
             metadata.AdobeColorTransform = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagColorTransform);
+
+         });
         }
 
-        // File Type Directory
-        var fileTypeDirectory = directories.OfType<FileTypeDirectory>().FirstOrDefault();
         if (fileTypeDirectory != null)
         {
+            actions.Add(() =>
+         {
             metadata.DetectedFileTypeName = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagDetectedFileTypeName);
             metadata.DetectedFileTypeLongName = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagDetectedFileTypeLongName);
             metadata.ExpectedFileNameExtension = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagExpectedFileNameExtension);
+
+         });
         }
+
+        Parallel.Invoke(actions.ToArray());
 
         return metadata;
     }
+
 }

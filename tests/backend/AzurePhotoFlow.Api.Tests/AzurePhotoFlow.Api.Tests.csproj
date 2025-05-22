@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\backend\AzurePhotoFlow.Api\AzurePhotoFlow.Api.csproj" />
+    <ProjectReference Include="..\..\..\backend\AzurePhotoFlow.POCO\AzurePhotoFlow.POCO.csproj" />
   </ItemGroup>
 
   <ItemGroup>

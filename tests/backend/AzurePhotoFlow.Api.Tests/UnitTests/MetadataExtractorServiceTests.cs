@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using AzurePhotoFlow.Services;
 using Api.Models;
+using AzurePhotoFlow.POCO.QueueModels;
+
 namespace UnitTests;
 
 [TestFixture]
