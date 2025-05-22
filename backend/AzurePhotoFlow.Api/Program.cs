@@ -21,11 +21,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Load Environment Variables
 DotNetEnv.Env.Load();
 
-// Configure Kestrel to listen on port 8080
+// Configure Kestrel to listen on port 80
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(8080);
+    options.ListenAnyIP(80);
 });
+
 
 // Validate Blob Storage Connection Early
 /* var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
@@ -338,5 +339,14 @@ appLifetime.ApplicationStopping.Register(() =>
     app.Logger.LogInformation("Application is shutting down...");
     // Add any necessary cleanup logic here
 });
+
+if(app.Environment.IsDevelopment())
+{
+	app.UseDeveloperExceptionPage();
+}
+else
+{
+	app.UseExceptionHandler("/error");
+}
 
 app.Run();

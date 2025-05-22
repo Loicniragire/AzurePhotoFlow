@@ -158,6 +158,7 @@ public class MinIOImageUploadService : IImageUploadService
     }
 
     public Task Delete(string projectName, DateTime timestamp) => throw new NotImplementedException();
+
     public Task<List<ProjectInfo>> GetProjects(string year, string projectName, DateTime? ts)
                                                                     => throw new NotImplementedException();
 
