@@ -23,7 +23,7 @@ public interface IImageUploadService
                                                           bool isRawFiles = true,
                                                           string rawfileDirectoryName = "");
 
-    Task<List<ProjectInfo>> GetProjects(string year, string projectName, DateTime? timestamp);
+    Task<List<ProjectInfo>> GetProjectsAsync(string year, string projectName, DateTime? timestamp, CancellationToken cancellationToken = default);
 }
 
 

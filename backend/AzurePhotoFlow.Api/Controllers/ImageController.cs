@@ -162,7 +162,7 @@ public class ImageController : ControllerBase
                 parsedTimestamp = validDate;
             }
 
-            var projects = await _imageUploadService.GetProjects(year, projectName, parsedTimestamp);
+            var projects = await _imageUploadService.GetProjectsAsync(year, projectName, parsedTimestamp);
             return Ok(projects);
         }
         catch (Exception ex)

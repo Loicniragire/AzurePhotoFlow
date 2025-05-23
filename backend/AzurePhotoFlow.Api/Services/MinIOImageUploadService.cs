@@ -7,6 +7,8 @@ using Minio.DataModel.Args;
 using Newtonsoft.Json;
 using AzurePhotoFlow.POCO.QueueModels;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
+using Minio.DataModel;
 
 namespace AzurePhotoFlow.Services;
 
@@ -42,10 +44,10 @@ public class MinIOImageUploadService : IImageUploadService
         if (!await _minioClient.BucketExistsAsync(
                 new BucketExistsArgs().WithBucket(BucketName)))
         {
-			if(!MinIODirectoryHelper.IsValidBucketName(BucketName))
-				throw new InvalidOperationException(
-					$"Invalid bucket name '{BucketName}'. " +
-					$"Bucket names must be lowercase and match the regex: {MinIODirectoryHelper.IsValidBucketName(BucketName)}");
+            if (!MinIODirectoryHelper.IsValidBucketName(BucketName))
+                throw new InvalidOperationException(
+                    $"Invalid bucket name '{BucketName}'. " +
+                    $"Bucket names must be lowercase and match the regex: {MinIODirectoryHelper.IsValidBucketName(BucketName)}");
 
             await _minioClient.MakeBucketAsync(
                 new MakeBucketArgs().WithBucket(BucketName));
@@ -111,8 +113,8 @@ public class MinIOImageUploadService : IImageUploadService
                                      .WithObjectSize(uploadStream.Length)
                                      .WithContentType(MinIODirectoryHelper.GetMimeType(entry.Name));
 
-					// Log putArgs for debugging
-					_log.LogDebug("PutArgs: {PutArgs}", putArgs);
+                    // Log putArgs for debugging
+                    _log.LogDebug("PutArgs: {PutArgs}", putArgs);
 
                     await _minioClient.PutObjectAsync(putArgs);
 
@@ -159,9 +161,113 @@ public class MinIOImageUploadService : IImageUploadService
 
     public Task Delete(string projectName, DateTime timestamp) => throw new NotImplementedException();
 
-    public Task<List<ProjectInfo>> GetProjects(string year, string projectName, DateTime? ts)
-                                                                    => throw new NotImplementedException();
+    public async Task<List<ProjectInfo>> GetProjectsAsync(
+            string? year,
+            string? projectName,
+            DateTime? timestamp = null,
+            CancellationToken ct = default)
+    {
+        var projectsBag = new ConcurrentBag<ProjectInfo>();
 
+        // Start at the “root” of the bucket (empty prefix).
+        await ProcessHierarchyAsync(
+                prefix: String.Empty,
+                projects: projectsBag,
+                year, projectName, timestamp,
+                ct);
+
+        var result = projectsBag.ToList();
+        _log.LogInformation("Found {Count} projects", result.Count);
+        return result;
+    }
+
+    private async Task ProcessHierarchyAsync(
+            string prefix,
+            ConcurrentBag<ProjectInfo> projects,
+            string? year,
+            string? projectName,
+            DateTime? timestamp,
+            CancellationToken ct)
+    {
+        // Ask MinIO for *immediate* children only (delimiter = “/”).
+        var listArgs = new ListObjectsArgs()
+                           .WithBucket(BucketName)
+                           .WithPrefix(prefix)
+                           .WithRecursive(false);
+
+        var recursiveTasks = new List<Task>();
+
+        await foreach (Item item in _minioClient
+                                   .ListObjectsEnumAsync(listArgs, ct)
+                                   .WithCancellation(ct))            
+        {
+            // We only care about “sub-folders” (prefixes).
+            if (!item.IsDir)
+                continue;
+
+            string dirPrefix = item.Key;  // always ends with “/”
+            string[] parts = dirPrefix.Split(
+                                '/',
+                                StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 3)
+            {
+                string currentYear = parts[0];
+                string currentDateStamp = parts[1];
+                string currentProjectName = parts[2];
+
+                // ---------------- filters ----------------
+                if (!string.IsNullOrEmpty(year) && currentYear != year)
+                    continue;
+
+                if (!string.IsNullOrEmpty(projectName) &&
+                    !currentProjectName.Equals(projectName,
+                                              StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (timestamp.HasValue &&
+                    (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd",
+                                             CultureInfo.InvariantCulture,
+                                             DateTimeStyles.None,
+                                             out var parsedDate) ||
+                     parsedDate.Date != timestamp.Value.Date))
+                    continue;
+                // -----------------------------------------
+
+                // Parse once for the output DTO.
+                if (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd",
+                                            CultureInfo.InvariantCulture,
+                                            DateTimeStyles.None,
+                                            out var finalDate))
+                {
+                    _log.LogWarning("Unable to parse date: {Stamp}", currentDateStamp);
+                    continue;
+                }
+
+                var projectInfo = new ProjectInfo
+                {
+                    Name = currentProjectName,
+                    Datestamp = finalDate,
+                    Directories = await GetDirectoryDetailsAsync(dirPrefix, ct)
+                };
+
+                projects.Add(projectInfo);
+                _log.LogInformation("Added {Project} ({Stamp})",
+                                    currentProjectName, currentDateStamp);
+            }
+            else
+            {
+                // Go one level deeper — run in parallel.
+                recursiveTasks.Add(
+                    ProcessHierarchyAsync(dirPrefix, projects,
+                                          year, projectName, timestamp, ct));
+            }
+        }
+
+        // Await children once we have queued them all.
+        if (recursiveTasks.Count > 0)
+            await Task.WhenAll(recursiveTasks);
+    }
 
     /// <summary>Checks whether at least one object exists under <paramref name="prefix"/>.</summary>
     private async Task<bool> DoesPathExistAsync(string prefix, CancellationToken ct = default)
@@ -177,6 +283,74 @@ public class MinIOImageUploadService : IImageUploadService
             return true;
         }
         return false;
+    }
+
+    private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
+        string projectPrefix,    // MUST end in '/'
+        CancellationToken ct = default)
+    {
+        var directories = new List<ProjectDirectory>();
+
+        // 1  Ask MinIO for “one-level-deep” prefixes only
+        var listArgs = new ListObjectsArgs()
+                          .WithBucket(BucketName)
+                          .WithPrefix(projectPrefix)
+                          .WithPrefix(projectPrefix)
+                          .WithRecursive(false);
+
+        await foreach (var item in _minioClient
+                                   .ListObjectsEnumAsync(listArgs, ct)
+                                   .WithCancellation(ct))          // async stream
+        {
+            if (!item.IsDir)          // skip real objects; we want folder prefixes
+                continue;
+
+            /*  dirPrefix looks like:
+             *    2025/05-13/WeddingSmith/CameraA/
+             */
+            string dirPrefix = item.Key;
+            string directoryName = dirPrefix
+                                   .Substring(projectPrefix.Length) // remove parent part
+                                   .TrimEnd('/');                   // => "CameraA"
+
+            // 2  Count RawFiles and ProcessedFiles in parallel
+            string rawPrefix = $"{dirPrefix}RawFiles/";
+            string processedPrefix = $"{dirPrefix}ProcessedFiles/";
+
+            var rawTask = CountFilesAsync(rawPrefix, ct);
+            var processedTask = CountFilesAsync(processedPrefix, ct);
+
+            await Task.WhenAll(rawTask, processedTask);
+
+            directories.Add(new ProjectDirectory
+            {
+                Name = directoryName,
+                RawFilesCount = rawTask.Result,
+                ProcessedFilesCount = processedTask.Result
+            });
+        }
+
+        return directories;
+    }
+
+    private async Task<int> CountFilesAsync(string prefix, CancellationToken ct)
+    {
+        int count = 0;
+
+        var countArgs = new ListObjectsArgs()
+                           .WithBucket(BucketName)
+                           .WithPrefix(prefix)
+                           .WithRecursive(true);   // walk entire subtree
+
+        await foreach (var obj in _minioClient
+                                  .ListObjectsEnumAsync(countArgs, ct)
+                                  .WithCancellation(ct))
+        {
+            if (!obj.IsDir)      // ignore synthetic folder entries
+                count++;
+        }
+
+        return count;
     }
 }
 
