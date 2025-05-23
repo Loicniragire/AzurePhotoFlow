@@ -76,37 +76,37 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            metadata.DateTimeOriginal = MetadataHelper.SafeGetDateTime(exifSubIfdDirectory, ExifDirectoryBase.TagDateTimeOriginal);
-            metadata.DateTimeDigitized = MetadataHelper.SafeGetDateTime(exifSubIfdDirectory, ExifDirectoryBase.TagDateTimeDigitized);
+             metadata.DateTimeOriginal = MetadataHelper.SafeGetDateTime(exifSubIfdDirectory, ExifDirectoryBase.TagDateTimeOriginal);
+             metadata.DateTimeDigitized = MetadataHelper.SafeGetDateTime(exifSubIfdDirectory, ExifDirectoryBase.TagDateTimeDigitized);
 
-            metadata.ShutterSpeed = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifDirectoryBase.TagExposureTime);
+             metadata.ShutterSpeed = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifDirectoryBase.TagExposureTime);
 
-            Rational? aperture = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifDirectoryBase.TagFNumber);
-            metadata.Aperture = aperture?.ToDouble();
+             Rational? aperture = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifDirectoryBase.TagFNumber);
+             metadata.Aperture = aperture?.ToDouble();
 
-            metadata.Iso = MetadataHelper.SafeGetInt32(exifSubIfdDirectory, ExifDirectoryBase.TagIsoEquivalent);
-            metadata.ExposureProgram = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagExposureProgram);
-            metadata.SensitivityType = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagSensitivityType);
-            metadata.RecommendedExposureIndex = MetadataHelper.SafeGetInt32(exifSubIfdDirectory, ExifSubIfdDirectory.TagRecommendedExposureIndex);
-            metadata.ExifVersion = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagExifVersion);
-            metadata.ColorSpace = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagColorSpace);
+             metadata.Iso = MetadataHelper.SafeGetInt32(exifSubIfdDirectory, ExifDirectoryBase.TagIsoEquivalent);
+             metadata.ExposureProgram = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagExposureProgram);
+             metadata.SensitivityType = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagSensitivityType);
+             metadata.RecommendedExposureIndex = MetadataHelper.SafeGetInt32(exifSubIfdDirectory, ExifSubIfdDirectory.TagRecommendedExposureIndex);
+             metadata.ExifVersion = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagExifVersion);
+             metadata.ColorSpace = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagColorSpace);
 
-            Rational? focalPlaneXResolution = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalPlaneXResolution);
-            metadata.FocalPlaneXResolution = focalPlaneXResolution?.ToDouble();
-            Rational? focalPlaneYResolution = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalPlaneYResolution);
-            metadata.FocalPlaneYResolution = focalPlaneYResolution?.ToDouble();
-            metadata.FocalPlaneResolutionUnit = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalPlaneResolutionUnit);
-            metadata.CustomRendered = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagCustomRendered);
-            metadata.ExposureMode = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagExposureMode);
-            metadata.WhiteBalance = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagWhiteBalance);
-            metadata.SceneCaptureType = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagSceneCaptureType);
-            metadata.BodySerialNumber = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagBodySerialNumber);
-            metadata.LensSpecification = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagLensSpecification);
-            metadata.LensModel = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagLensModel);
-            metadata.LensSerialNumber = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagLensSerialNumber);
-            metadata.MeteringMode = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagMeteringMode);
-            Rational? focalLength = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalLength);
-            metadata.FocalLength = focalLength?.ToDouble();
+             Rational? focalPlaneXResolution = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalPlaneXResolution);
+             metadata.FocalPlaneXResolution = focalPlaneXResolution?.ToDouble();
+             Rational? focalPlaneYResolution = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalPlaneYResolution);
+             metadata.FocalPlaneYResolution = focalPlaneYResolution?.ToDouble();
+             metadata.FocalPlaneResolutionUnit = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalPlaneResolutionUnit);
+             metadata.CustomRendered = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagCustomRendered);
+             metadata.ExposureMode = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagExposureMode);
+             metadata.WhiteBalance = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagWhiteBalance);
+             metadata.SceneCaptureType = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagSceneCaptureType);
+             metadata.BodySerialNumber = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagBodySerialNumber);
+             metadata.LensSpecification = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagLensSpecification);
+             metadata.LensModel = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagLensModel);
+             metadata.LensSerialNumber = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagLensSerialNumber);
+             metadata.MeteringMode = MetadataHelper.SafeGetDescription(exifSubIfdDirectory, ExifSubIfdDirectory.TagMeteringMode);
+             Rational? focalLength = MetadataHelper.SafeGetRational(exifSubIfdDirectory, ExifSubIfdDirectory.TagFocalLength);
+             metadata.FocalLength = focalLength?.ToDouble();
 
          });
         }
@@ -115,14 +115,14 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            var location = gpsDirectory.GetGeoLocation();
-            if (location != null)
-            {
-                metadata.GpsLatitude = location.Latitude;
-                metadata.GpsLongitude = location.Longitude;
-            }
-            Rational? altitude = MetadataHelper.SafeGetRational(gpsDirectory, GpsDirectory.TagAltitude);
-            metadata.GpsAltitude = altitude?.ToDouble();
+             var location = gpsDirectory.GetGeoLocation();
+             if (location != null)
+             {
+                 metadata.GpsLatitude = location.Latitude;
+                 metadata.GpsLongitude = location.Longitude;
+             }
+             Rational? altitude = MetadataHelper.SafeGetRational(gpsDirectory, GpsDirectory.TagAltitude);
+             metadata.GpsAltitude = altitude?.ToDouble();
 
          });
         }
@@ -131,7 +131,7 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            metadata.XmpValueCount = xmpDirectory.XmpMeta.Properties.Count();
+             metadata.XmpValueCount = xmpDirectory.XmpMeta.Properties.Count();
 
          });
         }
@@ -140,17 +140,17 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            // Example: if (iccDirectory.ContainsTag(IccDirectory.TagProfileSize)) { ... }
-            metadata.IccCmmType = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagCmmType);
-            metadata.IccColorSpace = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagColorSpace);
-            metadata.IccProfileConnectionSpace = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagProfileConnectionSpace);
-            string profileDateStr = MetadataHelper.SafeGetString(iccDirectory, IccDirectory.TagProfileDateTime);
-            if (DateTime.TryParse(profileDateStr, out var profileDate))
-            {
-                metadata.IccProfileDateTime = profileDate;
-            }
-            metadata.IccDeviceModel = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagDeviceModel);
-            metadata.IccTagCount = MetadataHelper.SafeGetInt32(iccDirectory, IccDirectory.TagTagCount);
+             // Example: if (iccDirectory.ContainsTag(IccDirectory.TagProfileSize)) { ... }
+             metadata.IccCmmType = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagCmmType);
+             metadata.IccColorSpace = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagColorSpace);
+             metadata.IccProfileConnectionSpace = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagProfileConnectionSpace);
+             string profileDateStr = MetadataHelper.SafeGetString(iccDirectory, IccDirectory.TagProfileDateTime);
+             if (DateTime.TryParse(profileDateStr, out var profileDate))
+             {
+                 metadata.IccProfileDateTime = profileDate;
+             }
+             metadata.IccDeviceModel = MetadataHelper.SafeGetDescription(iccDirectory, IccDirectory.TagDeviceModel);
+             metadata.IccTagCount = MetadataHelper.SafeGetInt32(iccDirectory, IccDirectory.TagTagCount);
 
          });
         }
@@ -159,8 +159,8 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            metadata.PhotoshopResolutionInfo = MetadataHelper.SafeGetDescription(photoshopDirectory, PhotoshopDirectory.TagResolutionInfo);
-            metadata.PhotoshopCaptionDigest = MetadataHelper.SafeGetDescription(photoshopDirectory, PhotoshopDirectory.TagCaptionDigest);
+             metadata.PhotoshopResolutionInfo = MetadataHelper.SafeGetDescription(photoshopDirectory, PhotoshopDirectory.TagResolutionInfo);
+             metadata.PhotoshopCaptionDigest = MetadataHelper.SafeGetDescription(photoshopDirectory, PhotoshopDirectory.TagCaptionDigest);
          });
         }
 
@@ -168,13 +168,13 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            metadata.IptcCodedCharacterSet = MetadataHelper.SafeGetDescription(iptcDirectory, IptcDirectory.TagCodedCharacterSet);
-            metadata.IptcApplicationRecordVersion = MetadataHelper.SafeGetInt32(iptcDirectory, IptcDirectory.TagApplicationRecordVersion);
-            metadata.IptcDateCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDateCreated);
-            metadata.IptcTimeCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagTimeCreated);
-            metadata.IptcDigitalDateCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDigitalDateCreated);
-            metadata.IptcDigitalTimeCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDigitalTimeCreated);
-            metadata.IptcByLine = MetadataHelper.SafeGetDescription(iptcDirectory, IptcDirectory.TagByLine);
+             metadata.IptcCodedCharacterSet = MetadataHelper.SafeGetDescription(iptcDirectory, IptcDirectory.TagCodedCharacterSet);
+             metadata.IptcApplicationRecordVersion = MetadataHelper.SafeGetInt32(iptcDirectory, IptcDirectory.TagApplicationRecordVersion);
+             metadata.IptcDateCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDateCreated);
+             metadata.IptcTimeCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagTimeCreated);
+             metadata.IptcDigitalDateCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDigitalDateCreated);
+             metadata.IptcDigitalTimeCreated = MetadataHelper.SafeGetString(iptcDirectory, IptcDirectory.TagDigitalTimeCreated);
+             metadata.IptcByLine = MetadataHelper.SafeGetDescription(iptcDirectory, IptcDirectory.TagByLine);
 
          });
         }
@@ -183,10 +183,10 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            metadata.AdobeDctEncodeVersion = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagDctEncodeVersion);
-            metadata.AdobeFlags0 = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagApp14Flags0);
-            metadata.AdobeFlags1 = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagApp14Flags1);
-            metadata.AdobeColorTransform = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagColorTransform);
+             metadata.AdobeDctEncodeVersion = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagDctEncodeVersion);
+             metadata.AdobeFlags0 = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagApp14Flags0);
+             metadata.AdobeFlags1 = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagApp14Flags1);
+             metadata.AdobeColorTransform = MetadataHelper.SafeGetDescription(adobeJpegDirectory, AdobeJpegDirectory.TagColorTransform);
 
          });
         }
@@ -195,9 +195,9 @@ public class MetadataExtractorService : IMetadataExtractorService
         {
             actions.Add(() =>
          {
-            metadata.DetectedFileTypeName = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagDetectedFileTypeName);
-            metadata.DetectedFileTypeLongName = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagDetectedFileTypeLongName);
-            metadata.ExpectedFileNameExtension = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagExpectedFileNameExtension);
+             metadata.DetectedFileTypeName = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagDetectedFileTypeName);
+             metadata.DetectedFileTypeLongName = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagDetectedFileTypeLongName);
+             metadata.ExpectedFileNameExtension = MetadataHelper.SafeGetDescription(fileTypeDirectory, FileTypeDirectory.TagExpectedFileNameExtension);
 
          });
         }
