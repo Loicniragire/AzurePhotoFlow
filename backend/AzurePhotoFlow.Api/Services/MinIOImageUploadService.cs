@@ -14,7 +14,7 @@ namespace AzurePhotoFlow.Services;
 
 public class MinIOImageUploadService : IImageUploadService
 {
-    private const string BucketName = "photo‑store";
+    private const string BucketName = "photostore";
     private readonly IMinioClient _minioClient;
     private readonly ILogger<MinIOImageUploadService> _log;
     private readonly IMetadataExtractorService _metadataExtractorService;
@@ -190,6 +190,7 @@ public class MinIOImageUploadService : IImageUploadService
             CancellationToken ct)
     {
         // Ask MinIO for *immediate* children only (delimiter = “/”).
+		_log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName}");
         var listArgs = new ListObjectsArgs()
                            .WithBucket(BucketName)
                            .WithPrefix(prefix)
