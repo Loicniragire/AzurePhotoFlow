@@ -190,7 +190,7 @@ public class MinIOImageUploadService : IImageUploadService
             CancellationToken ct)
     {
         // Ask MinIO for *immediate* children only (delimiter = “/”).
-		_log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName}");
+        _log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName}");
         var listArgs = new ListObjectsArgs()
                            .WithBucket(BucketName)
                            .WithPrefix(prefix)
@@ -198,9 +198,18 @@ public class MinIOImageUploadService : IImageUploadService
 
         var recursiveTasks = new List<Task>();
 
+        // check if bucket exists
+        if (!await _minioClient.BucketExistsAsync(
+                new BucketExistsArgs().WithBucket(BucketName)))
+        {
+            _log.LogWarning("Bucket {Bucket} does not exist", BucketName);
+            return;
+        }
+
+
         await foreach (Item item in _minioClient
                                    .ListObjectsEnumAsync(listArgs, ct)
-                                   .WithCancellation(ct))            
+                                   .WithCancellation(ct))
         {
             // We only care about “sub-folders” (prefixes).
             if (!item.IsDir)
