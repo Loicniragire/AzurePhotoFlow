@@ -57,6 +57,7 @@ public class MinIOImageUploadService : IImageUploadService
             timestamp, projectName,
             isRawFiles ? directoryName : rawfileDirectoryName,
             isRawFiles);
+		_log.LogInformation("Destination path: {Path}", destinationPath);
 
         // If we're uploading *processed* files, verify that raw files are present first.
         if (!isRawFiles)
@@ -189,6 +190,16 @@ public class MinIOImageUploadService : IImageUploadService
             DateTime? timestamp,
             CancellationToken ct)
     {
+		/*
+		   Directory structure:
+			└─ 2025-01-04/                ← level 0  (date folder)
+			   └─ Test project/           ← level 1  (project)
+				  ├─ RawFiles/            ← level 2
+				  └─ ProcessedFiles/
+		 *
+		 */
+
+
         // Ask MinIO for *immediate* children only (delimiter = “/”).
         _log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName}");
         var listArgs = new ListObjectsArgs()
@@ -220,11 +231,11 @@ public class MinIOImageUploadService : IImageUploadService
                                 '/',
                                 StringSplitOptions.RemoveEmptyEntries);
 
-            if (parts.Length == 3)
+            if (parts.Length == 2)
             {
-                string currentYear = parts[0];
-                string currentDateStamp = parts[1];
-                string currentProjectName = parts[2];
+                string currentDateStamp = parts[0];
+                string currentProjectName = parts[1];
+                string currentYear = currentDateStamp[..4];
 
                 // ---------------- filters ----------------
                 if (!string.IsNullOrEmpty(year) && currentYear != year)
@@ -295,53 +306,54 @@ public class MinIOImageUploadService : IImageUploadService
         return false;
     }
 
-    private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
-        string projectPrefix,    // MUST end in '/'
-        CancellationToken ct = default)
-    {
-        var directories = new List<ProjectDirectory>();
+private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
+    string            projectPrefix,   // “…/{project}/”, ends with '/'
+    CancellationToken ct = default)
+{
+    // Bucket may contain thousands of rolls; use a dictionary to merge the
+    // two categories fast.
 
-        // 1  Ask MinIO for “one-level-deep” prefixes only
-        var listArgs = new ListObjectsArgs()
+	_log.LogInformation("Getting directory details for prefix: {Prefix}", projectPrefix);
+    var lookup = new Dictionary<string, ProjectDirectory>(
+                     StringComparer.OrdinalIgnoreCase);
+
+    foreach (string category in new[] { "RawFiles", "ProcessedFiles" })
+    {
+        string categoryPrefix = $"{projectPrefix}{category}/";
+
+        var catArgs = new ListObjectsArgs()
                           .WithBucket(BucketName)
-                          .WithPrefix(projectPrefix)
-                          .WithPrefix(projectPrefix)
-                          .WithRecursive(false);
+                          .WithPrefix(categoryPrefix)
+                          .WithRecursive(false);   // one level: rolls
 
         await foreach (var item in _minioClient
-                                   .ListObjectsEnumAsync(listArgs, ct)
-                                   .WithCancellation(ct))          // async stream
+                                   .ListObjectsEnumAsync(catArgs, ct)
+                                   .WithCancellation(ct))
         {
-            if (!item.IsDir)          // skip real objects; we want folder prefixes
-                continue;
+            if (!item.IsDir) continue;   // we want roll folders only
 
-            /*  dirPrefix looks like:
-             *    2025/05-13/WeddingSmith/CameraA/
-             */
-            string dirPrefix = item.Key;
-            string directoryName = dirPrefix
-                                   .Substring(projectPrefix.Length) // remove parent part
-                                   .TrimEnd('/');                   // => "CameraA"
+            string rollPrefix = item.Key;                            // …/Roll 7/
+            string rollName   = rollPrefix.Substring(categoryPrefix.Length)
+                                           .TrimEnd('/');            // “Roll 7”
 
-            // 2  Count RawFiles and ProcessedFiles in parallel
-            string rawPrefix = $"{dirPrefix}RawFiles/";
-            string processedPrefix = $"{dirPrefix}ProcessedFiles/";
+            // Count files *inside that roll* (recursive).
+            int fileCount = await CountFilesAsync(rollPrefix, ct);
 
-            var rawTask = CountFilesAsync(rawPrefix, ct);
-            var processedTask = CountFilesAsync(processedPrefix, ct);
-
-            await Task.WhenAll(rawTask, processedTask);
-
-            directories.Add(new ProjectDirectory
+            if (!lookup.TryGetValue(rollName, out var pd))
             {
-                Name = directoryName,
-                RawFilesCount = rawTask.Result,
-                ProcessedFilesCount = processedTask.Result
-            });
-        }
+                pd = new ProjectDirectory { Name = rollName };
+                lookup.Add(rollName, pd);
+            }
 
-        return directories;
+            if (category.Equals("RawFiles", StringComparison.OrdinalIgnoreCase))
+                pd.RawFilesCount = fileCount;
+            else
+                pd.ProcessedFilesCount = fileCount;
+        }
     }
+
+    return lookup.Values.ToList();
+}
 
     private async Task<int> CountFilesAsync(string prefix, CancellationToken ct)
     {

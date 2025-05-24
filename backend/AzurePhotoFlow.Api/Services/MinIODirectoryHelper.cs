@@ -66,7 +66,7 @@ public static class MinIODirectoryHelper
         string directoryName,
         bool isRawFiles)
     {
-        // 1)  yyyy/MM/dd   → keeps objects in date partitions for easier lifecycle rules
+        // 1)  yyyy-MM-dd   → keeps objects in date partitions for easier lifecycle rules
         // 2)  project name → one level per customer / shoot / collection
         // 3)  category     → RawFiles | ProcessedFiles
         // 4)  directory    → typically the folder inside the ZIP
@@ -75,7 +75,7 @@ public static class MinIODirectoryHelper
         //   2025/05/13/WeddingSmith/RawFiles/CameraA
         //   2025/05/13/WeddingSmith/ProcessedFiles/CameraA
 
-        string datePart = timestamp.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
+        string datePart = timestamp.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         string category = isRawFiles ? "RawFiles" : "ProcessedFiles";
 
         return $"{datePart}/{Sanitize(projectName)}/{category}/{Sanitize(directoryName)}";
