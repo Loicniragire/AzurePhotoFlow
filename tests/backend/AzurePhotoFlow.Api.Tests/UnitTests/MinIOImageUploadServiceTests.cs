@@ -31,7 +31,7 @@ public static class AsyncEnumerableHelper
     }
 }
 
-namespace AzurePhotoFlow.Api.Tests.UnitTests
+namespace unitTests
 {
     [TestFixture]
     public class MinIOImageUploadServiceTests
