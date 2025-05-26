@@ -1,4 +1,4 @@
-using Xunit;
+using NUnit.Framework;
 using Moq;
 using Minio;
 using Minio.DataModel;
@@ -33,6 +33,7 @@ public static class AsyncEnumerableHelper
 
 namespace AzurePhotoFlow.Api.Tests.UnitTests
 {
+    [TestFixture]
     public class MinIOImageUploadServiceTests
     {
         private readonly Mock<IMinioClient> _mockMinioClient;
@@ -106,7 +107,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
                 .Returns(fileItemsInRoll.ToAsyncEnumerable());
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_EmptyProject_ReturnsProjectWithNoDirectories()
         {
             // Arrange
@@ -119,14 +120,15 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
-            Assert.Equal(TestProjectName, project.Name);
-            Assert.Equal(TestTimestamp, project.Datestamp);
-            Assert.Empty(project.Directories);
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
+            Assert.AreEqual(TestProjectName, project.Name);
+            Assert.AreEqual(TestTimestamp, project.Datestamp);
+            Assert.IsEmpty(project.Directories);
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithEmptyCategories_ReturnsProjectWithNoDirectories()
         {
             // Arrange - Same as EmptyProject for GetDirectoryDetailsAsync behavior
@@ -137,14 +139,15 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
-            Assert.Equal(TestProjectName, project.Name);
-            Assert.Equal(TestTimestamp, project.Datestamp);
-            Assert.Empty(project.Directories);
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
+            Assert.AreEqual(TestProjectName, project.Name);
+            Assert.AreEqual(TestTimestamp, project.Datestamp);
+            Assert.IsEmpty(project.Directories);
         }
         
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithFilesInferredRolls_CorrectlyCountsFiles()
         {
             // Arrange
@@ -172,24 +175,25 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
-            Assert.Equal(TestProjectName, project.Name);
-            Assert.Equal(TestTimestamp, project.Datestamp);
-            Assert.Equal(2, project.Directories.Count);
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
+            Assert.AreEqual(TestProjectName, project.Name);
+            Assert.AreEqual(TestTimestamp, project.Datestamp);
+            Assert.AreEqual(2, project.Directories.Count);
 
             var roll1 = project.Directories.FirstOrDefault(d => d.Name == "Roll1");
-            Assert.NotNull(roll1);
-            Assert.Equal(2, roll1.RawFilesCount);
-            Assert.Equal(1, roll1.ProcessedFilesCount);
+            Assert.IsNotNull(roll1);
+            Assert.AreEqual(2, roll1.RawFilesCount);
+            Assert.AreEqual(1, roll1.ProcessedFilesCount);
 
             var roll2 = project.Directories.FirstOrDefault(d => d.Name == "Roll2");
-            Assert.NotNull(roll2);
-            Assert.Equal(1, roll2.RawFilesCount);
-            Assert.Equal(0, roll2.ProcessedFilesCount);
+            Assert.IsNotNull(roll2);
+            Assert.AreEqual(1, roll2.RawFilesCount);
+            Assert.AreEqual(0, roll2.ProcessedFilesCount);
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithExplicitRollDirectoryMarkersOnly_NoFiles_ReturnsEmptyDirectories()
         {
             // Arrange
@@ -215,12 +219,13 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
-            Assert.Empty(project.Directories); // Because rolls are inferred from *files*, not directory markers.
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
+            Assert.IsEmpty(project.Directories); // Because rolls are inferred from *files*, not directory markers.
         }
         
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithExplicitRollDirectoryMarkersAndFiles_CorrectlyCountsFiles()
         {
             // Arrange
@@ -245,22 +250,23 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
-            Assert.Equal(2, project.Directories.Count);
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
+            Assert.AreEqual(2, project.Directories.Count);
 
             var roll1 = project.Directories.FirstOrDefault(d => d.Name == "Roll1");
-            Assert.NotNull(roll1);
-            Assert.Equal(1, roll1.RawFilesCount);
-            Assert.Equal(0, roll1.ProcessedFilesCount);
+            Assert.IsNotNull(roll1);
+            Assert.AreEqual(1, roll1.RawFilesCount);
+            Assert.AreEqual(0, roll1.ProcessedFilesCount);
 
             var roll2 = project.Directories.FirstOrDefault(d => d.Name == "Roll2");
-            Assert.NotNull(roll2);
-            Assert.Equal(1, roll2.RawFilesCount);
-            Assert.Equal(0, roll2.ProcessedFilesCount);
+            Assert.IsNotNull(roll2);
+            Assert.AreEqual(1, roll2.RawFilesCount);
+            Assert.AreEqual(0, roll2.ProcessedFilesCount);
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithFilesDirectlyInCategory_NoRolls_ReturnsEmptyDirectories()
         {
             // Arrange
@@ -278,12 +284,13 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
-            Assert.Empty(project.Directories); // Files directly in category are not treated as rolls.
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
+            Assert.IsEmpty(project.Directories); // Files directly in category are not treated as rolls.
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithMixedContent_CorrectlyIdentifiesRollsAndCounts()
         {
             // Arrange
@@ -318,19 +325,20 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             var projects = await _service.GetProjectsAsync(TestYear, TestProjectName, TestTimestamp);
 
             // Assert
-            Assert.NotNull(projects);
-            var project = Assert.Single(projects);
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count);
+            var project = projects.Single();
             
             // Expected: Only RollA should be found. RollB (IsDir=true) is skipped, and img_directly_in_raw.jpg doesn't form a roll.
-            Assert.Single(project.Directories); 
+            Assert.AreEqual(1, project.Directories.Count); 
 
             var rollA = project.Directories.FirstOrDefault(d => d.Name == "RollA");
-            Assert.NotNull(rollA);
-            Assert.Equal(2, rollA.RawFilesCount);
-            Assert.Equal(1, rollA.ProcessedFilesCount);
+            Assert.IsNotNull(rollA);
+            Assert.AreEqual(2, rollA.RawFilesCount);
+            Assert.AreEqual(1, rollA.ProcessedFilesCount);
 
             var rollB = project.Directories.FirstOrDefault(d => d.Name == "RollB");
-            Assert.Null(rollB); // RollB should not be present as it was only an IsDir=true item or had no files.
+            Assert.IsNull(rollB); // RollB should not be present as it was only an IsDir=true item or had no files.
         }
     }
 }
