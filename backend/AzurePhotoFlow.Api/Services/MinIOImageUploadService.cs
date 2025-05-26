@@ -9,6 +9,7 @@ using AzurePhotoFlow.POCO.QueueModels;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using Minio.DataModel;
+using System.Collections.Generic; // Added for HashSet
 
 namespace AzurePhotoFlow.Services;
 
@@ -320,24 +321,57 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
     foreach (string category in new[] { "RawFiles", "ProcessedFiles" })
     {
         string categoryPrefix = $"{projectPrefix}{category}/";
+        _log.LogInformation("Processing category prefix: {CategoryPrefix}", categoryPrefix);
+        var rollNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var catArgs = new ListObjectsArgs()
-                          .WithBucket(BucketName)
-                          .WithPrefix(categoryPrefix)
-                          .WithRecursive(false);   // one level: rolls
+        var listObjectsArgs = new ListObjectsArgs()
+            .WithBucket(BucketName)
+            .WithPrefix(categoryPrefix)
+            .WithRecursive(true);
 
-        await foreach (var item in _minioClient
-                                   .ListObjectsEnumAsync(catArgs, ct)
-                                   .WithCancellation(ct))
+        await foreach (var item in _minioClient.ListObjectsEnumAsync(listObjectsArgs, ct).WithCancellation(ct))
         {
-            if (!item.IsDir) continue;   // we want roll folders only
+            if (item.IsDir)
+            {
+                // _log.LogDebug("Skipping directory item: {ItemKey}", item.Key);
+                continue; // Skip directories, we infer rolls from file paths
+            }
 
-            string rollPrefix = item.Key;                            // …/Roll 7/
-            string rollName   = rollPrefix.Substring(categoryPrefix.Length)
-                                           .TrimEnd('/');            // “Roll 7”
+            string objectKey = item.Key;
+            // _log.LogDebug("Processing object key: {ObjectKey}", objectKey);
 
-            // Count files *inside that roll* (recursive).
-            int fileCount = await CountFilesAsync(rollPrefix, ct);
+            if (!objectKey.StartsWith(categoryPrefix))
+            {
+                _log.LogWarning("Object key {ObjectKey} does not start with expected category prefix {CategoryPrefix}. Skipping.", objectKey, categoryPrefix);
+                continue;
+            }
+
+            string pathInsideCategory = objectKey.Substring(categoryPrefix.Length); // e.g., "Roll1/img.jpg" or "img.jpg"
+            string[] pathParts = pathInsideCategory.Split(new[] { '/' }, 2); // {"Roll1", "img.jpg"} or {"img.jpg"}
+
+            if (pathParts.Length > 1 && !string.IsNullOrEmpty(pathParts[0]))
+            {
+                // This means pathParts[0] is a directory segment (a roll name)
+                // and pathParts[1] is the file/object name within that roll.
+                string rollName = pathParts[0];
+                if (!string.IsNullOrWhiteSpace(rollName)) // Ensure rollName is not empty or just whitespace
+                {
+                    rollNames.Add(rollName);
+                    // _log.LogDebug("Added roll name: {RollName} from object {ObjectKey}", rollName, objectKey);
+                }
+            }
+            // else: file is directly in category folder (e.g. RawFiles/image.jpg), not in a roll. These are ignored for ProjectDirectory.
+        }
+
+        _log.LogInformation("Found {Count} unique roll(s) for category {Category}: {Rolls}", rollNames.Count, category, string.Join(", ", rollNames));
+
+        foreach (string rollName in rollNames)
+        {
+            string rollPrefixForCount = $"{categoryPrefix}{rollName}/";
+            // _log.LogDebug("Counting files for roll: {RollName} with prefix {RollPrefixForCount}", rollName, rollPrefixForCount);
+            int fileCount = await CountFilesAsync(rollPrefixForCount, ct);
+            // _log.LogInformation("File count for roll {RollName} in category {Category} is {FileCount}", rollName, category, fileCount);
+
 
             if (!lookup.TryGetValue(rollName, out var pd))
             {
@@ -346,9 +380,15 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
             }
 
             if (category.Equals("RawFiles", StringComparison.OrdinalIgnoreCase))
+            {
                 pd.RawFilesCount = fileCount;
+                // _log.LogDebug("Updated RawFilesCount for roll {RollName} to {FileCount}", rollName, fileCount);
+            }
             else
+            {
                 pd.ProcessedFilesCount = fileCount;
+                // _log.LogDebug("Updated ProcessedFilesCount for roll {RollName} to {FileCount}", rollName, fileCount);
+            }
         }
     }
 
