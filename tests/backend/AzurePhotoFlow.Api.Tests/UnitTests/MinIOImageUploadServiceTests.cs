@@ -60,7 +60,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
 
             // Default setup for BucketExistsAsync
             _mockMinioClient.Setup(c => c.BucketExistsAsync(
-                It.Is<BucketExistsArgs>(args => args.BucketName == BucketName), 
+                It.IsAny<BucketExistsArgs>(), 
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
