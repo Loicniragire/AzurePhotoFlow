@@ -1,4 +1,3 @@
-using Xunit;
 using Moq;
 using Minio;
 using Minio.DataModel;
@@ -31,8 +30,9 @@ public static class AsyncEnumerableHelper
     }
 }
 
-namespace AzurePhotoFlow.Api.Tests.UnitTests
+namespace unitTests
 {
+	[TestFixture]
     public class MinIOImageUploadServiceTests
     {
         private readonly Mock<IMinioClient> _mockMinioClient;
@@ -106,7 +106,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
                 .Returns(fileItemsInRoll.ToAsyncEnumerable());
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_EmptyProject_ReturnsProjectWithNoDirectories()
         {
             // Arrange
@@ -126,7 +126,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             Assert.Empty(project.Directories);
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithEmptyCategories_ReturnsProjectWithNoDirectories()
         {
             // Arrange - Same as EmptyProject for GetDirectoryDetailsAsync behavior
@@ -144,7 +144,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             Assert.Empty(project.Directories);
         }
         
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithFilesInferredRolls_CorrectlyCountsFiles()
         {
             // Arrange
@@ -189,7 +189,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             Assert.Equal(0, roll2.ProcessedFilesCount);
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithExplicitRollDirectoryMarkersOnly_NoFiles_ReturnsEmptyDirectories()
         {
             // Arrange
@@ -220,7 +220,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             Assert.Empty(project.Directories); // Because rolls are inferred from *files*, not directory markers.
         }
         
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithExplicitRollDirectoryMarkersAndFiles_CorrectlyCountsFiles()
         {
             // Arrange
@@ -260,7 +260,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             Assert.Equal(0, roll2.ProcessedFilesCount);
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithFilesDirectlyInCategory_NoRolls_ReturnsEmptyDirectories()
         {
             // Arrange
@@ -283,7 +283,7 @@ namespace AzurePhotoFlow.Api.Tests.UnitTests
             Assert.Empty(project.Directories); // Files directly in category are not treated as rolls.
         }
 
-        [Fact]
+        [Test]
         public async Task GetProjectsAsync_ProjectWithMixedContent_CorrectlyIdentifiesRollsAndCounts()
         {
             // Arrange
