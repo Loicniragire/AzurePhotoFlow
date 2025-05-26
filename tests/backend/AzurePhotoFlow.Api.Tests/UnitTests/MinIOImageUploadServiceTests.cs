@@ -1,35 +1,10 @@
-using NUnit.Framework;
 using Moq;
 using Minio;
 using Minio.DataModel;
 using Minio.DataModel.Args;
 using AzurePhotoFlow.Services;
-using AzurePhotoFlow.Api.Models; // Assuming ProjectInfo, ProjectDirectory are here
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System; // For DateTime
-using Api.Interfaces; // For IMetadataExtractorService, IImageUploadService
-using System.Globalization; // For CultureInfo in DateTime.ParseExact
-
-// Helper class for converting IEnumerable to IAsyncEnumerable
-public static class AsyncEnumerableHelper
-{
-    public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> source)
-    {
-        foreach (var item in source)
-        {
-            // Yielding ensures that the enumeration is deferred.
-            yield return item;
-        }
-        // The await Task.CompletedTask is not strictly necessary for yield return to work
-        // but can be useful if you needed an async method signature for other reasons.
-        // For this specific conversion, it's often omitted or can be a simple await Task.Yield();
-        await Task.CompletedTask; 
-    }
-}
+using Api.Interfaces;
 
 namespace unitTests
 {
