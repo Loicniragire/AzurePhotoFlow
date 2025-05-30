@@ -173,6 +173,7 @@ public class MinIOImageUploadService : IImageUploadService
         var projectsBag = new ConcurrentBag<ProjectInfo>();
 
         // Start at the “root” of the bucket (empty prefix).
+		_log.LogInformation($"GetProjectsAsync() - Project name: {projectName}, Year: {year}, Timestamp: {timestamp?.ToString("yyyy-MM-dd")}");
         await ProcessHierarchyAsync(
                 prefix: String.Empty,
                 projects: projectsBag,
@@ -202,11 +203,13 @@ public class MinIOImageUploadService : IImageUploadService
 		 */
 
         // Ask MinIO for *immediate* children only (delimiter = “/”).
-        _log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName}");
+        _log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName} - projectName: {projectName}");
         var listArgs = new ListObjectsArgs()
                            .WithBucket(BucketName)
                            .WithPrefix(prefix)
                            .WithRecursive(false);
+
+
 
         var recursiveTasks = new List<Task>();
 
@@ -241,7 +244,8 @@ public class MinIOImageUploadService : IImageUploadService
             {
                 string currentDateStamp = parts[0];
                 string currentProjectNameFromKey = parts[1];
-                string decodedProjectNameFromKey = System.Net.WebUtility.UrlDecode(currentProjectNameFromKey);
+				string decodedProjectNameFromKey = System.Net.WebUtility.UrlDecode(currentProjectNameFromKey);
+				_log.LogInformation($"CurrentProjectNameFromKey: {currentProjectNameFromKey}, CurrentDateStamp: {currentDateStamp}");
                 string currentYear = currentDateStamp[..4];
 
                 // ---------------- filters ----------------
@@ -251,7 +255,12 @@ public class MinIOImageUploadService : IImageUploadService
                 if (!string.IsNullOrEmpty(projectName) &&
                     !decodedProjectNameFromKey.Equals(projectName,
                                               StringComparison.OrdinalIgnoreCase))
+				{
+					_log.LogInformation("Skipping project {Project} as it does not match the filter {Filter}",
+										decodedProjectNameFromKey, projectName);
+
                     continue;
+				}
 
                 if (timestamp.HasValue &&
                     (!DateTime.TryParseExact(currentDateStamp, "yyyy-MM-dd",
@@ -327,6 +336,8 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
     foreach (string category in new[] { "RawFiles", "ProcessedFiles" })
     {
         string categoryPrefix = $"{projectPrefix}{category}/";
+		categoryPrefix = WebUtility.UrlDecode(categoryPrefix);
+
         _log.LogInformation("Processing category prefix: {CategoryPrefix}", categoryPrefix);
         var rollNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
