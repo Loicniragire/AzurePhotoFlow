@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using Minio.DataModel;
 using System.Collections.Generic; // Added for HashSet
+using System.Net;
 
 namespace AzurePhotoFlow.Services;
 
@@ -239,7 +240,8 @@ public class MinIOImageUploadService : IImageUploadService
             if (parts.Length == 2)
             {
                 string currentDateStamp = parts[0];
-                string currentProjectName = parts[1];
+                string currentProjectNameFromKey = parts[1];
+                string decodedProjectNameFromKey = System.Net.WebUtility.UrlDecode(currentProjectNameFromKey);
                 string currentYear = currentDateStamp[..4];
 
                 // ---------------- filters ----------------
@@ -247,7 +249,7 @@ public class MinIOImageUploadService : IImageUploadService
                     continue;
 
                 if (!string.IsNullOrEmpty(projectName) &&
-                    !currentProjectName.Equals(projectName,
+                    !decodedProjectNameFromKey.Equals(projectName,
                                               StringComparison.OrdinalIgnoreCase))
                     continue;
 
@@ -272,14 +274,14 @@ public class MinIOImageUploadService : IImageUploadService
 
                 var projectInfo = new ProjectInfo
                 {
-                    Name = currentProjectName,
+                    Name = decodedProjectNameFromKey,
                     Datestamp = finalDate,
                     Directories = await GetDirectoryDetailsAsync(dirPrefix, ct)
                 };
 
                 projects.Add(projectInfo);
                 _log.LogInformation("Added {Project} ({Stamp})",
-                                    currentProjectName, currentDateStamp);
+                                    decodedProjectNameFromKey, currentDateStamp);
             }
             else
             {
