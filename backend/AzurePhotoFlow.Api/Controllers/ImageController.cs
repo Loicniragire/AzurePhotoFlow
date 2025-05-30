@@ -5,17 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Globalization;
 
-/*
- * Blob storage structure:
- * 	- Year/
- * 	  - Datestamp/
- * 	    - Project name/
- * 	      - Directory name/
- * 	        - RawFiles/
- * 	          - Image files
-* 	        - ProcessedFiles/
- * 	          - Image files
- */
 [ApiController]
 [Route("api/[controller]")]
 public class ImageController : ControllerBase
@@ -31,7 +20,7 @@ public class ImageController : ControllerBase
 
     /// <summary>
     /// Uploads a directory containing image files as a zip file.
-    /// Path to the directory is constructed as: {timestamp.year}/{timestamp}/{projectName}/{directoryName}/{fileName}
+    /// Path to the directory is constructed as: {timestamp}/{projectName}/{directoryName}/{fileName}
     /// The directory is extracted and each image file is uploaded to the Azure Blob Storage.
     /// </summary>
     /// <param name="timeStamp">The timestamp to assign to this upload..</param>

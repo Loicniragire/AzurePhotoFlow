@@ -200,7 +200,6 @@ public class MinIOImageUploadService : IImageUploadService
 		 *
 		 */
 
-
         // Ask MinIO for *immediate* children only (delimiter = “/”).
         _log.LogDebug($"Processing prefix: {prefix} - Bucket name: {BucketName}");
         var listArgs = new ListObjectsArgs()
@@ -228,9 +227,14 @@ public class MinIOImageUploadService : IImageUploadService
                 continue;
 
             string dirPrefix = item.Key;  // always ends with “/”
+
+			_log.LogInformation($"Processing directory: {dirPrefix}");
+
             string[] parts = dirPrefix.Split(
                                 '/',
                                 StringSplitOptions.RemoveEmptyEntries);
+
+			_log.LogInformation("Parts: {Parts}", string.Join(", ", parts));
 
             if (parts.Length == 2)
             {
@@ -331,14 +335,15 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
 
         await foreach (var item in _minioClient.ListObjectsEnumAsync(listObjectsArgs, ct).WithCancellation(ct))
         {
+			_log.LogInformation("Loop - Processing item: {ItemKey}, IsDir: {IsDir}", item.Key, item.IsDir);
             if (item.IsDir)
             {
-                // _log.LogDebug("Skipping directory item: {ItemKey}", item.Key);
+				_log.LogInformation("Skipping directory item: {ItemKey}", item.Key);
                 continue; // Skip directories, we infer rolls from file paths
             }
 
             string objectKey = item.Key;
-            // _log.LogDebug("Processing object key: {ObjectKey}", objectKey);
+            _log.LogInformation("Processing object key: {ObjectKey}", objectKey);
 
             if (!objectKey.StartsWith(categoryPrefix))
             {
@@ -347,6 +352,9 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
             }
 
             string pathInsideCategory = objectKey.Substring(categoryPrefix.Length); // e.g., "Roll1/img.jpg" or "img.jpg"
+
+			_log.LogInformation("Path inside category: {PathInsideCategory}", pathInsideCategory);
+
             string[] pathParts = pathInsideCategory.Split(new[] { '/' }, 2); // {"Roll1", "img.jpg"} or {"img.jpg"}
 
             if (pathParts.Length > 1 && !string.IsNullOrEmpty(pathParts[0]))
@@ -357,7 +365,7 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
                 if (!string.IsNullOrWhiteSpace(rollName)) // Ensure rollName is not empty or just whitespace
                 {
                     rollNames.Add(rollName);
-                    // _log.LogDebug("Added roll name: {RollName} from object {ObjectKey}", rollName, objectKey);
+                    _log.LogInformation("Added roll name: {RollName} from object {ObjectKey}", rollName, objectKey);
                 }
             }
             // else: file is directly in category folder (e.g. RawFiles/image.jpg), not in a roll. These are ignored for ProjectDirectory.

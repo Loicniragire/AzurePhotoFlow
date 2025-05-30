@@ -176,7 +176,11 @@ public class ImageUploadService : IImageUploadService
         };
     }
 
-    public async Task<List<ProjectInfo>> GetProjectsAsync(string? year, string? projectName, DateTime? timestamp = null, CancellationToken cancellationToken = default)
+    public async Task<List<ProjectInfo>> GetProjectsAsync(
+			string? year, 
+			string? projectName, 
+			DateTime? timestamp = null, 
+			CancellationToken cancellationToken = default)
     {
         var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
         // Use a thread-safe collection for concurrent updates.
