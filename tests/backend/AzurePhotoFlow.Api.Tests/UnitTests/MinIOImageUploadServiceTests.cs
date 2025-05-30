@@ -5,6 +5,7 @@ using Minio.DataModel.Args;
 using AzurePhotoFlow.Services;
 using Microsoft.Extensions.Logging;
 using Api.Interfaces;
+using System.Net; // Added for potential WebUtility usage and for SUT's usage
 
 namespace unitTests
 {
@@ -314,6 +315,126 @@ namespace unitTests
 
             var rollB = project.Directories.FirstOrDefault(d => d.Name == "RollB");
             Assert.IsNull(rollB); // RollB should not be present as it was only an IsDir=true item or had no files.
+        }
+
+        [Test]
+        public async Task GetProjectsAsync_ProjectNameWithSpaces_FiltersAndDecodesCorrectly()
+        {
+            // Arrange
+            string projectNameWithSpaces = "Test Project With Spaces";
+            string encodedProjectName = WebUtility.UrlEncode(projectNameWithSpaces); // "Test+Project+With+Spaces"
+            string dateFolderPrefix = $"{TestTimestamp:yyyy-MM-dd}/";
+            string projectFolderKey = $"{dateFolderPrefix}{encodedProjectName}/";
+
+            _mockMinioClient.Reset(); // Reset to clear default setups if they interfere
+
+            // 1. Setup BucketExistsAsync (needed by ProcessHierarchyAsync)
+            _mockMinioClient.Setup(c => c.BucketExistsAsync(
+                It.Is<BucketExistsArgs>(b => b.BucketName == BucketName),
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            // 2. Mock for discovering date folders (prefix: "", non-recursive)
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == "" && !args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item> { new Item { Key = dateFolderPrefix, IsDir = true } }.ToAsyncEnumerable())
+                .Verifiable("Date folder discovery mock was not called.");
+
+            // 3. Mock for discovering project folders (prefix: "2023-01-01/", non-recursive)
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == dateFolderPrefix && !args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item> { new Item { Key = projectFolderKey, IsDir = true } }.ToAsyncEnumerable())
+                .Verifiable("Project folder discovery mock was not called.");
+
+            // 4. Mocks for GetDirectoryDetailsAsync (RawFiles and ProcessedFiles, recursive)
+            // These expect prefixes like "2023-01-01/Test+Project+With+Spaces/RawFiles/"
+            string projectFilesPrefix = $"{dateFolderPrefix}{encodedProjectName}/";
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == $"{projectFilesPrefix}RawFiles/" && args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item>().ToAsyncEnumerable()) // No files in RawFiles
+                .Verifiable("RawFiles mock for GetDirectoryDetailsAsync was not called.");
+
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == $"{projectFilesPrefix}ProcessedFiles/" && args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item>().ToAsyncEnumerable()) // No files in ProcessedFiles
+                .Verifiable("ProcessedFiles mock for GetDirectoryDetailsAsync was not called.");
+            
+            // Act
+            var projects = await _service.GetProjectsAsync(TestYear, projectNameWithSpaces, TestTimestamp);
+
+            // Assert
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count, "Should find one project.");
+            var project = projects.Single();
+            Assert.AreEqual(projectNameWithSpaces, project.Name, "Project name should be decoded correctly.");
+            Assert.AreEqual(TestTimestamp, project.Datestamp);
+            Assert.IsEmpty(project.Directories, "Directories should be empty as per mock setup.");
+
+            _mockMinioClient.Verify(); // Verify all verifiable mocks were called
+        }
+
+        [Test]
+        public async Task GetProjectsAsync_NoFilter_DecodesProjectNamesCorrectly()
+        {
+            // Arrange
+            string decodedProjectName = "Another Encoded Project";
+            string encodedProjectName = WebUtility.UrlEncode(decodedProjectName); // "Another+Encoded+Project"
+            string dateFolderPrefix = $"{TestTimestamp:yyyy-MM-dd}/";
+            string projectFolderKey = $"{dateFolderPrefix}{encodedProjectName}/";
+
+            _mockMinioClient.Reset(); // Reset to clear default setups
+
+            // 1. Setup BucketExistsAsync
+            _mockMinioClient.Setup(c => c.BucketExistsAsync(
+                It.Is<BucketExistsArgs>(b => b.BucketName == BucketName),
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            // 2. Mock for discovering date folders
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == "" && !args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item> { new Item { Key = dateFolderPrefix, IsDir = true } }.ToAsyncEnumerable())
+                .Verifiable("Date folder discovery mock (no filter) was not called.");
+
+            // 3. Mock for discovering project folders
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == dateFolderPrefix && !args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item> { new Item { Key = projectFolderKey, IsDir = true } }.ToAsyncEnumerable())
+                .Verifiable("Project folder discovery mock (no filter) was not called.");
+
+            // 4. Mocks for GetDirectoryDetailsAsync (RawFiles and ProcessedFiles)
+            string projectFilesPrefix = $"{dateFolderPrefix}{encodedProjectName}/";
+             _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == $"{projectFilesPrefix}RawFiles/" && args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item>().ToAsyncEnumerable()) // No files
+                .Verifiable("RawFiles mock for GetDirectoryDetailsAsync (no filter) was not called.");
+
+            _mockMinioClient.Setup(c => c.ListObjectsEnumAsync(
+                It.Is<ListObjectsArgs>(args => args.BucketName == BucketName && args.Prefix == $"{projectFilesPrefix}ProcessedFiles/" && args.Recursive),
+                It.IsAny<CancellationToken>()))
+                .Returns(new List<Item>().ToAsyncEnumerable()) // No files
+                .Verifiable("ProcessedFiles mock for GetDirectoryDetailsAsync (no filter) was not called.");
+
+            // Act
+            // Pass null for projectName to test no-filter scenario
+            var projects = await _service.GetProjectsAsync(TestYear, null, TestTimestamp); 
+
+            // Assert
+            Assert.IsNotNull(projects);
+            Assert.AreEqual(1, projects.Count, "Should find one project when no filter is applied.");
+            var project = projects.Single();
+            Assert.AreEqual(decodedProjectName, project.Name, "Project name should be decoded correctly even with no filter.");
+            Assert.AreEqual(TestTimestamp, project.Datestamp);
+            Assert.IsEmpty(project.Directories, "Directories should be empty as per mock setup.");
+            
+            _mockMinioClient.Verify(); // Verify all verifiable mocks were called
         }
     }
 }
