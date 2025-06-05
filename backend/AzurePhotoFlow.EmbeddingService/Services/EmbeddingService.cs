@@ -19,16 +19,16 @@ using SixLaborsImage = SixLabors.ImageSharp.Image;
 
 namespace AzurePhotoFlow.Services;
 
-public class EmbeddingGeneratorService : IEmbeddingGeneratorService
+public class EmbeddingService : IEmbeddingService
 {
     private const string BucketName = "photostore";
     private readonly IMinioClient _minioClient;
     private readonly QdrantClient _qdrantClient;
-    private readonly ILogger<EmbeddingGeneratorService> _logger;
+    private readonly ILogger<EmbeddingService> _logger;
     private readonly InferenceSession _session;
     private readonly string _collection;
 
-    public EmbeddingGeneratorService(IMinioClient minioClient, QdrantClient qdrantClient, ILogger<EmbeddingGeneratorService> logger)
+    public EmbeddingService(IMinioClient minioClient, QdrantClient qdrantClient, ILogger<EmbeddingService> logger)
     {
         _minioClient = minioClient;
         _qdrantClient = qdrantClient;

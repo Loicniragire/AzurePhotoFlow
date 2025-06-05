@@ -22,7 +22,7 @@ builder.Services.AddSingleton(_ =>
     return new QdrantClient(url);
 });
 
-builder.Services.AddSingleton<IEmbeddingGeneratorService, EmbeddingGeneratorService>();
+builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 
 var app = builder.Build();
 
