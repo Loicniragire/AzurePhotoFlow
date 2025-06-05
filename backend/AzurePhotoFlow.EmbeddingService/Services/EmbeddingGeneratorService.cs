@@ -3,12 +3,19 @@ using Microsoft.Extensions.Logging;
 using Minio;
 using Minio.DataModel.Args;
 using Qdrant.Client;
+using Qdrant.Client.Grpc;
 using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using AzurePhotoFlow.Shared;
+using Google.Protobuf.Collections;
+using QdrantValue = Qdrant.Client.Grpc.Value;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLaborsImage = SixLabors.ImageSharp.Image;
 
 namespace AzurePhotoFlow.Services;
 
@@ -45,27 +52,26 @@ public class EmbeddingGeneratorService : IEmbeddingGeneratorService
             ms.Position = 0;
             float[] vector = GenerateEmbedding(ms.ToArray());
 
-            var point = new Qdrant.Client.PointStruct
+            var point = new PointStruct
             {
-                Id = item.Key,
-                Vectors = vector,
-                Payload = new Dictionary<string, object> { ["path"] = item.Key }
+                Id = new PointId { Uuid = item.Key },
+                Vectors = vector
             };
+            point.Payload.Add("path", new QdrantValue { StringValue = item.Key });
             await _qdrantClient.UpsertAsync(_collection, new[] { point });
         }
     }
 
     private float[] GenerateEmbedding(byte[] imageBytes)
     {
-        using var image = Image.Load<Rgb24>(imageBytes);
+        using var image = SixLaborsImage.Load<Rgb24>(imageBytes);
         image.Mutate(x => x.Resize(224, 224));
         var tensor = new DenseTensor<float>(new[] { 1, 3, 224, 224 });
         for (int y = 0; y < 224; y++)
         {
-            var span = image.GetPixelRowSpan(y);
             for (int x = 0; x < 224; x++)
             {
-                var p = span[x];
+                var p = image[x, y];
                 tensor[0, 0, y, x] = p.R / 255f;
                 tensor[0, 1, y, x] = p.G / 255f;
                 tensor[0, 2, y, x] = p.B / 255f;
