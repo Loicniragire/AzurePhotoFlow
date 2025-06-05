@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Minio.DataModel.Args;
 
-namespace AzurePhotoFlow.Services;
+namespace AzurePhotoFlow.Shared;
 
 public static class MinIODirectoryHelper
 {
