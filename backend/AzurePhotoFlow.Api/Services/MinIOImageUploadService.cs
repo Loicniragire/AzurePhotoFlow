@@ -21,20 +21,20 @@ public class MinIOImageUploadService : IImageUploadService
     private readonly IMinioClient _minioClient;
     private readonly ILogger<MinIOImageUploadService> _log;
     private readonly IMetadataExtractorService _metadataExtractorService;
-    private readonly IEmbeddingNotificationService _embeddingNotificationService;
+    private readonly IImageEmbeddingService _imageEmbeddingService;
     /* private readonly IMessageQueueingService _messageQueueingService; */
 
     public MinIOImageUploadService(
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
         IMetadataExtractorService metadataExtractorService,
-        IEmbeddingNotificationService embeddingNotificationService)
+        IImageEmbeddingService imageEmbeddingService)
     /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
-        _embeddingNotificationService = embeddingNotificationService;
+        _imageEmbeddingService = imageEmbeddingService;
         /* _messageQueueingService = messageQueueingService; */
     }
 
@@ -100,16 +100,20 @@ public class MinIOImageUploadService : IImageUploadService
                 string relPath = MinIODirectoryHelper.GetRelativePath(entry.FullName, directoryName);
                 string objectKey = $"{destinationPath}/{relPath}";
 
-                // Copy entry to temp file so we know the exact length (needed by PutObjectAsync).
                 string tmp = Path.GetTempFileName();
                 try
                 {
+                    byte[] imageBytes;
                     await using (var entryStream = entry.Open())
-                    await using (var tmpStream = File.Create(tmp))
                     {
-                        await entryStream.CopyToAsync(tmpStream);
+                        using var ms = new MemoryStream();
+                        await entryStream.CopyToAsync(ms);
+                        imageBytes = ms.ToArray();
                     }
 
+                    await _imageEmbeddingService.StoreEmbeddingAsync(objectKey, imageBytes);
+
+                    await File.WriteAllBytesAsync(tmp, imageBytes);
                     await using var uploadStream = File.OpenRead(tmp);
 
                     // ---- MinIO upload ----
@@ -162,8 +166,6 @@ public class MinIOImageUploadService : IImageUploadService
                 _log.LogError(ex, "Failed processing entry {Entry}", entry.FullName);
             }
         }
-
-        await _embeddingNotificationService.NotifyAsync(projectName, directoryName, timestamp);
 
         return new UploadResponse { UploadedCount = uploadedCount, OriginalCount = totalCount };
     }

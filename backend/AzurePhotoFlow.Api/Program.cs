@@ -15,6 +15,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Minio;
+using Qdrant.Client;
+using Microsoft.ML.OnnxRuntime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,9 +116,9 @@ builder.Logging.AddJsonConsole(options =>
 // Configure MinIO Client
 builder.Services.AddSingleton(x =>
 {
-	var minioEndpoint = Environment.GetEnvironmentVariable("MINIO_ENDPOINT");
-	var minioAccessKey = Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY");
-	var minioSecretKey = Environment.GetEnvironmentVariable("MINIO_SECRET_KEY");
+        var minioEndpoint = Environment.GetEnvironmentVariable("MINIO_ENDPOINT");
+        var minioAccessKey = Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY");
+        var minioSecretKey = Environment.GetEnvironmentVariable("MINIO_SECRET_KEY");
 
 	if (string.IsNullOrEmpty(minioEndpoint) || string.IsNullOrEmpty(minioAccessKey) || string.IsNullOrEmpty(minioSecretKey))
 	{
@@ -126,7 +128,19 @@ builder.Services.AddSingleton(x =>
 	return new MinioClient()
 	.WithEndpoint(minioEndpoint)
 	.WithCredentials(minioAccessKey, minioSecretKey)
-	.Build();
+        .Build();
+});
+
+builder.Services.AddSingleton(_ =>
+{
+    var url = Environment.GetEnvironmentVariable("QDRANT_URL") ?? "http://localhost:6333";
+    return new QdrantClient(url);
+});
+
+builder.Services.AddSingleton(_ =>
+{
+    string modelPath = Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "model.onnx";
+    return new InferenceSession(modelPath);
 });
 
 // Secure Blob Client Initialization
@@ -174,6 +188,7 @@ builder.Services.AddSingleton(x =>
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
 builder.Services.AddHttpClient<IEmbeddingNotificationService, EmbeddingNotificationService>();
+builder.Services.AddScoped<IImageEmbeddingService, ImageEmbeddingService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
