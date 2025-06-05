@@ -13,5 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\AzurePhotoFlow.Api\AzurePhotoFlow.Api.csproj" />
     <ProjectReference Include="..\AzurePhotoFlow.POCO\AzurePhotoFlow.POCO.csproj" />
+    <ProjectReference Include="..\AzurePhotoFlow.Shared\AzurePhotoFlow.Shared.csproj" />
   </ItemGroup>
 </Project>
