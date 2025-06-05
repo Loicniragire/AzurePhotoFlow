@@ -37,7 +37,7 @@ AzurePhotoFlow utilizes a modern cloud architecture with the following key compo
 - Azure CLI
 - Terraform
 - Git
-- The environment variable `EMBEDDING_SERVICE_URL` should point to the HTTP endpoint of your embedding service.
+- The environment variable `EMBEDDING_SERVICE_URL` should point to the HTTP endpoint of your embedding service (e.g. `http://embedding:80/api/Embedding`).
 - The embedding service itself requires `QDRANT_URL`, `QDRANT_COLLECTION`, and `CLIP_MODEL_PATH` to be configured.
 
 ### Backend Setup
