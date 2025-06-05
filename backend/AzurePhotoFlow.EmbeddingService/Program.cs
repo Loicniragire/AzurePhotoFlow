@@ -1,12 +1,12 @@
 using AzurePhotoFlow.Services;
 using Api.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 using Minio;
 using Qdrant.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddLogging();
+builder.Services.AddControllers();
 
 builder.Services.AddSingleton<IMinioClient>(sp =>
 {
@@ -26,12 +26,6 @@ builder.Services.AddSingleton<IEmbeddingGeneratorService, EmbeddingGeneratorServ
 
 var app = builder.Build();
 
-app.MapPost("/generate", async ([FromBody]EmbeddingRequest req, IEmbeddingGeneratorService generator) =>
-{
-    await generator.GenerateAsync(req.ProjectName, req.DirectoryName, req.Timestamp);
-    return Results.Ok();
-});
+app.MapControllers();
 
 app.Run();
-
-public record EmbeddingRequest(string ProjectName, string DirectoryName, DateTime Timestamp);
