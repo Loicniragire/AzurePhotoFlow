@@ -11,7 +11,7 @@ AzurePhotoFlow is a cloud-native application designed to help users manage, anal
 - **Optical Character Recognition (OCR):** Extract text from images.
 - **Semantic Search (Natural Language Search):** Search photos using natural language queries.
 - **Metadata-based Search:** Search photos based on metadata like filename, date, and tags.
-- **Vector Embeddings:** After uploads, a notification is sent to an embedding service which writes image vectors to Qdrant for similarity search.
+- **Vector Embeddings:** Embeddings are computed during upload and stored directly in Qdrant for similarity search.
 
 ## Architecture
 AzurePhotoFlow utilizes a modern cloud architecture with the following key components:
