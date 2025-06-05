@@ -187,8 +187,12 @@ builder.Services.AddSingleton(_ =>
 
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
-builder.Services.AddHttpClient<IEmbeddingNotificationService, EmbeddingNotificationService>();
-builder.Services.AddScoped<IImageEmbeddingService, ImageEmbeddingService>();
+builder.Services.AddHttpClient("EmbeddingService", client =>
+{
+    var url = Environment.GetEnvironmentVariable("EMBEDDING_SERVICE_URL")
+              ?? throw new InvalidOperationException("EMBEDDING_SERVICE_URL is not configured.");
+    client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+});
 
 builder.Services.Configure<FormOptions>(options =>
 {

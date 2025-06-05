@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Globalization;
+using System.Net.Http;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -11,11 +12,15 @@ public class ImageController : ControllerBase
 {
     private readonly IImageUploadService _imageUploadService;
     private readonly ILogger<ImageController> _logger;
+    private readonly HttpClient _embeddingClient;
 
-    public ImageController(ILogger<ImageController> logger, IImageUploadService imageUploadService)
+    public ImageController(ILogger<ImageController> logger,
+                           IImageUploadService imageUploadService,
+                           IHttpClientFactory httpClientFactory)
     {
         _imageUploadService = imageUploadService;
         _logger = logger;
+        _embeddingClient = httpClientFactory.CreateClient("EmbeddingService");
     }
 
     /// <summary>
@@ -38,7 +43,21 @@ public class ImageController : ControllerBase
         try
         {
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
-			_logger.LogInformation($"Uploading directory {directoryName} for project {projectName} at timestamp {timeStamp}", directoryName, projectName, timeStamp);
+            _logger.LogInformation($"Uploading directory {directoryName} for project {projectName} at timestamp {timeStamp}", directoryName, projectName, timeStamp);
+
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent(projectName), "ProjectName");
+            content.Add(new StringContent(directoryName), "DirectoryName");
+            content.Add(new StringContent(timeStamp.ToString("o")), "Timestamp");
+            content.Add(new StringContent("true"), "IsRawFiles");
+            content.Add(new StringContent(directoryName), "RawDirectoryName");
+            content.Add(new StreamContent(directoryFile.OpenReadStream()), "ZipFile", directoryFile.FileName);
+
+            var response = await _embeddingClient.PostAsync("generate", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Embedding service responded with status {Status}", response.StatusCode);
+            }
 
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, projectName, directoryName, timeStamp);
 
@@ -76,6 +95,19 @@ public class ImageController : ControllerBase
         try
         {
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent(projectName), "ProjectName");
+            content.Add(new StringContent(directoryName), "DirectoryName");
+            content.Add(new StringContent(timeStamp.ToString("o")), "Timestamp");
+            content.Add(new StringContent("false"), "IsRawFiles");
+            content.Add(new StringContent(rawfileDirectoryName), "RawDirectoryName");
+            content.Add(new StreamContent(directoryFile.OpenReadStream()), "ZipFile", directoryFile.FileName);
+
+            var response = await _embeddingClient.PostAsync("generate", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Embedding service responded with status {Status}", response.StatusCode);
+            }
             // Upload processed files and ensure corresponding raw files path exists
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(
                 directoryFile,

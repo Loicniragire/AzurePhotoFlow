@@ -21,20 +21,17 @@ public class MinIOImageUploadService : IImageUploadService
     private readonly IMinioClient _minioClient;
     private readonly ILogger<MinIOImageUploadService> _log;
     private readonly IMetadataExtractorService _metadataExtractorService;
-    private readonly IImageEmbeddingService _imageEmbeddingService;
     /* private readonly IMessageQueueingService _messageQueueingService; */
 
     public MinIOImageUploadService(
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
-        IMetadataExtractorService metadataExtractorService,
-        IImageEmbeddingService imageEmbeddingService)
+        IMetadataExtractorService metadataExtractorService)
     /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
-        _imageEmbeddingService = imageEmbeddingService;
         /* _messageQueueingService = messageQueueingService; */
     }
 
@@ -110,8 +107,6 @@ public class MinIOImageUploadService : IImageUploadService
                         await entryStream.CopyToAsync(ms);
                         imageBytes = ms.ToArray();
                     }
-
-                    await _imageEmbeddingService.StoreEmbeddingAsync(objectKey, imageBytes);
 
                     await File.WriteAllBytesAsync(tmp, imageBytes);
                     await using var uploadStream = File.OpenRead(tmp);

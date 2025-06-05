@@ -15,7 +15,6 @@ namespace unitTests
         private readonly Mock<IMinioClient> _mockMinioClient;
         private readonly Mock<ILogger<MinIOImageUploadService>> _mockLogger;
         private readonly Mock<IMetadataExtractorService> _mockMetadataExtractorService;
-        private readonly Mock<IImageEmbeddingService> _mockImageEmbeddingService;
         private readonly MinIOImageUploadService _service;
 
         private const string BucketName = "photostore";
@@ -29,13 +28,11 @@ namespace unitTests
             _mockMinioClient = new Mock<IMinioClient>();
             _mockLogger = new Mock<ILogger<MinIOImageUploadService>>();
             _mockMetadataExtractorService = new Mock<IMetadataExtractorService>();
-            _mockImageEmbeddingService = new Mock<IImageEmbeddingService>();
 
             _service = new MinIOImageUploadService(
                 _mockMinioClient.Object,
                 _mockLogger.Object,
-                _mockMetadataExtractorService.Object,
-                _mockImageEmbeddingService.Object
+                _mockMetadataExtractorService.Object
             );
 
             // Default setup for BucketExistsAsync
