@@ -21,17 +21,20 @@ public class MinIOImageUploadService : IImageUploadService
     private readonly IMinioClient _minioClient;
     private readonly ILogger<MinIOImageUploadService> _log;
     private readonly IMetadataExtractorService _metadataExtractorService;
+    private readonly IEmbeddingNotificationService _embeddingNotificationService;
     /* private readonly IMessageQueueingService _messageQueueingService; */
 
     public MinIOImageUploadService(
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
-        IMetadataExtractorService metadataExtractorService)
+        IMetadataExtractorService metadataExtractorService,
+        IEmbeddingNotificationService embeddingNotificationService)
     /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
+        _embeddingNotificationService = embeddingNotificationService;
         /* _messageQueueingService = messageQueueingService; */
     }
 
@@ -159,6 +162,8 @@ public class MinIOImageUploadService : IImageUploadService
                 _log.LogError(ex, "Failed processing entry {Entry}", entry.FullName);
             }
         }
+
+        await _embeddingNotificationService.NotifyAsync(projectName, directoryName, timestamp);
 
         return new UploadResponse { UploadedCount = uploadedCount, OriginalCount = totalCount };
     }

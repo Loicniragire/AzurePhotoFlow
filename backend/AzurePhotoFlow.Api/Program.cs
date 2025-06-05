@@ -173,6 +173,7 @@ builder.Services.AddSingleton(x =>
 
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
+builder.Services.AddHttpClient<IEmbeddingNotificationService, EmbeddingNotificationService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
