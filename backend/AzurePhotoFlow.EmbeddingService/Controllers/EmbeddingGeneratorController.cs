@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AzurePhotoFlow.Services;
 
 [ApiController]
-[Route("")]
+[Route("api/[controller]")]
 public class EmbeddingGeneratorController : ControllerBase
 {
     private readonly IEmbeddingGeneratorService _generatorService;
