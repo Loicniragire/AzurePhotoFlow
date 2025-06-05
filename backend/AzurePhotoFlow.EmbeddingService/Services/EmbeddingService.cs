@@ -1,13 +1,11 @@
 using Api.Interfaces;
 using Microsoft.Extensions.Logging;
-using Minio;
-using Minio.DataModel.Args;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using AzurePhotoFlow.Shared;
+using AzurePhotoFlow.Services;
 using Google.Protobuf.Collections;
 using QdrantValue = Qdrant.Client.Grpc.Value;
 using Microsoft.ML.OnnxRuntime;
@@ -21,16 +19,13 @@ namespace AzurePhotoFlow.Services;
 
 public class EmbeddingService : IEmbeddingService
 {
-    private const string BucketName = "photostore";
-    private readonly IMinioClient _minioClient;
     private readonly QdrantClient _qdrantClient;
     private readonly ILogger<EmbeddingService> _logger;
     private readonly InferenceSession _session;
     private readonly string _collection;
 
-    public EmbeddingService(IMinioClient minioClient, QdrantClient qdrantClient, ILogger<EmbeddingService> logger)
+    public EmbeddingService(QdrantClient qdrantClient, ILogger<EmbeddingService> logger)
     {
-        _minioClient = minioClient;
         _qdrantClient = qdrantClient;
         _logger = logger;
         _collection = Environment.GetEnvironmentVariable("QDRANT_COLLECTION") ?? "images";
@@ -38,26 +33,18 @@ public class EmbeddingService : IEmbeddingService
         _session = new InferenceSession(modelPath);
     }
 
-    public async Task GenerateAsync(string projectName, string directoryName, DateTime timestamp)
+    public async Task GenerateAsync(IEnumerable<ImageEmbeddingInput> images)
     {
-        string prefix = MinIODirectoryHelper.GetDestinationPath(timestamp, projectName, directoryName, true) + "/";
-        var listArgs = new ListObjectsArgs().WithBucket(BucketName).WithPrefix(prefix).WithRecursive(true);
-
-        await foreach (var item in _minioClient.ListObjectsEnumAsync(listArgs))
+        foreach (var image in images)
         {
-            if (item.IsDir) continue;
-
-            using var ms = new MemoryStream();
-            await _minioClient.GetObjectAsync(new GetObjectArgs().WithBucket(BucketName).WithObject(item.Key).WithCallbackStream(s => s.CopyTo(ms)));
-            ms.Position = 0;
-            float[] vector = GenerateEmbedding(ms.ToArray());
+            float[] vector = GenerateEmbedding(image.ImageBytes);
 
             var point = new PointStruct
             {
-                Id = new PointId { Uuid = item.Key },
+                Id = new PointId { Uuid = image.ObjectKey },
                 Vectors = vector
             };
-            point.Payload.Add("path", new QdrantValue { StringValue = item.Key });
+            point.Payload.Add("path", new QdrantValue { StringValue = image.ObjectKey });
             await _qdrantClient.UpsertAsync(_collection, new[] { point });
         }
     }

@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using AzurePhotoFlow.Services;
+
 namespace Api.Interfaces;
 
 public interface IEmbeddingService
 {
-    Task GenerateAsync(string projectName, string directoryName, DateTime timestamp);
+    Task GenerateAsync(IEnumerable<ImageEmbeddingInput> images);
 }
