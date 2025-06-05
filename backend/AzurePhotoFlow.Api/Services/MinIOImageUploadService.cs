@@ -6,6 +6,7 @@ using Minio;
 using Minio.DataModel.Args;
 using Newtonsoft.Json;
 using AzurePhotoFlow.POCO.QueueModels;
+using AzurePhotoFlow.Shared;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using Minio.DataModel;
