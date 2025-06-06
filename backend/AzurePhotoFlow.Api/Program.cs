@@ -187,12 +187,13 @@ builder.Services.AddSingleton(_ =>
 
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
-builder.Services.AddHttpClient("EmbeddingService", client =>
+builder.Services.AddSingleton<IQdrantClientWrapper, QdrantClientWrapper>();
+builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
 {
-    var url = Environment.GetEnvironmentVariable("EMBEDDING_SERVICE_URL")
-              ?? throw new InvalidOperationException("EMBEDDING_SERVICE_URL is not configured.");
-    client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+    var session = sp.GetRequiredService<InferenceSession>();
+    return new OnnxImageEmbeddingModel(session);
 });
+builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {

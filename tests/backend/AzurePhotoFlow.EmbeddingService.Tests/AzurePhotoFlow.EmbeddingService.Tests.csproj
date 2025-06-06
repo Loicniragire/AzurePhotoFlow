@@ -18,6 +18,6 @@
     <Using Include="NUnit.Framework" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\backend\AzurePhotoFlow.EmbeddingService\AzurePhotoFlow.EmbeddingService.csproj" />
+    <ProjectReference Include="..\..\..\backend\AzurePhotoFlow.Api\AzurePhotoFlow.Api.csproj" />
   </ItemGroup>
 </Project>
