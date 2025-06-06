@@ -8,6 +8,7 @@ using System.IO.Compression;
 using AzurePhotoFlow.Shared;
 using System.Collections.Generic;
 using System.IO;
+using AzurePhotoFlow.Services;
 
 [ApiController]
 [Route("api/[controller]")]
