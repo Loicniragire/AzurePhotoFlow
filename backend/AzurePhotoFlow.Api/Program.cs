@@ -137,11 +137,7 @@ builder.Services.AddSingleton(_ =>
     return new QdrantClient(url);
 });
 
-builder.Services.AddSingleton(_ =>
-{
-    string modelPath = Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "model.onnx";
-    return new InferenceSession(modelPath);
-});
+builder.Services.AddSingleton(_ => InferenceSessionFactory.Create());
 
 // Secure Blob Client Initialization
 /* builder.Services.AddSingleton(x => */
