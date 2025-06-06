@@ -1,0 +1,9 @@
+# Ignore exported models
+models/
+__pycache__/
+*.onnx
+
+# Python virtual environments
+venv/
+ENV/
+

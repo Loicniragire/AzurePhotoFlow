@@ -26,6 +26,8 @@ services:
         MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
         MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
     container_name: backend
+    volumes:
+      - ./models:/models
     environment:
       - ASPNETCORE_URLS=http://+:80
       - AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
@@ -39,7 +41,7 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_COLLECTION=${QDRANT_COLLECTION}
-      - CLIP_MODEL_PATH=${CLIP_MODEL_PATH}
+      - CLIP_MODEL_PATH=${CLIP_MODEL_PATH:-/models/model.onnx}
     networks:
       - app-network
 
