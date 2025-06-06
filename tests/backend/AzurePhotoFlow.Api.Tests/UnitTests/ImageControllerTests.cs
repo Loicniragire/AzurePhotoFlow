@@ -1,9 +1,11 @@
 using Api.Interfaces;
+using Api.Models;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
 using NUnit.Framework;
 using System.IO.Compression;
 using System.Net;
