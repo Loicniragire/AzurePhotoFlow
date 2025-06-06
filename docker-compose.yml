@@ -37,34 +37,12 @@ services:
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - EMBEDDING_SERVICE_URL=http://embedding:80/api/Embedding
-    networks:
-      - app-network
-
-  embedding:
-    build:
-      context: .
-      dockerfile: backend/AzurePhotoFlow.EmbeddingService/Dockerfile
-      args:
-        QDRANT_URL: ${QDRANT_URL}
-        QDRANT_COLLECTION: ${QDRANT_COLLECTION}
-        CLIP_MODEL_PATH: ${CLIP_MODEL_PATH}
-        MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-        MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-        MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-    environment:
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_COLLECTION=${QDRANT_COLLECTION}
       - CLIP_MODEL_PATH=${CLIP_MODEL_PATH}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - ASPNETCORE_URLS=http://+:80
-    container_name: embedding
     networks:
       - app-network
-    expose:
-      - "80"
+
 
   qdrant:
     image: qdrant/qdrant:latest

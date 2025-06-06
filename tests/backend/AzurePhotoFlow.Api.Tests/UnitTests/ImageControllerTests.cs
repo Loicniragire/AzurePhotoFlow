@@ -1,17 +1,16 @@
 using Api.Interfaces;
 using Api.Models;
 using AzurePhotoFlow.Services;
+using AzurePhotoFlow.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Moq.Protected;
 using NUnit.Framework;
 using System.IO.Compression;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace unitTests;
 
@@ -19,25 +18,20 @@ namespace unitTests;
 public class ImageControllerTests
 {
     [Test]
-    public async Task UploadDirectory_SendsArchiveToEmbeddingService()
+    public async Task UploadDirectory_CallsEmbeddingServiceWithImages()
     {
         // Arrange
         var mockUploadService = new Mock<IImageUploadService>();
         mockUploadService
             .Setup(s => s.ExtractAndUploadImagesAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), true, ""))
             .ReturnsAsync(new UploadResponse());
+        var mockEmbeddingService = new Mock<IEmbeddingService>();
+        List<ImageEmbeddingInput>? received = null;
+        mockEmbeddingService.Setup(s => s.GenerateAsync(It.IsAny<IEnumerable<ImageEmbeddingInput>>()))
+            .Callback<IEnumerable<ImageEmbeddingInput>>(imgs => received = imgs.ToList())
+            .Returns(Task.CompletedTask);
 
-        HttpRequestMessage? capturedRequest = null;
-        var handler = new Mock<HttpMessageHandler>();
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, ct) => capturedRequest = req)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
-        var client = new HttpClient(handler.Object) { BaseAddress = new Uri("http://embedding") };
-        var factory = new Mock<IHttpClientFactory>();
-        factory.Setup(f => f.CreateClient("EmbeddingService")).Returns(client);
-
-        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, factory.Object);
+        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, mockEmbeddingService.Object);
 
         var zipStream = new MemoryStream();
         using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
@@ -50,26 +44,14 @@ public class ImageControllerTests
         IFormFile file = new FormFile(zipStream, 0, zipStream.Length, "directory", "dummy.zip");
 
         // Act
-        var result = await controller.UploadDirectory(DateTime.UtcNow, "proj", file);
+        var ts = new System.DateTime(2025,1,1);
+        var result = await controller.UploadDirectory(ts, "proj", file);
 
         // Assert
         Assert.IsInstanceOf<OkObjectResult>(result);
-        Assert.IsNotNull(capturedRequest);
-        Assert.AreEqual(HttpMethod.Post, capturedRequest!.Method);
-        Assert.IsTrue(capturedRequest.RequestUri!.AbsoluteUri.EndsWith("generate"));
-        Assert.IsInstanceOf<MultipartFormDataContent>(capturedRequest.Content);
-        var multipart = (MultipartFormDataContent)capturedRequest.Content!;
-        string? isRaw = null;
-        string? rawDir = null;
-        foreach (var part in multipart)
-        {
-            var name = part.Headers.ContentDisposition?.Name?.Trim('"');
-            if (name == "IsRawFiles")
-                isRaw = await part.ReadAsStringAsync();
-            if (name == "RawDirectoryName")
-                rawDir = await part.ReadAsStringAsync();
-        }
-        Assert.AreEqual("true", isRaw);
-        Assert.AreEqual("directory", rawDir);
+        Assert.NotNull(received);
+        Assert.AreEqual(1, received!.Count);
+        var expectedPrefix = MinIODirectoryHelper.GetDestinationPath(ts, "proj", "directory", true);
+        Assert.AreEqual($"{expectedPrefix}/dummy.txt", received[0].ObjectKey);
     }
 }
