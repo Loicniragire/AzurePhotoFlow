@@ -40,6 +40,14 @@ AzurePhotoFlow utilizes a modern cloud architecture with the following key compo
 - The environment variable `EMBEDDING_SERVICE_URL` should point to the HTTP endpoint of your embedding service (e.g. `http://embedding:80/api/Embedding`).
 - The embedding service itself requires `QDRANT_URL`, `QDRANT_COLLECTION`, and `CLIP_MODEL_PATH` to be configured.
 
+### Exporting the CLIP Model
+The backend expects an ONNX version of the CLIP vision model. You can export it using the provided helper script:
+
+```bash
+python scripts/export_clip_onnx.py --output models/model.onnx
+```
+This will download the pre-trained model and save the ONNX file under `models/`. The `docker-compose.yml` mounts this directory so the backend container can access the model at `/models/model.onnx`.
+
 ### Backend Setup
 ```bash
 # Navigate to the backend API directory
