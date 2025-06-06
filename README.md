@@ -39,6 +39,7 @@ AzurePhotoFlow utilizes a modern cloud architecture with the following key compo
 - Git
 - The environment variable `EMBEDDING_SERVICE_URL` should point to the HTTP endpoint of your embedding service (e.g. `http://embedding:80/api/Embedding`).
 - The embedding service itself requires `QDRANT_URL`, `QDRANT_COLLECTION`, and `CLIP_MODEL_PATH` to be configured.
+- `CLIP_MODEL_PATH` must reference a valid ONNX model file accessible to the backend container. If this file is missing, the backend will fail to start with an *Inference service is not configured* error.
 
 ### Backend Setup
 ```bash
