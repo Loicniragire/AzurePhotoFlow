@@ -167,15 +167,17 @@ public class ImageController : ControllerBase
         {
             _logger.LogInformation("Getting projects");
 
-            // Validate and parse timestamp if provided
+            // Validate and parse timestamp if provided. The client may send the
+            // date in various formats (e.g. from a browser date picker).  Try a
+            // general parse and normalise to a date-only value.
             DateTime? parsedTimestamp = null;
             if (!string.IsNullOrEmpty(timestamp))
             {
-                if (!DateTime.TryParseExact(timestamp, "yyyy-MM-dd", null, DateTimeStyles.None, out var validDate))
+                if (!DateTime.TryParse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.None, out var validDate))
                 {
                     return BadRequest("Invalid timestamp format. Use 'yyyy-MM-dd'.");
                 }
-                parsedTimestamp = validDate;
+                parsedTimestamp = validDate.Date;
             }
 
             var projects = await _imageUploadService.GetProjectsAsync(year, projectName, parsedTimestamp);

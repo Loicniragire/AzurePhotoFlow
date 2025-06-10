@@ -2,6 +2,7 @@ import { useState } from 'react';
 import JSZip from 'jszip'; // Import JSZip for zipping files
 import '../styles/ImageUpload.css';
 import { uploadRawDirectory } from '../services/imageUploadApi';
+import { formatDate } from '../utils/formatDate';
 
 const ImageUpload = () => {
     const [isZipUpload, setIsZipUpload] = useState(false);
@@ -40,7 +41,13 @@ const handleUpload = async () => {
         return;
     }
 
-    if (!timeStamp || !/^\d{4}-\d{2}-\d{2}$/.test(timeStamp)) {
+    if (!timeStamp) {
+        alert('Timestamp is required.');
+        return;
+    }
+
+    const formattedTimeStamp = formatDate(timeStamp);
+    if (!formattedTimeStamp) {
         alert('Invalid timestamp format. Please use yyyy-MM-dd.');
         return;
     }
@@ -72,7 +79,7 @@ const handleUpload = async () => {
 
     try {
         setUploadStatus('Uploading files...');
-        const response = await uploadRawDirectory(timeStamp, projectName, directoryFile);
+        const response = await uploadRawDirectory(formattedTimeStamp, projectName, directoryFile);
         setUploadStatus('Upload successful!');
         console.log('Upload response:', response);
     } catch (error) {
