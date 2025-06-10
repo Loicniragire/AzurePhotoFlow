@@ -6,4 +6,7 @@ __pycache__/
 # Python virtual environments
 venv/
 ENV/
+# Node modules and build artifacts in test environment
+tests/frontend/node_modules/
+.vite/
 
