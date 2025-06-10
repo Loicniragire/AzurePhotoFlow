@@ -73,6 +73,7 @@ stages:
           echo "CONTAINER_REGISTRY=$(containerRegistry)" > .env
           echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)"  >> .env
           echo "stableTag=$(Build.BuildId)" >> .env
+          echo "ALLOWED_ORIGINS=$(ALLOWED_ORIGINS)" >> .env
         displayName: 'Create .env file'
 
       - publish: $(Build.SourcesDirectory)/.env

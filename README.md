@@ -39,6 +39,7 @@ AzurePhotoFlow utilizes a modern cloud architecture with the following key compo
 - Git
 - The environment variable `EMBEDDING_SERVICE_URL` should point to the HTTP endpoint of your embedding service (e.g. `http://embedding:80/api/Embedding`).
 - The embedding service itself requires `QDRANT_URL`, `QDRANT_COLLECTION`, and `CLIP_MODEL_PATH` to be configured.
+- `ALLOWED_ORIGINS` (optional): comma-separated list of origins allowed by the backend CORS policy. Defaults to `http://localhost`.
 
 ### Exporting the CLIP Model
 The backend expects an ONNX version of the CLIP vision model. You can export it using the provided helper script:
