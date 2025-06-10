@@ -58,12 +58,13 @@ builder.Services.AddHealthChecks();
 /*         } */
 /*     }); */
 
+var allowedOrigins = CorsConfigHelper.GetAllowedOrigins();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
     {
-        // Adjust the allowed origin to match your frontend (e.g., including the correct port if needed)
-        policyBuilder.WithOrigins("http://localhost:80", "http://localhost")
+        policyBuilder.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();

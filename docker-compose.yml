@@ -42,6 +42,7 @@ services:
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_COLLECTION=${QDRANT_COLLECTION}
       - CLIP_MODEL_PATH=${CLIP_MODEL_PATH:-/models/model.onnx}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
     networks:
       - app-network
     depends_on:
