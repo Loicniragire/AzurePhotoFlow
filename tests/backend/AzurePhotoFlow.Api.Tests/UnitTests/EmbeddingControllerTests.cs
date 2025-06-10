@@ -22,10 +22,18 @@ public class EmbeddingControllerTests
         var mockService = new Mock<IEmbeddingService>();
         var mockStore = new Mock<IVectorStore>();
         List<ImageEmbeddingInput>? received = null;
-        mockService.Setup(s => s.GenerateEmbeddingsAsync(It.IsAny<IEnumerable<ImageEmbeddingInput>>()))
-            .Callback<IEnumerable<ImageEmbeddingInput>>(imgs => received = imgs.ToList())
-            .ReturnsAsync((IEnumerable<ImageEmbeddingInput> imgs) =>
-                imgs.Select(i => new ImageEmbedding(i.ObjectKey, new float[] { 1f })).ToList());
+        mockService.Setup(s => s.GenerateEmbeddingsAsync(It.IsAny<IAsyncEnumerable<ImageEmbeddingInput>>()))
+            .Returns((IAsyncEnumerable<ImageEmbeddingInput> imgs) => Record(imgs));
+
+        async IAsyncEnumerable<ImageEmbedding> Record(IAsyncEnumerable<ImageEmbeddingInput> imgs)
+        {
+            received = new List<ImageEmbeddingInput>();
+            await foreach (var i in imgs)
+            {
+                received.Add(i);
+                yield return new ImageEmbedding(i.ObjectKey, new float[] { 1f });
+            }
+        }
         var controller = new EmbeddingController(mockService.Object, mockStore.Object);
 
         var ts = new System.DateTime(2025, 1, 1);
