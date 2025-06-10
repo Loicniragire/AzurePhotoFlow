@@ -188,10 +188,15 @@ builder.Services.AddSingleton(_ =>
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
 builder.Services.AddSingleton<IQdrantClientWrapper, QdrantClientWrapper>();
-builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
+builder.Services.AddSingleton<IOnnxSession>(sp =>
 {
     var session = sp.GetRequiredService<InferenceSession>();
-    return new OnnxImageEmbeddingModel(session);
+    return new OnnxSession(session);
+});
+builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
+{
+    var onnx = sp.GetRequiredService<IOnnxSession>();
+    return new OnnxImageEmbeddingModel(onnx);
 });
 builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 

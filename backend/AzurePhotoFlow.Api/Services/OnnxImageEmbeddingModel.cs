@@ -1,5 +1,6 @@
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using System;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -9,9 +10,9 @@ namespace AzurePhotoFlow.Services;
 
 public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 {
-    private readonly InferenceSession _session;
+    private readonly IOnnxSession _session;
 
-    public OnnxImageEmbeddingModel(InferenceSession session)
+    public OnnxImageEmbeddingModel(IOnnxSession session)
     {
         _session = session;
     }
@@ -33,6 +34,7 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         }
         var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", tensor) };
         using var results = _session.Run(inputs);
-        return results.First().AsEnumerable<float>().ToArray();
+        var first = results.FirstOrDefault();
+        return first != null ? first.AsEnumerable<float>().ToArray() : Array.Empty<float>();
     }
 }
