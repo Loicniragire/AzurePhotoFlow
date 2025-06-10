@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using System.IO.Compression;
 using AzurePhotoFlow.Shared;
-using System.Collections.Generic;
 
 namespace AzurePhotoFlow.Services;
 
@@ -12,10 +11,12 @@ namespace AzurePhotoFlow.Services;
 public class EmbeddingController : ControllerBase
 {
     private readonly IEmbeddingService _embeddingService;
+    private readonly IVectorStore _vectorStore;
 
-    public EmbeddingController(IEmbeddingService embeddingService)
+    public EmbeddingController(IEmbeddingService embeddingService, IVectorStore vectorStore)
     {
         _embeddingService = embeddingService;
+        _vectorStore = vectorStore;
     }
 
     [HttpPost("generate")]
@@ -47,7 +48,8 @@ public class EmbeddingController : ControllerBase
             images.Add(new ImageEmbeddingInput(objectKey, ms.ToArray()));
         }
 
-        await _embeddingService.GenerateAsync(images);
+        var embeddings = await _embeddingService.GenerateEmbeddingsAsync(images);
+        await _vectorStore.UpsertAsync(embeddings);
         return Ok();
     }
 

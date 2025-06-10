@@ -26,12 +26,14 @@ public class ImageControllerTests
             .Setup(s => s.ExtractAndUploadImagesAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), true, ""))
             .ReturnsAsync(new UploadResponse());
         var mockEmbeddingService = new Mock<IEmbeddingService>();
+        var mockStore = new Mock<IVectorStore>();
         List<ImageEmbeddingInput>? received = null;
-        mockEmbeddingService.Setup(s => s.GenerateAsync(It.IsAny<IEnumerable<ImageEmbeddingInput>>()))
+        mockEmbeddingService.Setup(s => s.GenerateEmbeddingsAsync(It.IsAny<IEnumerable<ImageEmbeddingInput>>()))
             .Callback<IEnumerable<ImageEmbeddingInput>>(imgs => received = imgs.ToList())
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync((IEnumerable<ImageEmbeddingInput> imgs) =>
+                imgs.Select(i => new ImageEmbedding(i.ObjectKey, new float[] { 1f })).ToList());
 
-        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, mockEmbeddingService.Object);
+        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, mockEmbeddingService.Object, mockStore.Object);
 
         var zipStream = new MemoryStream();
         using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
@@ -46,6 +48,8 @@ public class ImageControllerTests
         // Act
         var ts = new System.DateTime(2025,1,1);
         var result = await controller.UploadDirectory(ts, "proj", file);
+
+        mockStore.Verify(s => s.UpsertAsync(It.IsAny<IEnumerable<ImageEmbedding>>()), Times.Once);
 
         // Assert
         Assert.IsInstanceOf<OkObjectResult>(result);

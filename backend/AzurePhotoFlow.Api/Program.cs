@@ -188,6 +188,7 @@ builder.Services.AddSingleton(_ =>
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
 builder.Services.AddSingleton<IQdrantClientWrapper, QdrantClientWrapper>();
+builder.Services.AddSingleton<IVectorStore, QdrantVectorStore>();
 builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
 {
     var session = sp.GetRequiredService<InferenceSession>();

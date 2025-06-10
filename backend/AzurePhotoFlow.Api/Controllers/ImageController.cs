@@ -17,14 +17,17 @@ public class ImageController : ControllerBase
     private readonly IImageUploadService _imageUploadService;
     private readonly ILogger<ImageController> _logger;
     private readonly IEmbeddingService _embeddingService;
+    private readonly IVectorStore _vectorStore;
 
     public ImageController(ILogger<ImageController> logger,
                            IImageUploadService imageUploadService,
-                           IEmbeddingService embeddingService)
+                           IEmbeddingService embeddingService,
+                           IVectorStore vectorStore)
     {
         _imageUploadService = imageUploadService;
         _logger = logger;
         _embeddingService = embeddingService;
+        _vectorStore = vectorStore;
     }
 
     /// <summary>
@@ -50,7 +53,8 @@ public class ImageController : ControllerBase
             _logger.LogInformation($"Uploading directory {directoryName} for project {projectName} at timestamp {timeStamp}", directoryName, projectName, timeStamp);
 
             var images = await ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, true, directoryName);
-            await _embeddingService.GenerateAsync(images);
+            var embeddings = await _embeddingService.GenerateEmbeddingsAsync(images);
+            await _vectorStore.UpsertAsync(embeddings);
 
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, projectName, directoryName, timeStamp);
 
@@ -89,7 +93,8 @@ public class ImageController : ControllerBase
         {
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
             var images = await ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, false, rawfileDirectoryName);
-            await _embeddingService.GenerateAsync(images);
+            var embeddings = await _embeddingService.GenerateEmbeddingsAsync(images);
+            await _vectorStore.UpsertAsync(embeddings);
             // Upload processed files and ensure corresponding raw files path exists
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(
                 directoryFile,
