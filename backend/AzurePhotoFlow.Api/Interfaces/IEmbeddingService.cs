@@ -5,5 +5,5 @@ namespace Api.Interfaces;
 
 public interface IEmbeddingService
 {
-    Task GenerateAsync(IEnumerable<ImageEmbeddingInput> images);
+    Task<IEnumerable<ImageEmbedding>> GenerateEmbeddingsAsync(IEnumerable<ImageEmbeddingInput> images);
 }
