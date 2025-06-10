@@ -60,6 +60,15 @@ dotnet build
 dotnet run
 ```
 
+### Docker Compose
+To start all services including MinIO and Qdrant locally, use:
+
+```bash
+docker compose up
+```
+
+MinIO will be available at `http://localhost:9000` with the console at `http://localhost:9001` using the default credentials `minioadmin:minioadmin`.
+
 ### Frontend Setup
 ```bash
 # Navigate to the frontend directory
