@@ -1,4 +1,5 @@
 using Api.Interfaces;
+using Api.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AzurePhotoFlow.Services;

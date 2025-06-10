@@ -1,3 +1,4 @@
+using Api.Models;
 using Api.Interfaces;
 using AzurePhotoFlow.Services;
 using AzurePhotoFlow.Shared;

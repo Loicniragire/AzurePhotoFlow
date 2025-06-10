@@ -1,3 +1,5 @@
+using Api.Models;
+using Api.Interfaces;
 using AzurePhotoFlow.Services;
 using Moq;
 using NUnit.Framework;

@@ -1,4 +1,4 @@
-namespace AzurePhotoFlow.Services;
+namespace Api.Models;
 
 /// <summary>
 /// Represents an embedding vector associated with an image key.

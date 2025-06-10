@@ -1,6 +1,6 @@
 using Qdrant.Client.Grpc;
 
-namespace AzurePhotoFlow.Services;
+namespace Api.Interfaces;
 
 public interface IQdrantClientWrapper
 {

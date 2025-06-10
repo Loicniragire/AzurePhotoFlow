@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using System.IO.Compression;
 using AzurePhotoFlow.Shared;
+using Api.Models;
 
 namespace AzurePhotoFlow.Services;
 

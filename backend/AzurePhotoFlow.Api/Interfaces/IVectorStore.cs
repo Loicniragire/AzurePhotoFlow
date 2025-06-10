@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Api.Models;
 
-namespace AzurePhotoFlow.Services;
+namespace Api.Interfaces;
 
 public interface IVectorStore
 {

@@ -1,4 +1,5 @@
 using Api.Interfaces;
+using Api.Models;
 using AzurePhotoFlow.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
