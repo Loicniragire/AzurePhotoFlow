@@ -22,9 +22,9 @@ services:
         CERTIFICATE_PATH: ${CERTIFICATE_PATH}
         JWT_SECRET_KEY: ${JWT_SECRET_KEY}
         MODE: ${MODE}
-        MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-        MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-        MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+        MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+        MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+        MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     container_name: backend
     volumes:
       - ./models:/models
@@ -36,15 +36,30 @@ services:
       - MODE=${MODE}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_COLLECTION=${QDRANT_COLLECTION}
       - CLIP_MODEL_PATH=${CLIP_MODEL_PATH:-/models/model.onnx}
     networks:
       - app-network
+    depends_on:
+      - minio
 
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    networks:
+      - app-network
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -73,3 +88,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  minio-data:
