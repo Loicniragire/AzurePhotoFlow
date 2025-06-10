@@ -11,7 +11,9 @@ const ImageUpload = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState('');
     const [projectName, setProjectName] = useState('');
-    const [timeStamp, setTimeStamp] = useState('');
+    const [timeStamp, setTimeStamp] = useState(() =>
+        new Date().toISOString().split('T')[0]
+    );
 
     const handleFileChange = (event) => {
         if (isZipUpload) {
