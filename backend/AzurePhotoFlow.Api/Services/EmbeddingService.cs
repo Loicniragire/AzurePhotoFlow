@@ -15,14 +15,12 @@ public class EmbeddingService : IEmbeddingService
         _embeddingModel = embeddingModel;
     }
 
-    public Task<IEnumerable<ImageEmbedding>> GenerateEmbeddingsAsync(IEnumerable<ImageEmbeddingInput> images)
+    public async IAsyncEnumerable<ImageEmbedding> GenerateEmbeddingsAsync(IAsyncEnumerable<ImageEmbeddingInput> images)
     {
-        var embeddings = images.Select(i =>
+        await foreach (var i in images)
         {
             var vector = _embeddingModel.GenerateEmbedding(i.ImageBytes);
-            return new ImageEmbedding(i.ObjectKey, vector);
-        }).ToList();
-
-        return Task.FromResult<IEnumerable<ImageEmbedding>>(embeddings);
+            yield return new ImageEmbedding(i.ObjectKey, vector);
+        }
     }
 }

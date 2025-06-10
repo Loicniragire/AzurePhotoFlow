@@ -34,22 +34,27 @@ public class EmbeddingController : ControllerBase
         string destDir = request.IsRawFiles ? request.DirectoryName : request.RawDirectoryName;
         string destinationPrefix = MinIODirectoryHelper.GetDestinationPath(request.Timestamp, request.ProjectName, destDir, request.IsRawFiles);
 
-        var images = new List<ImageEmbeddingInput>();
-
-        foreach (var entry in archive.Entries)
+        async IAsyncEnumerable<ImageEmbeddingInput> GetImages()
         {
-            if (!MinIODirectoryHelper.IsDirectDescendant(entry, request.DirectoryName) ||
-                !MinIODirectoryHelper.IsImageFile(entry.Name))
-                continue;
+            foreach (var entry in archive.Entries)
+            {
+                if (!MinIODirectoryHelper.IsDirectDescendant(entry, request.DirectoryName) ||
+                    !MinIODirectoryHelper.IsImageFile(entry.Name))
+                    continue;
 
-            await using var entryStream = entry.Open();
-            using var ms = new MemoryStream();
-            await entryStream.CopyToAsync(ms);
-            string objectKey = $"{destinationPrefix}/{MinIODirectoryHelper.GetRelativePath(entry.FullName, request.DirectoryName)}";
-            images.Add(new ImageEmbeddingInput(objectKey, ms.ToArray()));
+                await using var entryStream = entry.Open();
+                using var ms = new MemoryStream();
+                await entryStream.CopyToAsync(ms);
+                string objectKey = $"{destinationPrefix}/{MinIODirectoryHelper.GetRelativePath(entry.FullName, request.DirectoryName)}";
+                yield return new ImageEmbeddingInput(objectKey, ms.ToArray());
+            }
         }
 
-        var embeddings = await _embeddingService.GenerateEmbeddingsAsync(images);
+        var embeddings = new List<ImageEmbedding>();
+        await foreach (var e in _embeddingService.GenerateEmbeddingsAsync(GetImages()))
+        {
+            embeddings.Add(e);
+        }
         await _vectorStore.UpsertAsync(embeddings);
         return Ok();
     }

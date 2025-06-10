@@ -52,8 +52,12 @@ public class ImageController : ControllerBase
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
             _logger.LogInformation($"Uploading directory {directoryName} for project {projectName} at timestamp {timeStamp}", directoryName, projectName, timeStamp);
 
-            var images = await ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, true, directoryName);
-            var embeddings = await _embeddingService.GenerateEmbeddingsAsync(images);
+            var images = ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, true, directoryName);
+            var embeddings = new List<ImageEmbedding>();
+            await foreach (var e in _embeddingService.GenerateEmbeddingsAsync(images))
+            {
+                embeddings.Add(e);
+            }
             await _vectorStore.UpsertAsync(embeddings);
 
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, projectName, directoryName, timeStamp);
@@ -92,8 +96,12 @@ public class ImageController : ControllerBase
         try
         {
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
-            var images = await ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, false, rawfileDirectoryName);
-            var embeddings = await _embeddingService.GenerateEmbeddingsAsync(images);
+            var images = ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, false, rawfileDirectoryName);
+            var embeddings = new List<ImageEmbedding>();
+            await foreach (var e in _embeddingService.GenerateEmbeddingsAsync(images))
+            {
+                embeddings.Add(e);
+            }
             await _vectorStore.UpsertAsync(embeddings);
             // Upload processed files and ensure corresponding raw files path exists
             var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(
@@ -179,7 +187,7 @@ public class ImageController : ControllerBase
         }
     }
 
-    private static async Task<List<ImageEmbeddingInput>> ExtractImagesForEmbedding(
+    private static async IAsyncEnumerable<ImageEmbeddingInput> ExtractImagesForEmbedding(
         IFormFile zip,
         string projectName,
         string directoryName,
@@ -192,7 +200,6 @@ public class ImageController : ControllerBase
 
         string destDir = isRaw ? directoryName : rawDir;
         string prefix = MinIODirectoryHelper.GetDestinationPath(timeStamp, projectName, destDir, isRaw);
-        var images = new List<ImageEmbeddingInput>();
 
         foreach (var entry in archive.Entries)
         {
@@ -204,10 +211,8 @@ public class ImageController : ControllerBase
             using var ms = new MemoryStream();
             await entryStream.CopyToAsync(ms);
             string objectKey = $"{prefix}/{MinIODirectoryHelper.GetRelativePath(entry.FullName, directoryName)}";
-            images.Add(new ImageEmbeddingInput(objectKey, ms.ToArray()));
+            yield return new ImageEmbeddingInput(objectKey, ms.ToArray());
         }
-
-        return images;
     }
 }
 

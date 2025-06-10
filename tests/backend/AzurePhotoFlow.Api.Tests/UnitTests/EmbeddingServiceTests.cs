@@ -27,9 +27,13 @@ public class EmbeddingServiceTests
             new ImageEmbeddingInput("img", new byte[] {1,2})
         };
 
-        var result = await service.GenerateEmbeddingsAsync(inputs);
+        var results = new List<ImageEmbedding>();
+        await foreach(var e in service.GenerateEmbeddingsAsync(inputs.ToAsyncEnumerable()))
+        {
+            results.Add(e);
+        }
 
-        var embedding = result.Single();
+        var embedding = results.Single();
         Assert.AreEqual("img", embedding.ObjectKey);
         Assert.AreEqual(0.5f, embedding.Vector[0]);
     }
