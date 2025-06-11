@@ -16,12 +16,14 @@ spec.loader.exec_module(setup_mod)
 
 def test_create_venv_runs_expected_commands():
     with tempfile.TemporaryDirectory() as tmpdir:
-        with mock.patch.object(setup_mod.subprocess, "check_call") as mock_call:
+        with mock.patch.object(setup_mod.subprocess, "check_call") as mock_call, \
+             mock.patch.object(setup_mod.shutil, "which", return_value=sys.executable):
             setup_mod.create_venv(tmpdir, "req.txt")
 
             pip = Path(tmpdir) / ("Scripts" if os.name == "nt" else "bin") / "pip"
-            expected_calls = [
-                mock.call([sys.executable, "-m", "venv", tmpdir]),
-                mock.call([str(pip), "install", "-r", "req.txt"]),
-            ]
-            assert mock_call.mock_calls == expected_calls
+        expected_calls = [
+            mock.call([sys.executable, "-m", "venv", str(tmpdir)]),
+            mock.call([str(pip), "install", "--upgrade", "pip"]),
+            mock.call([str(pip), "install", "torch>=2.1.0", "--extra-index-url", "https://download.pytorch.org/whl/cpu"]),
+        ]
+        assert mock_call.mock_calls == expected_calls
