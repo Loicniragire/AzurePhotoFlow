@@ -18,13 +18,15 @@ with mock.patch.dict(sys.modules, {"torch": mock.Mock(), "transformers": mock.Mo
 def test_export_calls_torch_export():
     with tempfile.NamedTemporaryFile() as tmp:
         with mock.patch.object(exp, "CLIPModel") as mock_model_cls, \
-             mock.patch.object(exp, "torch") as mock_torch:
+             mock.patch.object(exp, "torch") as mock_torch, \
+             mock.patch.object(exp.os, "makedirs") as mock_makedirs:
             model_instance = mock.Mock()
             model_instance.vision_model = object()
             mock_model_cls.from_pretrained.return_value = model_instance
 
             exp.export_clip_model(tmp.name, model_name="a/b")
 
-            mock_model_cls.from_pretrained.assert_called_with("a/b")
+            mock_model_cls.from_pretrained.assert_called_with("a/b", use_safetensors=True)
             assert mock_torch.onnx.export.called
+            assert mock_makedirs.called
 
