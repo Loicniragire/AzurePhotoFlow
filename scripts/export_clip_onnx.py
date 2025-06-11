@@ -7,6 +7,7 @@ import os
 import torch
 from transformers import CLIPModel
 
+
 os.environ["HF_HOME"] = "./.hf_cache"
 
 
@@ -46,8 +47,8 @@ def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-
         dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
         opset_version=14,
     )
-    print(f"✅ Model exported to {output_path}")
 
+    print(f"Model exported to {output_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Export CLIP model to ONNX")
