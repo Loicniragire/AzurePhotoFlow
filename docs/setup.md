@@ -1,6 +1,6 @@
 # Local Setup
 
-This project includes a small Python script used to export the CLIP model to ONNX format. The script depends on packages such as **torch** and **transformers**. To keep these dependencies isolated, create a Python virtual environment.
+This project includes a small Python script used to export the CLIP model to TorchScript format. The script depends on packages such as **torch** and **transformers**. To keep these dependencies isolated, create a Python virtual environment.
 
 ```bash
 # Create the virtual environment and install requirements
@@ -15,5 +15,5 @@ source .venv/bin/activate
 Once activated, you can run the helper script:
 
 ```bash
-python scripts/export_clip_onnx.py --output models/model.onnx
+python scripts/export_clip_trace.py --output models/clip_vision_traced.pt
 ```

@@ -42,12 +42,12 @@ AzurePhotoFlow utilizes a modern cloud architecture with the following key compo
 - `ALLOWED_ORIGINS` (optional): comma-separated list of origins allowed by the backend CORS policy. Defaults to `http://localhost`.
 
 ### Exporting the CLIP Model
-The backend expects an ONNX version of the CLIP vision model. You can export it using the provided helper script:
+The backend expects a TorchScript version of the CLIP vision model. You can export it using the provided helper script:
 
 ```bash
-python scripts/export_clip_onnx.py --output models/model.onnx
+python scripts/export_clip_trace.py --output models/clip_vision_traced.pt
 ```
-This will download the pre-trained model and save the ONNX file under `models/`. The `docker-compose.yml` mounts this directory so the backend container can access the model at `/models/model.onnx`.
+This will download the pre-trained model and save the TorchScript file under `models/`. The `docker-compose.yml` mounts this directory so the backend container can access the model at `/models/clip_vision_traced.pt`.
 
 ### Backend Setup
 ```bash
