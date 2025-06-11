@@ -1,5 +1,6 @@
 import tempfile
 from unittest import mock
+import pytest
 
 import importlib.util
 import os
@@ -17,7 +18,8 @@ with mock.patch.dict(sys.modules, {"torch": mock.Mock(), "transformers": mock.Mo
 
 def test_export_calls_torch_export():
     with tempfile.NamedTemporaryFile() as tmp:
-        with mock.patch.object(exp, "CLIPModel") as mock_model_cls, \
+        with mock.patch.object(exp.importlib.util, "find_spec", return_value=object()), \
+             mock.patch.object(exp, "CLIPModel") as mock_model_cls, \
              mock.patch.object(exp, "torch") as mock_torch, \
              mock.patch.object(exp.os, "makedirs") as mock_makedirs:
             model_instance = mock.Mock()
@@ -26,7 +28,19 @@ def test_export_calls_torch_export():
 
             exp.export_clip_model(tmp.name, model_name="a/b")
 
-            mock_model_cls.from_pretrained.assert_called_with("a/b", use_safetensors=True)
+            mock_model_cls.from_pretrained.assert_called_with(
+                "a/b", use_safetensors=True, attn_implementation="eager"
+            )
             assert mock_torch.onnx.export.called
             assert mock_makedirs.called
+
+
+def test_export_requires_onnx():
+    with tempfile.NamedTemporaryFile() as tmp:
+        with mock.patch.object(exp.importlib.util, "find_spec", return_value=None), \
+             mock.patch.object(exp, "CLIPModel"), \
+             mock.patch.object(exp, "torch"), \
+             mock.patch.object(exp.os, "makedirs"):
+            with pytest.raises(RuntimeError):
+                exp.export_clip_model(tmp.name)
 
