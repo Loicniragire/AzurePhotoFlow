@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import importlib.util
 
 import torch
 from transformers import CLIPModel
@@ -13,6 +14,10 @@ os.environ["HF_HOME"] = "./.hf_cache"
 
 def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-patch32"):
     """Export the vision part of a CLIP model to ONNX."""
+    if importlib.util.find_spec("onnx") is None:
+        raise RuntimeError(
+            "onnx package is required to export the model. Install it via 'pip install onnx'."
+        )
     print("📥 Loading CLIP model...")
     # Using the "eager" attention implementation avoids PyTorch's
     # scaled_dot_product_attention operator which currently fails
