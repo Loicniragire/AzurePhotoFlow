@@ -7,13 +7,21 @@ import os
 import torch
 from transformers import CLIPModel
 
+
 os.environ["HF_HOME"] = "./.hf_cache"
 
 
 def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-patch32"):
     """Export the vision part of a CLIP model to ONNX."""
     print("📥 Loading CLIP model...")
-    model = CLIPModel.from_pretrained(model_name, use_safetensors=True)
+    # Using the "eager" attention implementation avoids PyTorch's
+    # scaled_dot_product_attention operator which currently fails
+    # during ONNX export.
+    model = CLIPModel.from_pretrained(
+        model_name,
+        use_safetensors=True,
+        attn_implementation="eager",
+    )
     model.eval()
 
     class VisionWrapper(torch.nn.Module):
@@ -39,8 +47,8 @@ def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-
         dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
         opset_version=14,
     )
-    print(f"✅ Model exported to {output_path}")
 
+    print(f"Model exported to {output_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Export CLIP model to ONNX")

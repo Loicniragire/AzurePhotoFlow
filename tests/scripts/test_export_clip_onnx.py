@@ -26,7 +26,9 @@ def test_export_calls_torch_export():
 
             exp.export_clip_model(tmp.name, model_name="a/b")
 
-            mock_model_cls.from_pretrained.assert_called_with("a/b", use_safetensors=True)
+            mock_model_cls.from_pretrained.assert_called_with(
+                "a/b", use_safetensors=True, attn_implementation="eager"
+            )
             assert mock_torch.onnx.export.called
             assert mock_makedirs.called
 
