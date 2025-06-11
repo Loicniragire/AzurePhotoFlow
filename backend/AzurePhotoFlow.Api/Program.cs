@@ -19,45 +19,16 @@ using Qdrant.Client;
 using Microsoft.ML.OnnxRuntime;
 
 var builder = WebApplication.CreateBuilder(args);
-
 // Load Environment Variables
 DotNetEnv.Env.Load();
-
 // Configure Kestrel to listen on port 80
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(80);
 });
 
-
-// Validate Blob Storage Connection Early
-/* var azureBlobStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
-/* var queueStorageConnectionString = Environment.GetEnvironmentVariable("AZURE_BLOB_STORAGE"); */
-/* var metadataQueueName = Environment.GetEnvironmentVariable("METADATA_QUEUE") ?? "image-metadata-queue"; */
-
-/* if (string.IsNullOrEmpty(azureBlobStorageConnectionString)) */
-/* { */
-/*     throw new InvalidOperationException("Azure Blob Storage Connection String is missing."); */
-/* } */
-
 // Configure Services
 builder.Services.AddHealthChecks();
-
-/* builder.Services.AddHealthChecks() */
-/*     .AddCheck("BlobStorage", () => */
-/*     { */
-/*         try */
-/*         { */
-/*             var client = new BlobServiceClient(azureBlobStorageConnectionString); */
-/*             client.GetBlobContainers().AsPages().GetEnumerator().MoveNext(); */
-/*             return HealthCheckResult.Healthy(); */
-/*         } */
-/*         catch (Exception ex) */
-/*         { */
-/*             return HealthCheckResult.Unhealthy("Blob Storage connection failed", ex); */
-/*         } */
-/*     }); */
-
 var allowedOrigins = CorsConfigHelper.GetAllowedOrigins();
 
 builder.Services.AddCors(options =>
@@ -140,51 +111,13 @@ builder.Services.AddSingleton(_ =>
 
 builder.Services.AddSingleton(_ =>
 {
-    string modelPath = Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "model.onnx";
+    string modelPath = Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "clip_vision_traced.pt";
+
+	// InferenceSession: A core class provided by the ONNX Runtime that encapsulates a model and provides
+	// methods for executing inference. It loads an ONNX model and prepares it for efficient execution
+	// using available hardware.
     return new InferenceSession(modelPath);
 });
-
-// Secure Blob Client Initialization
-/* builder.Services.AddSingleton(x => */
-/* { */
-/*     try */
-/*     { */
-/*         return new BlobServiceClient( */
-/*             azureBlobStorageConnectionString, */
-/*             new BlobClientOptions { Retry = { MaxRetries = 3 } }); */
-/*     } */
-/*     catch (Exception ex) */
-/*     { */
-/*         var logger = x.GetRequiredService<ILogger<Program>>(); */
-/*         logger.LogCritical(ex, "Failed to initialize Blob Service Client"); */
-/*         throw; */
-/*     } */
-/* }); */
-
-// Secure Queue Client Initialization
-/* builder.Services.AddSingleton(x => */
-/* { */
-/*     try */
-/*     { */
-/*            return new QueueServiceClient( */
-/*             queueStorageConnectionString, */
-/*                new QueueClientOptions { Retry = { MaxRetries = 3 } }); */
-/*     } */
-/*        catch (Exception ex) */
-/*     { */
-/*            var logger = x.GetRequiredService<ILogger<Program>>(); */
-/*            logger.LogCritical(ex, "Failed to initialize Queue Service Client"); */
-/*         throw; */
-/*        } */
-/* }); */
-
-// Register MessageQueueingService
-/* builder.Services.AddScoped<IMessageQueueingService>(x => */
-/* { */
-/*        var queueServiceClient = x.GetRequiredService<QueueServiceClient>(); */
-/*        var logger = x.GetRequiredService<ILogger<MessageQueueingService>>(); */
-/*        return new MessageQueueingService(queueServiceClient, metadataQueueName, logger); */
-/* }); */
 
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
@@ -340,20 +273,6 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.MapControllers();
-
-// Startup Validation
-/* try */
-/* { */
-/*     using var scope = app.Services.CreateScope(); */
-/*     var blobClient = scope.ServiceProvider.GetRequiredService<BlobServiceClient>(); */
-/*     blobClient.GetBlobContainers().AsPages().GetEnumerator().MoveNext(); */
-/*     app.Logger.LogInformation("All critical services initialized successfully"); */
-/* } */
-/* catch (Exception ex) */
-/* { */
-/*     app.Logger.LogCritical(ex, "Critical service initialization failed"); */
-/*     throw; */
-/* } */
 
 // Graceful Shutdown Handling
 var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();

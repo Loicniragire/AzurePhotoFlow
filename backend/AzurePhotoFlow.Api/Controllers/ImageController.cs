@@ -54,6 +54,7 @@ public class ImageController : ControllerBase
 
             var images = ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, true, directoryName);
             var embeddings = new List<ImageEmbedding>();
+
             await foreach (var e in _embeddingService.GenerateEmbeddingsAsync(images))
             {
                 embeddings.Add(e);
@@ -189,6 +190,10 @@ public class ImageController : ControllerBase
         }
     }
 
+	/// <summary>
+	/// Retrieves the raw files associated with a project. Rather than buffering the entire zip file in memory,
+	/// this method streams the zip file directly to the response.
+	/// </summary>
     private static async IAsyncEnumerable<ImageEmbeddingInput> ExtractImagesForEmbedding(
         IFormFile zip,
         string projectName,
