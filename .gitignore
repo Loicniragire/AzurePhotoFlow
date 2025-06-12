@@ -6,7 +6,74 @@ __pycache__/
 # Python virtual environments
 venv/
 ENV/
+.venv/
+
 # Node modules and build artifacts in test environment
 tests/frontend/node_modules/
 .vite/
+
+# .NET build artifacts
+**/bin/
+**/obj/
+**/*.user
+**/*.rsuser
+**/*.suo
+**/*.cache
+**/*.dll
+**/*.pdb
+**/*.exe
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude AI files
+.claude/
+
+# Cache directories
+.hf_cache/
+
+# Build and dist directories
+build/
+dist/
+out/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Azure Functions
+local.settings.json
+
+# Build agents
+build_agents/
+
+# Logs and temporary files
+*.log
+*.tmp
+notes.txt
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
