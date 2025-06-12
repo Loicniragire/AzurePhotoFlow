@@ -9,6 +9,9 @@ using AzurePhotoFlow.Shared;
 using System.Collections.Generic;
 using System.IO;
 using AzurePhotoFlow.Services;
+using System.Collections.Concurrent;
+using System.Buffers;
+using System.Linq;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -52,21 +55,12 @@ public class ImageController : ControllerBase
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
             _logger.LogInformation($"Uploading directory {directoryName} for project {projectName} at timestamp {timeStamp}", directoryName, projectName, timeStamp);
 
-            var images = ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, true, directoryName);
-            var embeddings = new List<ImageEmbedding>();
-
-            await foreach (var e in _embeddingService.GenerateEmbeddingsAsync(images))
-            {
-                embeddings.Add(e);
-            }
-            await _vectorStore.UpsertAsync(embeddings);
-
-            var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(directoryFile, projectName, directoryName, timeStamp);
+            var result = await ProcessZipFileOptimizedAsync(directoryFile, projectName, directoryName, timeStamp, true, directoryName);
 
             return Ok(new
             {
                 Message = "Directory uploaded and files extracted successfully.",
-                Files = extractedFiles
+                Files = result
             });
         }
         catch (Exception ex)
@@ -97,26 +91,12 @@ public class ImageController : ControllerBase
         try
         {
             var directoryName = Path.GetFileNameWithoutExtension(directoryFile.FileName);
-            var images = ExtractImagesForEmbedding(directoryFile, projectName, directoryName, timeStamp, false, rawfileDirectoryName);
-            var embeddings = new List<ImageEmbedding>();
-            await foreach (var e in _embeddingService.GenerateEmbeddingsAsync(images))
-            {
-                embeddings.Add(e);
-            }
-            await _vectorStore.UpsertAsync(embeddings);
-            // Upload processed files and ensure corresponding raw files path exists
-            var extractedFiles = await _imageUploadService.ExtractAndUploadImagesAsync(
-                directoryFile,
-                projectName,
-                directoryName,
-                timeStamp,
-                isRawFiles: false,
-                   rawfileDirectoryName);
+            var result = await ProcessZipFileOptimizedAsync(directoryFile, projectName, directoryName, timeStamp, false, rawfileDirectoryName);
 
             return Ok(new
             {
                 Message = "Processed directory uploaded and files extracted successfully.",
-                Files = extractedFiles
+                Files = result
             });
         }
         catch (InvalidOperationException ex)
@@ -190,36 +170,93 @@ public class ImageController : ControllerBase
         }
     }
 
-	/// <summary>
-	/// Retrieves the raw files associated with a project. Rather than buffering the entire zip file in memory,
-	/// this method streams the zip file directly to the response.
-	/// </summary>
-    private static async IAsyncEnumerable<ImageEmbeddingInput> ExtractImagesForEmbedding(
-        IFormFile zip,
+    /// <summary>
+    /// Optimized method that processes ZIP file once for both embeddings and uploads.
+    /// Uses the new service method that eliminates duplicate ZIP processing.
+    /// </summary>
+    private async Task<UploadResponse> ProcessZipFileOptimizedAsync(
+        IFormFile directoryFile,
         string projectName,
         string directoryName,
         DateTime timeStamp,
-        bool isRaw,
-        string rawDir)
+        bool isRawFiles,
+        string rawfileDirectoryName)
     {
-        await using var stream = zip.OpenReadStream();
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
-
-        string destDir = isRaw ? directoryName : rawDir;
-        string prefix = MinIODirectoryHelper.GetDestinationPath(timeStamp, projectName, destDir, isRaw);
-
-        foreach (var entry in archive.Entries)
+        const int batchSize = 10; // Process embeddings in batches
+        const int maxConcurrentEmbeddings = 3; // Limit concurrent embedding generation
+        
+        // Use the optimized service method that processes ZIP once
+        var (uploadResponse, embeddingInputs) = await _imageUploadService.ProcessZipOptimizedAsync(
+            directoryFile, projectName, directoryName, timeStamp, isRawFiles, rawfileDirectoryName);
+        
+        // Check if embeddings are enabled
+        var enableEmbeddings = Environment.GetEnvironmentVariable("ENABLE_EMBEDDINGS")?.ToLower() == "true";
+        
+        if (!enableEmbeddings)
         {
-            if (!MinIODirectoryHelper.IsDirectDescendant(entry, directoryName) ||
-                !MinIODirectoryHelper.IsImageFile(entry.Name))
-                continue;
-
-            await using var entryStream = entry.Open();
-            using var ms = new MemoryStream();
-            await entryStream.CopyToAsync(ms);
-            string objectKey = $"{prefix}/{MinIODirectoryHelper.GetRelativePath(entry.FullName, directoryName)}";
-            yield return new ImageEmbeddingInput(objectKey, ms.ToArray());
+            _logger.LogInformation("Embeddings disabled via ENABLE_EMBEDDINGS environment variable");
+            return uploadResponse;
         }
+        
+        // Process embeddings in batches with concurrency control
+        var semaphore = new SemaphoreSlim(maxConcurrentEmbeddings);
+        var allEmbeddings = new List<ImageEmbedding>();
+        
+        for (int i = 0; i < embeddingInputs.Count; i += batchSize)
+        {
+            var batch = embeddingInputs.Skip(i).Take(batchSize);
+            var embeddingTasks = batch.Select(async input => 
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await foreach (var embedding in _embeddingService.GenerateEmbeddingsAsync(
+                        CreateAsyncEnumerable(input)))
+                    {
+                        return embedding;
+                    }
+                    throw new InvalidOperationException($"Failed to generate embedding for {input.ObjectKey}");
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            
+            var batchEmbeddings = await Task.WhenAll(embeddingTasks);
+            allEmbeddings.AddRange(batchEmbeddings);
+            
+            // Upsert batch to vector store
+            if (batchEmbeddings.Length > 0)
+            {
+                try
+                {
+                    _logger.LogInformation("Preparing to upsert {Count} embeddings to vector store", batchEmbeddings.Length);
+                    foreach (var embedding in batchEmbeddings)
+                    {
+                        _logger.LogDebug("Embedding - ObjectKey: {ObjectKey}, Vector Length: {VectorLength}", 
+                            embedding.ObjectKey, embedding.Vector?.Length ?? 0);
+                    }
+                    
+                    await _vectorStore.UpsertAsync(batchEmbeddings);
+                    _logger.LogInformation("Successfully upserted {Count} embeddings to vector store", batchEmbeddings.Length);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to upsert {Count} embeddings to vector store. Error: {ErrorMessage}", 
+                        batchEmbeddings.Length, ex.Message);
+					throw;
+                }
+            }
+        }
+        
+        return uploadResponse;
+    }
+    
+    private static async IAsyncEnumerable<ImageEmbeddingInput> CreateAsyncEnumerable(ImageEmbeddingInput input)
+    {
+        yield return input;
+        await Task.CompletedTask;
     }
 }
 

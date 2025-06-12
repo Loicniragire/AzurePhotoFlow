@@ -1,5 +1,5 @@
-using System.Net.Http;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using AzurePhotoFlow.Services;
 
-namespace unitTests;
+namespace AzurePhotoFlow.Api.Tests.UnitTests;
 
 [TestFixture]
 public class CorsTests
@@ -32,8 +32,8 @@ public class CorsTests
 
         var response = await client.SendAsync(request);
 
-        Assert.IsTrue(response.Headers.TryGetValues("Access-Control-Allow-Origin", out var values));
-        Assert.AreEqual("http://allowed.com", values.First());
+        Assert.That(response.Headers.TryGetValues("Access-Control-Allow-Origin", out var values), Is.True);
+        Assert.That(values.First(), Is.EqualTo("http://allowed.com"));
     }
 
     [Test]
@@ -49,7 +49,7 @@ public class CorsTests
 
         var response = await client.SendAsync(request);
 
-        Assert.IsFalse(response.Headers.Contains("Access-Control-Allow-Origin"));
+        Assert.That(response.Headers.Contains("Access-Control-Allow-Origin"), Is.False);
     }
 
     private static TestServer CreateServer()

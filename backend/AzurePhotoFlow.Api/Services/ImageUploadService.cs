@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using AzurePhotoFlow.POCO.QueueModels;
+using AzurePhotoFlow.Services;
 
 public class ImageUploadService : IImageUploadService
 {
@@ -406,6 +407,116 @@ public class ImageUploadService : IImageUploadService
         }
 
         return count;
+    }
+
+    public async Task<bool> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName)
+    {
+        try
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+            var blobClient = containerClient.GetBlobClient(objectKey);
+
+            using var stream = new MemoryStream(imageData);
+            BlobContentInfo uploadResponse = await blobClient.UploadAsync(stream, overwrite: true);
+
+            // Extract metadata if needed
+            stream.Position = 0;
+            var metadata = new ImageMetadata
+            {
+                Id = uploadResponse.VersionId,
+                BlobUri = blobClient.Uri.ToString(),
+                UploadedBy = "Admin",
+                UploadDate = uploadResponse.LastModified,
+                CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(stream)
+            };
+
+            var serializedMetadata = JsonConvert.SerializeObject(metadata, new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+            await _messageQueueingService.EnqueueMessageAsync(serializedMetadata);
+
+            _log.LogInformation($"Uploaded image: {objectKey}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.LogError($"Failed to upload image {objectKey}: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<(UploadResponse uploadResponse, List<ImageEmbeddingInput> embeddings)> ProcessZipOptimizedAsync(
+        IFormFile directoryFile,
+        string projectName,
+        string directoryName,
+        DateTime timestamp,
+        bool isRawFiles = true,
+        string rawfileDirectoryName = "")
+    {
+        var embeddings = new List<ImageEmbeddingInput>();
+        var uploadTasks = new List<Task<bool>>();
+        int totalCount = 0;
+
+        string destinationPath = GetDestinationPath(timestamp, projectName, 
+            isRawFiles ? directoryName : rawfileDirectoryName, isRawFiles);
+
+        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+
+        // If uploading processed files, verify raw files exist
+        if (!isRawFiles)
+        {
+            string rawPath = GetDestinationPath(timestamp, projectName, rawfileDirectoryName, true);
+            if (!await DoesPathExistAsync(containerClient, rawPath, "ProcessedFiles"))
+                throw new InvalidOperationException(
+                    $"Raw files path '{rawPath}' does not exist.");
+        }
+
+        using var zipStream = directoryFile.OpenReadStream();
+        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+
+        // Process each image entry once
+        foreach (var entry in archive.Entries)
+        {
+            if (!IsDirectDescendant(entry, directoryName) || !IsImageFile(entry.Name))
+                continue;
+
+            totalCount++;
+
+            try
+            {
+                await using var entryStream = entry.Open();
+                using var ms = new MemoryStream();
+                await entryStream.CopyToAsync(ms);
+                var imageData = ms.ToArray();
+
+                string relPath = GetRelativePath(entry.FullName, directoryName);
+                string blobPath = $"{destinationPath}/{relPath}";
+
+                // Add to embeddings list
+                embeddings.Add(new ImageEmbeddingInput(blobPath, imageData));
+
+                // Start upload task
+                var uploadTask = UploadImageFromBytesAsync(imageData, blobPath, entry.Name);
+                uploadTasks.Add(uploadTask);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError($"Failed processing entry {entry.FullName}: {ex.Message}");
+            }
+        }
+
+        // Wait for all uploads to complete
+        var uploadResults = await Task.WhenAll(uploadTasks);
+        int uploadedCount = uploadResults.Count(success => success);
+
+        var uploadResponse = new UploadResponse 
+        { 
+            UploadedCount = uploadedCount, 
+            OriginalCount = totalCount 
+        };
+
+        return (uploadResponse, embeddings);
     }
 }
 

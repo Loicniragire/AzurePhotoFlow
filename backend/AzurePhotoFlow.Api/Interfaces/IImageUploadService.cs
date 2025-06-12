@@ -24,6 +24,22 @@ public interface IImageUploadService
                                                           string rawfileDirectoryName = "");
 
     Task<List<ProjectInfo>> GetProjectsAsync(string year, string projectName, DateTime? timestamp, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Uploads a single image from byte array to storage
+    /// </summary>
+    Task<bool> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName);
+    
+    /// <summary>
+    /// Optimized method to process zip file once for both embeddings and uploads
+    /// </summary>
+    Task<(UploadResponse uploadResponse, List<ImageEmbeddingInput> embeddings)> ProcessZipOptimizedAsync(
+        IFormFile directoryFile,
+        string projectName,
+        string directoryName,
+        DateTime timestamp,
+        bool isRawFiles = true,
+        string rawfileDirectoryName = "");
 }
 
 

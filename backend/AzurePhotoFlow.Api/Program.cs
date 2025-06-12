@@ -105,8 +105,10 @@ builder.Services.AddSingleton(x =>
 
 builder.Services.AddSingleton(_ =>
 {
-    var url = Environment.GetEnvironmentVariable("QDRANT_URL") ?? "http://localhost:6333";
-    return new QdrantClient(url);
+    var qdrantHost = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
+    var qdrantPort = int.Parse(Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6333");
+    
+    return new QdrantClient(qdrantHost, qdrantPort, https: false);
 });
 
 builder.Services.AddSingleton(_ =>

@@ -438,5 +438,126 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
 
         return count;
     }
+
+    public async Task<bool> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName)
+    {
+        try
+        {
+            // Ensure bucket exists
+            if (!await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(BucketName)))
+            {
+                await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(BucketName));
+            }
+
+            using var stream = new MemoryStream(imageData);
+            var putArgs = new PutObjectArgs()
+                .WithBucket(BucketName)
+                .WithObject(objectKey)
+                .WithStreamData(stream)
+                .WithObjectSize(stream.Length)
+                .WithContentType(MinIODirectoryHelper.GetMimeType(fileName));
+
+            await _minioClient.PutObjectAsync(putArgs);
+            
+            // Extract metadata if needed
+            stream.Position = 0;
+            var metadata = new ImageMetadata
+            {
+                BlobUri = $"s3://{BucketName}/{objectKey}",
+                UploadedBy = "Admin", 
+                UploadDate = DateTime.UtcNow,
+                CameraGeneratedMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(stream)
+            };
+
+            _log.LogInformation("Uploaded image: {ObjectKey}", objectKey);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to upload image {ObjectKey}", objectKey);
+            return false;
+        }
+    }
+
+    public async Task<(UploadResponse uploadResponse, List<ImageEmbeddingInput> embeddings)> ProcessZipOptimizedAsync(
+        IFormFile directoryFile,
+        string projectName,
+        string directoryName,
+        DateTime timestamp,
+        bool isRawFiles = true,
+        string rawfileDirectoryName = "")
+    {
+        // Ensure bucket exists
+        if (!await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(BucketName)))
+        {
+            await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(BucketName));
+        }
+
+        var embeddings = new List<ImageEmbeddingInput>();
+        var uploadTasks = new List<Task<bool>>();
+        int totalCount = 0;
+
+        string destinationPath = MinIODirectoryHelper.GetDestinationPath(
+            timestamp, projectName,
+            isRawFiles ? directoryName : rawfileDirectoryName,
+            isRawFiles);
+
+        // If uploading processed files, verify raw files exist
+        if (!isRawFiles)
+        {
+            string rawPath = MinIODirectoryHelper.GetDestinationPath(
+                timestamp, projectName, rawfileDirectoryName, true);
+            if (!await DoesPathExistAsync(rawPath))
+                throw new InvalidOperationException(
+                    $"Raw files path '{rawPath}' does not exist.");
+        }
+
+        using var zipStream = directoryFile.OpenReadStream();
+        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+
+        // Process each image entry once
+        foreach (var entry in archive.Entries)
+        {
+            if (!MinIODirectoryHelper.IsDirectDescendant(entry, directoryName) ||
+                !MinIODirectoryHelper.IsImageFile(entry.Name))
+                continue;
+
+            totalCount++;
+
+            try
+            {
+                await using var entryStream = entry.Open();
+                using var ms = new MemoryStream();
+                await entryStream.CopyToAsync(ms);
+                var imageData = ms.ToArray();
+
+                string relPath = MinIODirectoryHelper.GetRelativePath(entry.FullName, directoryName);
+                string objectKey = $"{destinationPath}/{relPath}";
+
+                // Add to embeddings list
+                embeddings.Add(new ImageEmbeddingInput(objectKey, imageData));
+
+                // Start upload task
+                var uploadTask = UploadImageFromBytesAsync(imageData, objectKey, entry.Name);
+                uploadTasks.Add(uploadTask);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed processing entry {Entry}", entry.FullName);
+            }
+        }
+
+        // Wait for all uploads to complete
+        var uploadResults = await Task.WhenAll(uploadTasks);
+        int uploadedCount = uploadResults.Count(success => success);
+
+        var uploadResponse = new UploadResponse 
+        { 
+            UploadedCount = uploadedCount, 
+            OriginalCount = totalCount 
+        };
+
+        return (uploadResponse, embeddings);
+    }
 }
 
