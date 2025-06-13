@@ -17,12 +17,21 @@ public class ImageControllerTests
     {
         // Arrange
         var mockUploadService = new Mock<IImageUploadService>();
+        
+        // Create mock embeddings input to simulate what the service would return
+        var mockEmbeddingInputs = new List<ImageEmbeddingInput>
+        {
+            new ImageEmbeddingInput($"{MinIODirectoryHelper.GetDestinationPath(new DateTime(2025,1,1), "proj", "directory", true)}/dummy.txt", new byte[] { 1, 2, 3 })
+        };
+        
         mockUploadService
-            .Setup(s => s.ExtractAndUploadImagesAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), true, ""))
-            .ReturnsAsync(new UploadResponse());
+            .Setup(s => s.ProcessZipOptimizedAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), true, It.IsAny<string>()))
+            .ReturnsAsync((new UploadResponse(), mockEmbeddingInputs));
+            
         var mockEmbeddingService = new Mock<IEmbeddingService>();
         var mockStore = new Mock<IVectorStore>();
         List<ImageEmbeddingInput>? received = null;
+        
         mockEmbeddingService.Setup(s => s.GenerateEmbeddingsAsync(It.IsAny<IAsyncEnumerable<ImageEmbeddingInput>>()))
             .Returns((IAsyncEnumerable<ImageEmbeddingInput> imgs) => Record(imgs));
 

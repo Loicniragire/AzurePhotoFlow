@@ -9,7 +9,7 @@ namespace integrationTests;
 [TestFixture]
 public class MinioConnectionTests
 {
-    private static string Endpoint => Environment.GetEnvironmentVariable("MINIO_ENDPOINT") ?? "http://localhost:9000";
+    private static string Endpoint => Environment.GetEnvironmentVariable("MINIO_ENDPOINT") ?? "localhost:9000";
     private static string AccessKey => Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY") ?? "minioadmin";
     private static string SecretKey => Environment.GetEnvironmentVariable("MINIO_SECRET_KEY") ?? "minioadmin";
 
@@ -18,7 +18,7 @@ public class MinioConnectionTests
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-            var resp = await http.GetAsync($"{Endpoint.TrimEnd('/')}/minio/health/live");
+            var resp = await http.GetAsync($"http://{Endpoint.TrimEnd('/')}/minio/health/live");
             return resp.IsSuccessStatusCode;
         }
         catch
