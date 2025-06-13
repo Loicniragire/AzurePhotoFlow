@@ -7,6 +7,7 @@ using Moq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading;
 
@@ -27,7 +28,10 @@ public class GetProjectsTimestampTests
 
         var result = await controller.GetProjects(null, null, "01/02/2025");
         Assert.IsInstanceOf<OkObjectResult>(result);
-        mockService.Verify(s => s.GetProjectsAsync(null, null, It.Is<DateTime?>(d => d!.Value.Year == 2025 && d.Value.Month == 1 && d.Value.Day == 2), It.IsAny<CancellationToken>()), Times.Once);
+        mockService.Verify(s => s.GetProjectsAsync(null, null,
+            It.Is<DateTime?>(d => d!.Value.Year == 2025 && d.Value.Month == 1 && d.Value.Day == 2),
+            It.IsAny<CancellationToken>()), Times.Once);
+
     }
 
     [Test]

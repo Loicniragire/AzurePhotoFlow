@@ -37,6 +37,16 @@ public class ImageController : ControllerBase
     [HttpPost("raw")]
     public async Task<IActionResult> UploadDirectory(DateTime timeStamp, string projectName, IFormFile directoryFile)
     {
+        if (timeStamp == default)
+        {
+            return BadRequest("Timestamp must be provided.");
+        }
+
+        if (string.IsNullOrWhiteSpace(projectName))
+        {
+            return BadRequest("Project name must be provided.");
+        }
+
         if (directoryFile == null || directoryFile.Length == 0)
         {
             return BadRequest("A Zip file must be provided.");
@@ -75,6 +85,21 @@ public class ImageController : ControllerBase
     [HttpPost("processed")]
     public async Task<IActionResult> UploadProcessedFiles(DateTime timeStamp, string projectName, string rawfileDirectoryName, IFormFile directoryFile)
     {
+        if (timeStamp == default)
+        {
+            return BadRequest("Timestamp must be provided.");
+        }
+
+        if (string.IsNullOrWhiteSpace(projectName))
+        {
+            return BadRequest("Project name must be provided.");
+        }
+
+        if (string.IsNullOrWhiteSpace(rawfileDirectoryName))
+        {
+            return BadRequest("Raw directory name must be provided.");
+        }
+
         if (directoryFile == null || directoryFile.Length == 0)
         {
             return BadRequest("A Zip file must be provided.");

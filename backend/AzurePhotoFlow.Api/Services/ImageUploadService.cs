@@ -409,7 +409,7 @@ public class ImageUploadService : IImageUploadService
         return count;
     }
 
-    public async Task<bool> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName)
+    public async Task<ImageUploadResult> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName)
     {
         try
         {
@@ -437,12 +437,12 @@ public class ImageUploadService : IImageUploadService
             await _messageQueueingService.EnqueueMessageAsync(serializedMetadata);
 
             _log.LogInformation($"Uploaded image: {objectKey}");
-            return true;
+            return ImageUploadResult.Ok(objectKey);
         }
         catch (Exception ex)
         {
             _log.LogError($"Failed to upload image {objectKey}: {ex.Message}");
-            return false;
+            return ImageUploadResult.Fail(objectKey, ex.Message);
         }
     }
 
@@ -455,7 +455,7 @@ public class ImageUploadService : IImageUploadService
         string rawfileDirectoryName = "")
     {
         var embeddings = new List<ImageEmbeddingInput>();
-        var uploadTasks = new List<Task<bool>>();
+        var uploadTasks = new List<Task<ImageUploadResult>>();
         int totalCount = 0;
 
         string destinationPath = GetDestinationPath(timestamp, projectName, 
@@ -508,7 +508,7 @@ public class ImageUploadService : IImageUploadService
 
         // Wait for all uploads to complete
         var uploadResults = await Task.WhenAll(uploadTasks);
-        int uploadedCount = uploadResults.Count(success => success);
+        int uploadedCount = uploadResults.Count(r => r.Success);
 
         var uploadResponse = new UploadResponse 
         { 
