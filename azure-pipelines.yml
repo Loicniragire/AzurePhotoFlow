@@ -17,8 +17,8 @@ variables:
   - name: location
     value: 'eastus'
 
-  # - name: containerRegistry
-    # value: 'ghcr.io/Loicniragire/PhotoFlow'
+  - name: containerRegistry
+    value: 'ghcr.io/loicniragire/photoflow'
 
 
   - name: storageAccountName
@@ -59,6 +59,24 @@ stages:
     steps:
       - checkout: github_repo
 
+      # Setup Python for CLIP model generation
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.9'
+        displayName: 'Setup Python'
+
+      # Download CLIP model if needed
+      - script: |
+          if [ ! -f "models/model.onnx" ]; then
+            echo "Setting up Python environment and downloading CLIP model..."
+            python scripts/setup_venv.py --path .venv
+            source .venv/bin/activate
+            python scripts/export_clip_onnx.py --output models/model.onnx || echo "Warning: Could not generate CLIP model"
+          else
+            echo "CLIP model already exists"
+          fi
+        displayName: 'Ensure CLIP Model Exists'
+
       - script: |
           export DOCKER_CONFIG=$HOME/.docker
           docker context use desktop-linux
@@ -70,10 +88,16 @@ stages:
           echo "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" >> .env
           echo "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" >> .env
           echo "MODE=$(MODE)" >> .env
-          echo "CONTAINER_REGISTRY=$(containerRegistry)" > .env
-          echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)"  >> .env
+          echo "CONTAINER_REGISTRY=$(containerRegistry)" >> .env
+          echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" >> .env
+          echo "VITE_GOOGLE_CLIENT_ID=$(VITE_GOOGLE_CLIENT_ID)" >> .env
+          echo "JWT_SECRET_KEY=$(JWT_SECRET_KEY)" >> .env
           echo "stableTag=$(Build.BuildId)" >> .env
           echo "ALLOWED_ORIGINS=$(ALLOWED_ORIGINS)" >> .env
+          echo "QDRANT_URL=$(QDRANT_URL)" >> .env
+          echo "QDRANT_COLLECTION=$(QDRANT_COLLECTION)" >> .env
+          echo "CLIP_MODEL_PATH=$(CLIP_MODEL_PATH)" >> .env
+          echo "METADATA_QUEUE=$(METADATA_QUEUE)" >> .env
         displayName: 'Create .env file'
 
       - publish: $(Build.SourcesDirectory)/.env
