@@ -1,6 +1,7 @@
 using Api.Models;
 using Api.Interfaces;
 using AzurePhotoFlow.Services;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using Qdrant.Client.Grpc;
@@ -22,7 +23,8 @@ public class VectorStoreTests
             .Callback<string, IEnumerable<PointStruct>>((c, pts) => received = pts)
             .Returns(Task.CompletedTask);
 
-        var store = new QdrantVectorStore(mockWrapper.Object);
+        var logger = new Mock<ILogger<QdrantVectorStore>>();
+        var store = new QdrantVectorStore(logger.Object, mockWrapper.Object);
         var embeddings = new List<ImageEmbedding>
         {
             new ImageEmbedding("key", new float[] { 1f })

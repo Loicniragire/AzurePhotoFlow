@@ -8,6 +8,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace unitTests;
 
@@ -18,7 +19,7 @@ public class GetProjectsTimestampTests
     public async Task GetProjects_ValidTimestamp_ParsesDate()
     {
         var mockService = new Mock<IImageUploadService>();
-        mockService.Setup(s => s.GetProjectsAsync(null, null, It.IsAny<DateTime?>()))
+        mockService.Setup(s => s.GetProjectsAsync(null, null, It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ProjectInfo>());
 
         var controller = new ImageController(new Mock<ILogger<ImageController>>().Object,
@@ -26,7 +27,7 @@ public class GetProjectsTimestampTests
 
         var result = await controller.GetProjects(null, null, "01/02/2025");
         Assert.IsInstanceOf<OkObjectResult>(result);
-        mockService.Verify(s => s.GetProjectsAsync(null, null, It.Is<DateTime?>(d => d!.Value.Year == 2025 && d.Value.Month == 1 && d.Value.Day == 2)), Times.Once);
+        mockService.Verify(s => s.GetProjectsAsync(null, null, It.Is<DateTime?>(d => d!.Value.Year == 2025 && d.Value.Month == 1 && d.Value.Day == 2), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
