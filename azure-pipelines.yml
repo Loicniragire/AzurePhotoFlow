@@ -59,21 +59,27 @@ stages:
     steps:
       - checkout: github_repo
 
-      # Setup Python for CLIP model generation
-      - task: UsePythonVersion@0
-        inputs:
-          versionSpec: '3.9'
-        displayName: 'Setup Python'
-
-      # Download CLIP model if needed
+      # Verify CLIP model exists or download it
       - script: |
           if [ ! -f "models/model.onnx" ]; then
-            echo "Setting up Python environment and downloading CLIP model..."
-            python scripts/setup_venv.py --path .venv
-            source .venv/bin/activate
-            python scripts/export_clip_onnx.py --output models/model.onnx || echo "Warning: Could not generate CLIP model"
+            echo "CLIP model not found. Downloading from Hugging Face..."
+            mkdir -p models
+            
+            # Download CLIP ONNX model directly from Hugging Face
+            curl -L -o models/model.onnx \
+              "https://huggingface.co/openai/clip-vit-base-patch32/resolve/main/onnx/model.onnx" \
+              || echo "Warning: Could not download CLIP model from Hugging Face"
+              
+            if [ -f "models/model.onnx" ]; then
+              echo "CLIP model downloaded successfully"
+              ls -la models/model.onnx
+            else
+              echo "ERROR: CLIP model is required but could not be downloaded"
+              exit 1
+            fi
           else
             echo "CLIP model already exists"
+            ls -la models/model.onnx
           fi
         displayName: 'Ensure CLIP Model Exists'
 
