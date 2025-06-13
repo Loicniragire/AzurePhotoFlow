@@ -12,6 +12,12 @@ npm run dev          # Start development server
 npm run build        # Production build
 npm run lint         # ESLint code quality check
 npm run preview      # Preview production build
+
+# Frontend testing
+cd tests/frontend
+npm install          # Install test dependencies
+npm run test         # Run Vitest tests
+npm run test:ui      # Run Vitest with UI
 ```
 
 ### Backend (.NET 8)
@@ -103,6 +109,7 @@ dotnet test AzurePhotoFlow.Functions.Tests/
 - Unit tests for API controllers and services
 - Integration tests for MinIO/Qdrant connections
 - Test utilities in `AzurePhotoFlow.Tests.Utilities`
+- Frontend tests using Vitest and React Testing Library in `tests/frontend/`
 
 ## Key Patterns & Conventions
 

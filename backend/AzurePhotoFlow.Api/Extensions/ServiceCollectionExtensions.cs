@@ -1,8 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using Minio;
 using Qdrant.Client;
 using Api.Interfaces;
-using AzurePhotoFlow.Services;
 
 namespace AzurePhotoFlow.Services;
 
