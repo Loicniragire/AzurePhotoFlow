@@ -7,6 +7,7 @@ using Qdrant.Client.Grpc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace unitTests;
 
@@ -22,7 +23,7 @@ public class VectorStoreTests
             .Callback<string, IEnumerable<PointStruct>>((c, pts) => received = pts)
             .Returns(Task.CompletedTask);
 
-        var store = new QdrantVectorStore(mockWrapper.Object);
+        var store = new QdrantVectorStore(new NullLogger<QdrantVectorStore>(), mockWrapper.Object);
         var embeddings = new List<ImageEmbedding>
         {
             new ImageEmbedding("key", new float[] { 1f })

@@ -76,6 +76,8 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 ### Required Environment Variables
 - `VITE_GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `JWT_SECRET_KEY` - JWT token signing key
+- `JWT_ISSUER` - expected issuer for generated JWT tokens
+- `JWT_AUDIENCE` - expected audience for generated JWT tokens
 - `QDRANT_URL` - Vector database connection
 - `QDRANT_COLLECTION` - Collection name for embeddings
 - `CLIP_MODEL_PATH` - Path to ONNX model file (`/models/model.onnx`)

@@ -139,6 +139,8 @@ builder.Services.Configure<FormOptions>(options =>
 
 // Retrieve and Validate Environment Variables
 var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "loicportraits.azurewebsites.net";
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "loicportraits.azurewebsites.net";
 var googleClientId = Environment.GetEnvironmentVariable("VITE_GOOGLE_CLIENT_ID");
 
 if (string.IsNullOrEmpty(jwtSecretKey))
@@ -154,6 +156,7 @@ var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
 
 builder.Services.AddSingleton(securityKey);
 builder.Services.AddSingleton(new GoogleConfig { ClientId = googleClientId });
+builder.Services.AddSingleton(new JwtConfig { Issuer = jwtIssuer, Audience = jwtAudience });
 builder.Services.AddSingleton<JwtService>();
 
 // Configure JWT Bearer authentication
@@ -163,19 +166,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // Remove or comment out the Google authority since you are not validating Google-issued tokens.
         // options.Authority = "https://accounts.google.com";
 
-        // Set the expected audience and issuer to match the values in your generated JWT.
-        options.Audience = "loicportraits.azurewebsites.net";
+        // Set the expected audience and issuer to match the configured values.
+        options.Audience = jwtAudience;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = "loicportraits.azurewebsites.net",
+            ValidIssuer = jwtIssuer,
             ValidateAudience = true,
-            ValidAudience = "loicportraits.azurewebsites.net",
+            ValidAudience = jwtAudience,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             // Use the same secret key that you use to generate your JWT.
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? string.Empty))
+            IssuerSigningKey = securityKey
         };
 
         // Optional: Add detailed logging to help diagnose authentication failures.

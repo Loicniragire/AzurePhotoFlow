@@ -3,15 +3,17 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 
+using Api.Models;
+
 public class JwtService
 {
     private readonly SymmetricSecurityKey _jwtKey;
-    private const string Issuer = "loicportraits.azurewebsites.net";
-    private const string Audience = "loicportraits.azurewebsites.net";
+    private readonly JwtConfig _config;
 
-    public JwtService(SymmetricSecurityKey jwtKey)
+    public JwtService(SymmetricSecurityKey jwtKey, JwtConfig config)
     {
         _jwtKey = jwtKey;
+        _config = config;
     }
 
     public string GenerateJwtToken(string userId, string email)
@@ -28,8 +30,8 @@ public class JwtService
         var creds = new SigningCredentials(_jwtKey, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: Issuer,
-            audience: Audience,
+            issuer: _config.Issuer,
+            audience: _config.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddDays(7), // Token valid for 7 days
             signingCredentials: creds
