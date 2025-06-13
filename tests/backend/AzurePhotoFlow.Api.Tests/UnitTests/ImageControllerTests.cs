@@ -43,6 +43,8 @@ public class ImageControllerTests
 
         var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, mockEmbeddingService.Object, mockStore.Object);
 
+        Environment.SetEnvironmentVariable("ENABLE_EMBEDDINGS", "true");
+
         var zipStream = new MemoryStream();
         using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
         {
@@ -65,5 +67,35 @@ public class ImageControllerTests
         Assert.AreEqual(1, received!.Count);
         var expectedPrefix = MinIODirectoryHelper.GetDestinationPath(ts, "proj", "directory", true);
         Assert.AreEqual($"{expectedPrefix}/dummy.txt", received[0].ObjectKey);
+    }
+
+    [Test]
+    public async Task UploadDirectory_MissingProjectName_ReturnsBadRequest()
+    {
+        var mockUploadService = new Mock<IImageUploadService>();
+        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object,
+                                            mockUploadService.Object,
+                                            new Mock<IEmbeddingService>().Object,
+                                            new Mock<IVectorStore>().Object);
+
+        var stream = new MemoryStream(new byte[] {1});
+        IFormFile file = new FormFile(stream, 0, stream.Length, "file", "f.zip");
+
+        var result = await controller.UploadDirectory(DateTime.UtcNow, "", file);
+
+        Assert.IsInstanceOf<BadRequestObjectResult>(result);
+    }
+
+    [Test]
+    public async Task UploadDirectory_MissingFile_ReturnsBadRequest()
+    {
+        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object,
+                                            new Mock<IImageUploadService>().Object,
+                                            new Mock<IEmbeddingService>().Object,
+                                            new Mock<IVectorStore>().Object);
+
+        var result = await controller.UploadDirectory(DateTime.UtcNow, "proj", null!);
+
+        Assert.IsInstanceOf<BadRequestObjectResult>(result);
     }
 }

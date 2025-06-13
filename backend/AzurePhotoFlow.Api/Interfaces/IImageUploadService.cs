@@ -28,7 +28,7 @@ public interface IImageUploadService
     /// <summary>
     /// Uploads a single image from byte array to storage
     /// </summary>
-    Task<bool> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName);
+    Task<ImageUploadResult> UploadImageFromBytesAsync(byte[] imageData, string objectKey, string fileName);
     
     /// <summary>
     /// Optimized method to process zip file once for both embeddings and uploads
