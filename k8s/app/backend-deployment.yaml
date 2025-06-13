@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: azurephotoflow
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      imagePullSecrets:
+      - name: registry-secret
+      containers:
+      - name: backend
+        image: ghcr.io/loicniragire/photoflow/azurephotoflow-backend:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azurephotoflow-secrets
+              key: JWT_SECRET_KEY
+        - name: VITE_GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azurephotoflow-secrets
+              key: VITE_GOOGLE_CLIENT_ID
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azurephotoflow-secrets
+              key: MINIO_ACCESS_KEY
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azurephotoflow-secrets
+              key: MINIO_SECRET_KEY
+        envFrom:
+        - configMapRef:
+            name: azurephotoflow-config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: models
+          mountPath: /models
+          readOnly: true
+      # Init container to download CLIP model
+      initContainers:
+      - name: download-model
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          if [ ! -f /models/model.onnx ]; then
+            echo "Downloading CLIP model..."
+            curl -L -o /models/model.onnx "https://huggingface.co/openai/clip-vit-base-patch32/resolve/main/onnx/model.onnx"
+            echo "Model downloaded successfully"
+          else
+            echo "Model already exists"
+          fi
+        volumeMounts:
+        - name: models
+          mountPath: /models
+      volumes:
+      - name: models
+        emptyDir: {}  # You might want to use a persistent volume for the model

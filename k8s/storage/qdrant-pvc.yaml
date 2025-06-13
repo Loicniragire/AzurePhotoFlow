@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-storage-claim
+  namespace: azurephotoflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi  # Adjust based on your vector data storage needs
+  # storageClassName: your-storage-class  # Uncomment and specify if needed

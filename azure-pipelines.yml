@@ -194,184 +194,85 @@ stages:
         displayName: 'Run Frontend Tests'
 
 # ---------------------------------------------------------------------------
-# Deploy Infrastructure Stage
+# Deploy Stage
 # ---------------------------------------------------------------------------
-- stage: DeployInfrastructure
-  displayName: Deploy Infrastructure
+- stage: Deploy
+  displayName: Deploy to Kubernetes
   dependsOn: Test
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
-  - job: DeployTerraform
-    displayName: Deploy Infrastructure with Terraform
-    steps:
-      - script: |
-          cd $(Build.SourcesDirectory)/Infrastructure
-          terraform init \
-            -backend-config="storage_account_name=$(storageAccountName)" \
-            -backend-config="container_name=$(containerName)" \
-            -backend-config="key=$(tfStateFile)" \
-            -backend-config="resource_group_name=$(resourceGroupName)" \
-            -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)"
-          terraform plan \
-            -var="backend_image_tag=$(Build.BuildId)" \
-            -var="frontend_image_tag=$(Build.BuildId)" \
-            -var="backend_function_image_tag=$(Build.BuildId)" \
-            -var="azure_blob_storage=$(AZURE_BLOB_STORAGE)" \
-            -var="metadata_queue=$(METADATA_QUEUE)" \
-            -var="certificate_password=$(CERTIFICATE_PASSWORD)" \
-            -var="certificate_path=$(CERTIFICATE_PATH)" \
-            -var="vite_api_base_url=$(VITE_API_BASE_URL)" \
-            -var="backend_web_app_name=$(backendWebAppName)" \
-            -var="frontend_web_app_name=$(frontendWebAppName)" \
-            -var="ssl_certificate_password=$(CERTIFICATE_PASSWORD)" \
-            -var="docker_registry_username=$(ACR_USERNAME)" \
-            -var="docker_registry_password=$(ACR_PASSWORD)" \
-            -var="vite_google_client_id=$(VITE_GOOGLE_CLIENT_ID)" \
-            -var="jwt_secret_key=$(JWT_SECRET_KEY)" \
-            -var="backend_function_app_name=$(backend_function_app_name)" \
-            -out=tfplan
-          terraform apply \
-            -auto-approve \
-            -parallelism=5 \
-            -lock-timeout=60s tfplan || exit 1
-        displayName: 'Authenticate and Apply Terraform'
+  - deployment: DeployToKubernetes
+    displayName: Deploy to Kubernetes Cluster
+    environment: 'production'  # Create this environment in Azure DevOps
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: github_repo
 
-# ---------------------------------------------------------------------------
-# Deploy Function Stage
-# ---------------------------------------------------------------------------
-- stage: DeployFunction
-  displayName: "Deploy Function Zip Package"
-  dependsOn: DeployInfrastructure
-  jobs:
-  - job: UploadFunctionZipToStorage
-    displayName: "Upload Function Zip to Storage"
-    steps:
-      - download: current
-        artifact: functionapp-zip
+          # Download build artifacts
+          - download: current
+            artifact: env-artifact
+            displayName: 'Download Environment File'
 
-      - task: AzureCLI@2
-        displayName: 'Upload Zip Package to Azure Blob Storage and Generate SAS URL'
-        inputs:
-          azureSubscription: $(azureSubscription)
-          scriptType: 'bash'
-          scriptLocation: 'inlineScript'
-          inlineScript: |
-            # Define variables
-            STORAGE_ACCOUNT_NAME=$(storageAccountName)
-            CONTAINER_NAME="function-deployments"
-            ZIP_FILE="$(Pipeline.Workspace)/functionapp-zip/functionapp.zip"
-            BLOB_NAME="functionapp-$(Build.BuildId).zip"
-            EXPIRY_DATE=$(date -u -v+5d '+%Y-%m-%dT%H:%MZ')
-            echo "Expiration date: $EXPIRY_DATE"
+          # Install kubectl
+          - task: KubectlInstaller@0
+            displayName: 'Install kubectl'
+            inputs:
+              kubectlVersion: 'latest'
 
-            # Create container if it doesn't exist
-            az storage container create \
-              --name $CONTAINER_NAME \
-              --account-name $STORAGE_ACCOUNT_NAME
+          # Configure kubectl with your cluster
+          # Replace this with your cluster connection method
+          - task: Kubernetes@1
+            displayName: 'Configure kubectl'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'your-k8s-connection'  # Create this service connection
+              command: 'login'
 
-            # Upload the zip file
-            az storage blob upload \
-              --account-name $STORAGE_ACCOUNT_NAME \
-              --container-name $CONTAINER_NAME \
-              --name $BLOB_NAME \
-              --file $ZIP_FILE
+          # Create Docker registry secret
+          - script: |
+              kubectl create secret docker-registry registry-secret \
+                --docker-server=ghcr.io \
+                --docker-username="$(GHCR_USERNAME)" \
+                --docker-password="$(GHCR_TOKEN)" \
+                --namespace=azurephotoflow \
+                --dry-run=client -o yaml | kubectl apply -f -
+            displayName: 'Create Registry Secret'
 
-            # Generate a SAS URL valid for 24 hours
-            SAS_URL=$(az storage blob generate-sas \
-              --account-name $STORAGE_ACCOUNT_NAME \
-              --container-name $CONTAINER_NAME \
-              --name $BLOB_NAME \
-              --permissions r \
-              --expiry $EXPIRY_DATE \
-              --output tsv)
+          # Update secrets with pipeline variables
+          - script: |
+              # Update secrets.yaml with actual values
+              cd k8s
+              
+              # Encode secrets to base64
+              VITE_GOOGLE_CLIENT_ID_B64=$(echo -n "$(VITE_GOOGLE_CLIENT_ID)" | base64 -w 0)
+              JWT_SECRET_KEY_B64=$(echo -n "$(JWT_SECRET_KEY)" | base64 -w 0)
+              
+              # Update secrets file
+              sed -i "s/REPLACE_WITH_BASE64_ENCODED_VALUE/$VITE_GOOGLE_CLIENT_ID_B64/g" secrets.yaml
+              sed -i "s/REPLACE_WITH_BASE64_ENCODED_VALUE/$JWT_SECRET_KEY_B64/g" secrets.yaml
+              
+              # Update configmap with production values
+              sed -i "s|VITE_API_BASE_URL:.*|VITE_API_BASE_URL: \"$(VITE_API_BASE_URL)\"|g" configmap.yaml
+              sed -i "s|ALLOWED_ORIGINS:.*|ALLOWED_ORIGINS: \"$(ALLOWED_ORIGINS)\"|g" configmap.yaml
+            displayName: 'Update Kubernetes Manifests'
 
+          # Deploy to Kubernetes using the deployment script
+          - script: |
+              chmod +x scripts/deploy-k8s.sh
+              ./scripts/deploy-k8s.sh production $(Build.BuildId)
+            displayName: 'Deploy to Kubernetes'
 
-            FULL_URL="https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${BLOB_NAME}?${SAS_URL}"
-            echo "##vso[task.setvariable variable=WEBSITE_RUN_FROM_PACKAGE_URL]$FULL_URL"
-            echo "WEBSITE_RUN_FROM_PACKAGE_URL=$FULL_URL"
-
-      - task: AzureCLI@2
-        displayName: 'Update WEBSITE_RUN_FROM_PACKAGE setting'
-        inputs:
-          azureSubscription: $(azureSubscription)
-          scriptType: 'bash'
-          scriptLocation: 'inlineScript'
-          inlineScript: |
-            az functionapp config appsettings set \
-              --resource-group $(resourceGroupName) \
-              --name $(backend_function_app_name) \
-              --settings "WEBSITE_RUN_FROM_PACKAGE=$(WEBSITE_RUN_FROM_PACKAGE_URL)"
-
-            # Restart the function app
-            az functionapp restart \
-              --name $(backend_function_app_name) \
-              --resource-group $(resourceGroupName)
-
-# ---------------------------------------------------------------------------
-# Validate Stage
-# ---------------------------------------------------------------------------
-- stage: Validate
-  displayName: Validation Stage
-  dependsOn: DeployFunction
-  jobs:
-    - job: WaitForHealthAndSmokeTest
-      displayName: Wait for Health & Smoke Test
-      steps:
-        # Optional: Wait for backend /health endpoint
-        - script: |
-            echo "Waiting for backend container /health to become healthy..."
-            BACKEND_URL="https://$(backendWebAppName).azurewebsites.net/health"
-            MAX_ATTEMPTS=6
-            SLEEP_BETWEEN=10
-            ATTEMPT=1
-            while [ $ATTEMPT -le $MAX_ATTEMPTS ]
-            do
-              echo "Attempt $ATTEMPT: Checking ${BACKEND_URL}"
-              if curl -s -f ${BACKEND_URL}; then
-                echo "Backend is healthy!"
-                break
-              fi
-              echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds..."
-              ATTEMPT=$((ATTEMPT+1))
-              sleep $SLEEP_BETWEEN
-            done
-            if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-              echo "Health check failed after $MAX_ATTEMPTS attempts!"
-              exit 1
-            fi
-          displayName: 'Wait for Backend Health Endpoint'
-
-        - script: |
-            echo "waiting for frontend container /health to become healthy..."
-            FRONTEND_URL="https://$(frontendWebAppName).azurewebsites.net/health"
-            MAX_ATTEMPTS=6
-            SLEEP_BETWEEN=10
-            ATTEMPT=1
-            while [ $ATTEMPT -le $MAX_ATTEMPTS ]
-            do
-              echo "Attempt $ATTEMPT: Checking ${FRONTEND_URL}"
-              if curl -s -f ${FRONTEND_URL}; then
-                echo "Frontend is healthy!"
-                break
-              fi
-              echo "Health check unavailable. Waiting $SLEEP_BETWEEN seconds..."
-              ATTEMPT=$((ATTEMPT+1))
-              sleep $SLEEP_BETWEEN
-            done
-            if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
-              echo "Health check failed after $MAX_ATTEMPTS attempts!"
-              exit 1
-            fi
-          displayName: 'Wait for Frontend Health Endpoint'
-
-        # Quick Smoke Test
-        - script: |
-            FRONTEND_URL="https://$(frontendWebAppName).azurewebsites.net"
-            BACKEND_HEALTH_URL="https://$(backendWebAppName).azurewebsites.net/health"
-
-            echo "Checking Frontend at ${FRONTEND_URL}"
-            curl -sSf "${FRONTEND_URL}" | grep "Loic Portraits" || exit 1
-
-            echo "Checking Backend at ${BACKEND_HEALTH_URL}"
-            curl -sSf "${BACKEND_HEALTH_URL}" | grep "Healthy" || exit 1
-          displayName: 'Smoke Tests'
+          # Verify deployment
+          - script: |
+              echo "Verifying deployment..."
+              kubectl get pods -n azurephotoflow
+              kubectl get services -n azurephotoflow
+              kubectl get ingress -n azurephotoflow
+              
+              # Wait for pods to be ready
+              kubectl wait --for=condition=ready pod -l app=backend -n azurephotoflow --timeout=300s
+              kubectl wait --for=condition=ready pod -l app=frontend -n azurephotoflow --timeout=300s
+            displayName: 'Verify Deployment'
 
