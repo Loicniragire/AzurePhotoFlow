@@ -1,16 +1,11 @@
 using Api.Interfaces;
 using Api.Models;
-using AzurePhotoFlow.Services;
 using AzurePhotoFlow.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using NUnit.Framework;
 using System.IO.Compression;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace unitTests;
 

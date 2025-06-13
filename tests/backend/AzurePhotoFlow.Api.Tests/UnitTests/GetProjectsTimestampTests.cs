@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace unitTests;
 
@@ -30,6 +31,7 @@ public class GetProjectsTimestampTests
         mockService.Verify(s => s.GetProjectsAsync(null, null,
             It.Is<DateTime?>(d => d!.Value.Year == 2025 && d.Value.Month == 1 && d.Value.Day == 2),
             It.IsAny<CancellationToken>()), Times.Once);
+
     }
 
     [Test]

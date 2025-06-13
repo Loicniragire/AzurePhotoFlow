@@ -2,20 +2,12 @@ using System.Text;
 using System.Text.Json;
 using Api.Interfaces;
 using Api.Models;
-using Azure.Storage.Blobs;
-using Azure.Storage.Queues;
 using AzurePhotoFlow.Services;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Minio;
-using Qdrant.Client;
 using Microsoft.ML.OnnxRuntime;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -85,31 +77,8 @@ builder.Logging.AddJsonConsole(options =>
     options.JsonWriterOptions = new JsonWriterOptions { Indented = true };
 });
 
-// Configure MinIO Client
-builder.Services.AddSingleton(x =>
-{
-        var minioEndpoint = Environment.GetEnvironmentVariable("MINIO_ENDPOINT");
-        var minioAccessKey = Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY");
-        var minioSecretKey = Environment.GetEnvironmentVariable("MINIO_SECRET_KEY");
-
-	if (string.IsNullOrEmpty(minioEndpoint) || string.IsNullOrEmpty(minioAccessKey) || string.IsNullOrEmpty(minioSecretKey))
-	{
-		throw new InvalidOperationException("MinIO configuration is missing.");
-	}
-
-	return new MinioClient()
-	.WithEndpoint(minioEndpoint)
-	.WithCredentials(minioAccessKey, minioSecretKey)
-        .Build();
-});
-
-builder.Services.AddSingleton(_ =>
-{
-    var qdrantHost = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
-    var qdrantPort = int.Parse(Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6333");
-    
-    return new QdrantClient(qdrantHost, qdrantPort, https: false);
-});
+builder.Services.AddMinioClient();
+builder.Services.AddVectorStore();
 
 builder.Services.AddSingleton(_ =>
 {
@@ -194,24 +163,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Temporary Logging Middleware to Capture the Host Header
-app.Use(async (context, next) =>
-{
-    var hostHeader = context.Request.Headers["Host"].ToString();
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Incoming request Host header: {HostHeader}", hostHeader);
-    await next.Invoke();
-});
-
-// Security Headers Middleware
-app.Use(async (context, next) =>
-{
-    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'");
-    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.Append("X-Frame-Options", "DENY");
-    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-    await next();
-});
+app.UseHostHeaderLogging();
+app.UseSecurityHeaders();
 
 // Development Configuration
 if (app.Environment.IsDevelopment())
@@ -225,72 +178,18 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseCors("AllowSpecificOrigin");
 
-app.UseExceptionHandler(appError =>
-{
-    appError.Run(async context =>
-    {
-        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
-        var exception = exceptionHandlerPathFeature?.Error;
-
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json";
-
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogError(exception, "Unhandled exception occurred: {Message}", exception?.Message);
-
-        await context.Response.WriteAsync(JsonSerializer.Serialize(new
-        {
-            StatusCode = context.Response.StatusCode,
-            Message = "An unexpected error occurred. Please try again later.",
-            Details = app.Environment.IsDevelopment() ? exception?.ToString() : null
-        }));
-    });
-});
+app.UseGlobalExceptionHandling(app.Environment);
 
 // Activate Authentication and Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Health Check Endpoint
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
-    {
-        var result = JsonSerializer.Serialize(new
-        {
-            Status = report.Status.ToString(),
-            Checks = report.Entries.Select(e => new
-            {
-                Name = e.Key,
-                Status = e.Value.Status.ToString(),
-                Description = e.Value.Description,
-                Exception = e.Value.Exception?.Message
-            }),
-            Duration = report.TotalDuration
-        });
-
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync(result);
-    }
-});
+app.MapHealthEndpoint();
 
 app.MapControllers();
 
 // Graceful Shutdown Handling
-var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-appLifetime.ApplicationStopping.Register(() =>
-{
-    app.Logger.LogInformation("Application is shutting down...");
-    // Add any necessary cleanup logic here
-});
 
-if(app.Environment.IsDevelopment())
-{
-	app.UseDeveloperExceptionPage();
-}
-else
-{
-	app.UseExceptionHandler("/error");
-}
+app.UseShutdownLogging();
 
 app.Run();

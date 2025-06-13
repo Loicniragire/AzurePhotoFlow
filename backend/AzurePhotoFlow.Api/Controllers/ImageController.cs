@@ -4,14 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Globalization;
-using System.IO.Compression;
-using AzurePhotoFlow.Shared;
-using System.Collections.Generic;
-using System.IO;
-using AzurePhotoFlow.Services;
-using System.Collections.Concurrent;
-using System.Buffers;
-using System.Linq;
 
 [ApiController]
 [Route("api/[controller]")]
