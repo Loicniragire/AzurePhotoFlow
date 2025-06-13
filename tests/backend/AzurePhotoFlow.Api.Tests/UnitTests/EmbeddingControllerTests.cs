@@ -73,5 +73,24 @@ public class EmbeddingControllerTests
         Assert.AreEqual($"{expectedPrefix}/img.jpg", received[0].ObjectKey);
         CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, received[0].ImageBytes);
     }
+
+    [Test]
+    public async Task Generate_MissingZipFile_ReturnsBadRequest()
+    {
+        var controller = new EmbeddingController(new Mock<IEmbeddingService>().Object,
+                                                 new Mock<IVectorStore>().Object);
+
+        var request = new EmbeddingRequest
+        {
+            ProjectName = "P",
+            DirectoryName = "D",
+            Timestamp = DateTime.UtcNow,
+            ZipFile = null
+        };
+
+        var result = await controller.Generate(request);
+
+        Assert.IsInstanceOf<BadRequestObjectResult>(result);
+    }
 }
 

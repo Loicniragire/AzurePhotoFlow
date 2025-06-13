@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using System.IO.Compression;
 using AzurePhotoFlow.Shared;
 using Api.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace AzurePhotoFlow.Services;
 
@@ -68,10 +69,18 @@ public class EmbeddingController : ControllerBase
 
 public class EmbeddingRequest
 {
+    [Required]
     public string ProjectName { get; set; } = string.Empty;
+
+    [Required]
     public string DirectoryName { get; set; } = string.Empty;
+
+    [Required]
     public DateTime Timestamp { get; set; }
+
+    [Required]
     public IFormFile? ZipFile { get; set; }
+
     public bool IsRawFiles { get; set; } = true;
     public string RawDirectoryName { get; set; } = string.Empty;
 }
