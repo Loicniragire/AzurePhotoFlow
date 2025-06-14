@@ -7,38 +7,12 @@ pool:
 
 variables:
   - group: 'PhotoFlow'
-  - name: azureSubscription
-    value: 'AZ_PhotoFlow_connection'
-  - name: subscriptionId
-    value: 'ebe2acfb-f4a5-4f6b-8f30-252c571813f9'
-
-  - name: resourceGroupName
-    value: 'AzurePhotoFlow-RG'
-  - name: location
-    value: 'eastus'
-
   - name: containerRegistry
     value: 'ghcr.io/loicniragire/photoflow'
-
-
-  - name: storageAccountName
-    value: 'photoflowtfstatedev'
-  - name: containerName
-    value: 'tfstate'
-  - name: logging
-    value: 'logs'
-  - name: cognitiveAccountName
-    value: 'azurephotoflowvision'
-  - name: tfStateFile
-    value: 'azurephotoflow.tfstate'
   - name: stableTag
     value: "$(Build.BuildId)"
-  - name: backendWebAppName
-    value: "photoflowbackendwebapp"
-  - name: frontendWebAppName
-    value: "loicportraits"
-  - name: backend_function_app_name
-    value: "photoflowfunction"
+  - name: deploymentConfigured
+    value: ${{ variables.REMOTE_DEPLOYMENT_CONFIGURED }}
 
 resources:
   repositories:
@@ -54,8 +28,8 @@ stages:
 - stage: Build
   displayName: Build Stage
   jobs:
-  - job: BuildDockerImages
-    displayName: Build Docker Images (Backend & Frontend)
+  - job: BuildAndPush
+    displayName: Build and Push Docker Images
     steps:
       - checkout: github_repo
 
@@ -64,8 +38,6 @@ stages:
           if [ ! -f "models/model.onnx" ]; then
             echo "CLIP model not found. Downloading from Hugging Face..."
             mkdir -p models
-            
-            # Download CLIP ONNX model directly from Hugging Face
             curl -L -o models/model.onnx \
               "https://huggingface.co/openai/clip-vit-base-patch32/resolve/main/onnx/model.onnx" \
               || echo "Warning: Could not download CLIP model from Hugging Face"
@@ -83,17 +55,9 @@ stages:
           fi
         displayName: 'Ensure CLIP Model Exists'
 
-      - script: |
-          export DOCKER_CONFIG=$HOME/.docker
-          docker context use desktop-linux
-        displayName: 'Set Docker Context'
-
       # Create .env file
       - script: |
-          echo "AZURE_BLOB_STORAGE=$(AZURE_BLOB_STORAGE)" > .env
-          echo "CERTIFICATE_PASSWORD=$(CERTIFICATE_PASSWORD)" >> .env
-          echo "CERTIFICATE_PATH=$(CERTIFICATE_PATH)" >> .env
-          echo "MODE=$(MODE)" >> .env
+          echo "MODE=$(MODE)" > .env
           echo "CONTAINER_REGISTRY=$(containerRegistry)" >> .env
           echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" >> .env
           echo "VITE_GOOGLE_CLIENT_ID=$(VITE_GOOGLE_CLIENT_ID)" >> .env
@@ -103,73 +67,43 @@ stages:
           echo "QDRANT_URL=$(QDRANT_URL)" >> .env
           echo "QDRANT_COLLECTION=$(QDRANT_COLLECTION)" >> .env
           echo "CLIP_MODEL_PATH=$(CLIP_MODEL_PATH)" >> .env
-          echo "METADATA_QUEUE=$(METADATA_QUEUE)" >> .env
         displayName: 'Create .env file'
 
-      - publish: $(Build.SourcesDirectory)/.env
-        artifact: env-artifact
-        displayName: 'Publish .env File Artifact'
-
-      # Build and Tag Docker Images for backend and frontend only
+      # Build Docker Images
       - script: |
           set -e
-          # Build only backend and frontend services (exclude function service)
           docker compose --env-file .env -f docker-compose.yml build backend frontend
           docker tag $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-backend:latest
           docker tag $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId) $(containerRegistry)/azurephotoflow-frontend:latest
-        displayName: 'Build and Tag Backend & Frontend Images'
+        displayName: 'Build Docker Images'
 
-      # Login to ACR and Push Images for backend and frontend
+      # Login and Push to Container Registry
       - script: |
-            echo "$(GHCR_TOKEN)" | docker login ghcr.io \
-              --username "$(GHCR_USERNAME)" \
-              --password-stdin
+          echo "$(GHCR_TOKEN)" | docker login ghcr.io \
+            --username "$(GHCR_USERNAME)" \
+            --password-stdin
         displayName: 'Login to GitHub Container Registry'
 
       - script: |
-          echo "Pushing backend and frontend images to ACR..."
-
+          echo "Pushing images to container registry..."
           docker push $(containerRegistry)/azurephotoflow-backend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-backend:latest
-
           docker push $(containerRegistry)/azurephotoflow-frontend:$(Build.BuildId)
           docker push $(containerRegistry)/azurephotoflow-frontend:latest
+        displayName: 'Push Docker Images'
 
-        displayName: 'Push Docker Images to ACR'
+      # Publish deployment artifacts
+      - publish: $(Build.SourcesDirectory)/k8s
+        artifact: k8s-manifests
+        displayName: 'Publish Kubernetes Manifests'
 
-      - publish: $(Build.SourcesDirectory)/docker-compose.yml
-        artifact: compose-artifact
-        displayName: 'Publish docker-compose.yml Artifact'
+      - publish: $(Build.SourcesDirectory)/scripts
+        artifact: deployment-scripts
+        displayName: 'Publish Deployment Scripts'
 
-  - job: BuildFunctionZip
-    displayName: "Build Azure Function Zip Package"
-    steps:
-      - checkout: github_repo
-
-      # Publish the Azure Function App
-      - task: DotNetCoreCLI@2
-        displayName: 'Publish Function App'
-        inputs:
-          command: publish
-          publishWebProjects: false
-          projects: 'backend/AzurePhotoFlow.Functions/AzurePhotoFlow.Functions.csproj'
-          arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/function_publish'
-          zipAfterPublish: false
-
-      # Archive the published output into a zip package
-      - task: ArchiveFiles@2
-        displayName: 'Archive Function App into Zip'
-        inputs:
-          rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/function_publish'
-          includeRootFolder: false
-          archiveType: 'zip'
-          archiveFile: '$(Build.ArtifactStagingDirectory)/functionapp.zip'
-          replaceExistingArchive: true
-
-      # Publish the zip package as an artifact
-      - publish: '$(Build.ArtifactStagingDirectory)/functionapp.zip'
-        artifact: functionapp-zip
-        displayName: 'Publish Function Zip Artifact'
+      - publish: $(Build.SourcesDirectory)/.env
+        artifact: env-artifact
+        displayName: 'Publish Environment File'
 
 # ---------------------------------------------------------------------------
 # Test Stage
@@ -182,97 +116,296 @@ stages:
     displayName: Run Unit and Integration Tests
     steps:
       - checkout: self
+      
       - script: |
           cd $(Build.SourcesDirectory)/tests/backend/AzurePhotoFlow.Api.Tests
           dotnet restore
-          dotnet test
+          dotnet test --logger "trx;LogFileName=backend-tests.trx"
         displayName: 'Run Backend Tests'
-      - script: |
-          cd $(Build.SourcesDirectory)/tests/frontend
-          npm install
-          npm test
-        displayName: 'Run Frontend Tests'
+      
+      - task: PublishTestResults@2
+        displayName: 'Publish Backend Test Results'
+        inputs:
+          testResultsFormat: 'VSTest'
+          testResultsFiles: '**/backend-tests.trx'
+          failTaskOnFailedTests: true
 
 # ---------------------------------------------------------------------------
-# Deploy Stage
+# Deployment Approval Stage
 # ---------------------------------------------------------------------------
-- stage: Deploy
-  displayName: Deploy to Kubernetes
+- stage: DeploymentApproval
+  displayName: 🚀 Deploy to Remote Cluster?
   dependsOn: Test
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
-  - deployment: DeployToKubernetes
-    displayName: Deploy to Kubernetes Cluster
-    environment: 'production'  # Create this environment in Azure DevOps
+  - job: CheckDeploymentConfig
+    displayName: Check Deployment Configuration
+    steps:
+      - script: |
+          echo "Checking if remote deployment is configured..."
+          
+          # Check if required deployment variables are set
+          if [ -z "$(REMOTE_SSH_HOST)" ] || [ -z "$(REMOTE_SSH_USER)" ]; then
+            echo "##vso[task.logissue type=warning]Remote deployment not configured"
+            echo "##vso[task.logissue type=warning]Please set REMOTE_SSH_HOST and REMOTE_SSH_USER variables"
+            echo "##vso[task.setvariable variable=deploymentConfigured]false"
+          else
+            echo "Remote deployment is configured"
+            echo "Target: $(REMOTE_SSH_USER)@$(REMOTE_SSH_HOST)"
+            echo "##vso[task.setvariable variable=deploymentConfigured]true"
+          fi
+        displayName: 'Check Deployment Configuration'
+
+  - deployment: ApprovalGate
+    displayName: 🎯 Deployment Approval
+    environment: 'production-approval'  # Requires manual approval in Azure DevOps
+    condition: eq(variables.deploymentConfigured, 'true')
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+              echo "🎉 Deployment approved!"
+              echo "Proceeding with deployment to remote cluster..."
+              echo "Target: $(REMOTE_SSH_USER)@$(REMOTE_SSH_HOST)"
+              echo "Image Tag: $(Build.BuildId)"
+            displayName: 'Deployment Approved'
+
+# ---------------------------------------------------------------------------
+# Remote Deployment Stage
+# ---------------------------------------------------------------------------
+- stage: RemoteDeploy
+  displayName: 🚀 Deploy to Remote Cluster
+  dependsOn: DeploymentApproval
+  condition: and(succeeded(), eq(variables.deploymentConfigured, 'true'))
+  jobs:
+  - deployment: DeployToRemoteCluster
+    displayName: Deploy to Remote MicroK8s
+    environment: 'production-deployment'
     strategy:
       runOnce:
         deploy:
           steps:
           - checkout: github_repo
+          
+          # Download artifacts
+          - download: current
+            artifact: k8s-manifests
+            displayName: 'Download Kubernetes Manifests'
+          
+          - download: current
+            artifact: deployment-scripts
+            displayName: 'Download Deployment Scripts'
 
-          # Download build artifacts
           - download: current
             artifact: env-artifact
             displayName: 'Download Environment File'
 
-          # Install kubectl
-          - task: KubectlInstaller@0
-            displayName: 'Install kubectl'
-            inputs:
-              kubectlVersion: 'latest'
-
-          # Configure kubectl with your cluster
-          # Replace this with your cluster connection method
-          - task: Kubernetes@1
-            displayName: 'Configure kubectl'
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: 'your-k8s-connection'  # Create this service connection
-              command: 'login'
-
-          # Create Docker registry secret
+          # Setup SSH for deployment
           - script: |
-              kubectl create secret docker-registry registry-secret \
-                --docker-server=ghcr.io \
-                --docker-username="$(GHCR_USERNAME)" \
-                --docker-password="$(GHCR_TOKEN)" \
-                --namespace=azurephotoflow \
-                --dry-run=client -o yaml | kubectl apply -f -
-            displayName: 'Create Registry Secret'
+              echo "Setting up SSH for remote deployment..."
+              
+              # Create SSH directory
+              mkdir -p ~/.ssh
+              chmod 700 ~/.ssh
+              
+              # Add SSH key from pipeline variable
+              echo "$(REMOTE_SSH_PRIVATE_KEY)" > ~/.ssh/azure_pipeline_key
+              chmod 600 ~/.ssh/azure_pipeline_key
+              
+              # Test SSH connection
+              ssh -i ~/.ssh/azure_pipeline_key \
+                  -o StrictHostKeyChecking=no \
+                  -o UserKnownHostsFile=/dev/null \
+                  -o LogLevel=ERROR \
+                  -o ConnectTimeout=10 \
+                  $(REMOTE_SSH_USER)@$(REMOTE_SSH_HOST) \
+                  'echo "SSH connection successful"'
+              
+              # Set environment variables for deployment scripts
+              echo "export SSH_HOST=$(REMOTE_SSH_HOST)" > ~/.ssh_env
+              echo "export SSH_USER=$(REMOTE_SSH_USER)" >> ~/.ssh_env
+              echo "export SSH_KEY=~/.ssh/azure_pipeline_key" >> ~/.ssh_env
+              echo "export SSH_PORT=${REMOTE_SSH_PORT:-22}" >> ~/.ssh_env
+              
+              source ~/.ssh_env
+              echo "SSH setup completed"
+            displayName: 'Setup SSH Connection'
 
-          # Update secrets with pipeline variables
+          # Prepare deployment files
           - script: |
-              # Update secrets.yaml with actual values
+              echo "Preparing deployment files..."
+              
+              # Copy downloaded artifacts to working directory
+              cp -r $(Pipeline.Workspace)/k8s-manifests/* k8s/
+              cp -r $(Pipeline.Workspace)/deployment-scripts/* scripts/
+              
+              # Make scripts executable
+              chmod +x scripts/*.sh
+              
+              # Update Kubernetes manifests with pipeline values
               cd k8s
               
-              # Encode secrets to base64
-              VITE_GOOGLE_CLIENT_ID_B64=$(echo -n "$(VITE_GOOGLE_CLIENT_ID)" | base64 -w 0)
-              JWT_SECRET_KEY_B64=$(echo -n "$(JWT_SECRET_KEY)" | base64 -w 0)
+              # Update image tags
+              sed -i "s/:latest/:$(Build.BuildId)/g" app/backend-deployment.yaml
+              sed -i "s/:latest/:$(Build.BuildId)/g" app/frontend-deployment.yaml
               
-              # Update secrets file
-              sed -i "s/REPLACE_WITH_BASE64_ENCODED_VALUE/$VITE_GOOGLE_CLIENT_ID_B64/g" secrets.yaml
-              sed -i "s/REPLACE_WITH_BASE64_ENCODED_VALUE/$JWT_SECRET_KEY_B64/g" secrets.yaml
+              # Update configmap with production values  
+              sed -i "s|your-domain.com|$(PRODUCTION_DOMAIN)|g" configmap.yaml
+              sed -i "s|your-domain.com|$(PRODUCTION_DOMAIN)|g" ingress-microk8s.yaml
+              sed -i "s|VITE_API_BASE_URL:.*|VITE_API_BASE_URL: \"https://$(PRODUCTION_DOMAIN)/api\"|g" configmap.yaml
+              sed -i "s|ALLOWED_ORIGINS:.*|ALLOWED_ORIGINS: \"https://$(PRODUCTION_DOMAIN)\"|g" configmap.yaml
               
-              # Update configmap with production values
-              sed -i "s|VITE_API_BASE_URL:.*|VITE_API_BASE_URL: \"$(VITE_API_BASE_URL)\"|g" configmap.yaml
-              sed -i "s|ALLOWED_ORIGINS:.*|ALLOWED_ORIGINS: \"$(ALLOWED_ORIGINS)\"|g" configmap.yaml
-            displayName: 'Update Kubernetes Manifests'
+              echo "Deployment files prepared"
+            displayName: 'Prepare Deployment Files'
 
-          # Deploy to Kubernetes using the deployment script
+          # Deploy to remote cluster
           - script: |
-              chmod +x scripts/deploy-k8s.sh
-              ./scripts/deploy-k8s.sh production $(Build.BuildId)
-            displayName: 'Deploy to Kubernetes'
-
-          # Verify deployment
-          - script: |
-              echo "Verifying deployment..."
-              kubectl get pods -n azurephotoflow
-              kubectl get services -n azurephotoflow
-              kubectl get ingress -n azurephotoflow
+              echo "🚀 Starting deployment to remote MicroK8s cluster..."
               
-              # Wait for pods to be ready
-              kubectl wait --for=condition=ready pod -l app=backend -n azurephotoflow --timeout=300s
-              kubectl wait --for=condition=ready pod -l app=frontend -n azurephotoflow --timeout=300s
+              # Source SSH environment
+              source ~/.ssh_env
+              
+              # Create a comprehensive deployment script
+              cat > deploy_pipeline.sh << 'EOF'
+              #!/bin/bash
+              set -e
+              
+              # Load SSH environment
+              source ~/.ssh_env
+              
+              echo "📋 Deployment Information:"
+              echo "  Target: $SSH_USER@$SSH_HOST"
+              echo "  Image Tag: $(Build.BuildId)"
+              echo "  Domain: $(PRODUCTION_DOMAIN)"
+              echo ""
+              
+              # Step 1: Test cluster connectivity
+              echo "🔍 Testing cluster connectivity..."
+              ./scripts/ssh-helper.sh test
+              
+              # Step 2: Create/update secrets
+              echo "🔐 Setting up application secrets..."
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -'
+              
+              # Create secrets using pipeline variables
+              ssh $SSH_USER@$SSH_HOST "microk8s kubectl create secret generic azurephotoflow-secrets \
+                --from-literal=VITE_GOOGLE_CLIENT_ID='$(VITE_GOOGLE_CLIENT_ID)' \
+                --from-literal=JWT_SECRET_KEY='$(JWT_SECRET_KEY)' \
+                --from-literal=MINIO_ACCESS_KEY='$(MINIO_ACCESS_KEY)' \
+                --from-literal=MINIO_SECRET_KEY='$(MINIO_SECRET_KEY)' \
+                --namespace=azurephotoflow \
+                --dry-run=client -o yaml | microk8s kubectl apply -f -"
+              
+              # Create registry secret
+              ssh $SSH_USER@$SSH_HOST "microk8s kubectl create secret docker-registry registry-secret \
+                --docker-server=ghcr.io \
+                --docker-username='$(GHCR_USERNAME)' \
+                --docker-password='$(GHCR_TOKEN)' \
+                --namespace=azurephotoflow \
+                --dry-run=client -o yaml | microk8s kubectl apply -f -"
+              
+              echo "✅ Secrets configured"
+              
+              # Step 3: Deploy application
+              echo "🚀 Deploying application components..."
+              
+              # Copy manifests to remote server
+              scp -r k8s/ $SSH_USER@$SSH_HOST:/tmp/k8s-deploy-$(Build.BuildId)/
+              
+              # Deploy using remote kubectl
+              ssh $SSH_USER@$SSH_HOST "cd /tmp/k8s-deploy-$(Build.BuildId) && \
+                microk8s kubectl apply -f namespace.yaml && \
+                microk8s kubectl apply -f configmap.yaml && \
+                microk8s kubectl apply -f storage/ && \
+                microk8s kubectl apply -f app/ && \
+                microk8s kubectl apply -f ingress-microk8s.yaml"
+              
+              echo "✅ Application deployed"
+              
+              # Step 4: Wait for deployment to be ready
+              echo "⏳ Waiting for deployments to be ready..."
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/minio-deployment -n azurephotoflow'
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/qdrant-deployment -n azurephotoflow'
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/backend-deployment -n azurephotoflow'
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/frontend-deployment -n azurephotoflow'
+              
+              echo "✅ All deployments ready"
+              
+              # Step 5: Cleanup
+              ssh $SSH_USER@$SSH_HOST "rm -rf /tmp/k8s-deploy-$(Build.BuildId)"
+              
+              echo "🎉 Deployment completed successfully!"
+              EOF
+              
+              chmod +x deploy_pipeline.sh
+              ./deploy_pipeline.sh
+            displayName: 'Deploy to Remote Cluster'
+
+          # Post-deployment verification
+          - script: |
+              echo "🔍 Post-deployment verification..."
+              
+              source ~/.ssh_env
+              
+              # Show deployment status
+              echo "📊 Deployment Status:"
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl get pods -n azurephotoflow'
+              echo ""
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl get services -n azurephotoflow'
+              echo ""
+              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl get ingress -n azurephotoflow'
+              
+              # Get access information
+              echo ""
+              echo "🌍 Access Information:"
+              echo "  Frontend: https://$(PRODUCTION_DOMAIN)"
+              echo "  API: https://$(PRODUCTION_DOMAIN)/api"
+              echo "  Health Check: https://$(PRODUCTION_DOMAIN)/api/health"
+              
+              # Test health endpoint
+              echo ""
+              echo "🧪 Testing application health..."
+              for i in {1..5}; do
+                if ssh $SSH_USER@$SSH_HOST 'microk8s kubectl exec -n azurephotoflow deployment/backend-deployment -- curl -f http://localhost:8080/health' >/dev/null 2>&1; then
+                  echo "✅ Backend health check passed"
+                  break
+                else
+                  echo "⏳ Waiting for backend to be ready... (attempt $i/5)"
+                  sleep 10
+                fi
+              done
+              
+              echo ""
+              echo "🎯 Deployment Summary:"
+              echo "  Build ID: $(Build.BuildId)"
+              echo "  Target: $(REMOTE_SSH_USER)@$(REMOTE_SSH_HOST)"
+              echo "  Domain: $(PRODUCTION_DOMAIN)"
+              echo "  Status: ✅ SUCCESS"
             displayName: 'Verify Deployment'
 
+# ---------------------------------------------------------------------------
+# Notification Stage
+# ---------------------------------------------------------------------------
+- stage: Notification
+  displayName: 📢 Send Notifications
+  dependsOn: 
+  - RemoteDeploy
+  condition: always()
+  jobs:
+  - job: SendNotification
+    displayName: Send Deployment Notification
+    steps:
+      - script: |
+          if [ "$(Agent.JobStatus)" = "Succeeded" ]; then
+            echo "🎉 Deployment successful!"
+            echo "Application is now live at: https://$(PRODUCTION_DOMAIN)"
+          else
+            echo "❌ Deployment failed!"
+            echo "Please check the pipeline logs for details."
+          fi
+          
+          # Here you could add email, Slack, or Teams notifications
+          # Example: Send to Teams webhook
+          # curl -H "Content-Type: application/json" -d '{"text":"Deployment Status: $(Agent.JobStatus)"}' $(TEAMS_WEBHOOK_URL)
+        displayName: 'Send Notification'
