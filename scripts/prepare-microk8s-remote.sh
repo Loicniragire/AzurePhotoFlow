@@ -188,10 +188,33 @@ check_addon_enabled() {
     
     # Check if the addon appears as "enabled" in the status output
     echo "$status_output" | grep -q "^${addon_name}: enabled" && return 0
-    # Also check for "hostpath-storage" which is the actual name for "storage"
-    if [ "$addon_name" = "storage" ]; then
-        echo "$status_output" | grep -q "^hostpath-storage: enabled" && return 0
-    fi
+    
+    # Handle MicroK8s addon name variations
+    case "$addon_name" in
+        "storage")
+            # "storage" is actually "hostpath-storage" in MicroK8s
+            echo "$status_output" | grep -q "^hostpath-storage: enabled" && return 0
+            ;;
+        "dns")
+            # Check both "dns" and potential variations
+            echo "$status_output" | grep -q "^dns: enabled" && return 0
+            echo "$status_output" | grep -q "^coredns: enabled" && return 0
+            ;;
+        "cert-manager")
+            # Check for cert-manager variations
+            echo "$status_output" | grep -q "^cert-manager: enabled" && return 0
+            ;;
+        "metrics-server")
+            # Check for metrics-server variations
+            echo "$status_output" | grep -q "^metrics-server: enabled" && return 0
+            ;;
+        "ingress")
+            # Check for ingress variations
+            echo "$status_output" | grep -q "^ingress: enabled" && return 0
+            echo "$status_output" | grep -q "^nginx-ingress: enabled" && return 0
+            ;;
+    esac
+    
     return 1
 }
 
@@ -265,7 +288,7 @@ check_remote_storage() {
     print_header "Checking remote storage configuration"
     
     if check_addon_enabled "storage"; then
-        print_success "MicroK8s storage addon is enabled"
+        print_success "MicroK8s storage addon is enabled (hostpath-storage)"
         
         echo ""
         echo "Available storage classes:"
