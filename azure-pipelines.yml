@@ -211,9 +211,16 @@ stages:
               mkdir -p ~/.ssh
               chmod 700 ~/.ssh
               
-              # Add SSH key from pipeline variable
-              echo "$(REMOTE_SSH_PRIVATE_KEY)" > ~/.ssh/azure_pipeline_key
+              # Add SSH key from pipeline variable with proper formatting
+              cat > ~/.ssh/azure_pipeline_key << 'EOF'
+              $(REMOTE_SSH_PRIVATE_KEY)
+              EOF
               chmod 600 ~/.ssh/azure_pipeline_key
+              
+              # Verify key format
+              echo "SSH key format check:"
+              head -1 ~/.ssh/azure_pipeline_key
+              tail -1 ~/.ssh/azure_pipeline_key
               
               # Test SSH connection
               ssh -i ~/.ssh/azure_pipeline_key \
