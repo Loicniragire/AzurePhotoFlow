@@ -11,8 +11,6 @@ variables:
     value: 'ghcr.io/loicniragire/photoflow'
   - name: stableTag
     value: "$(Build.BuildId)"
-  - name: deploymentConfigured
-    value: ${{ variables.REMOTE_DEPLOYMENT_CONFIGURED }}
 
 resources:
   repositories:
@@ -134,7 +132,7 @@ stages:
 # Deployment Approval Stage
 # ---------------------------------------------------------------------------
 - stage: DeploymentApproval
-  displayName: 🚀 Should Deploy to Remote Cluster?
+  displayName: 🚀 Deploy to Remote Cluster?
   dependsOn: Test
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
@@ -143,23 +141,27 @@ stages:
     steps:
       - script: |
           echo "Checking if remote deployment is configured..."
+          echo "REMOTE_SSH_HOST: $(REMOTE_SSH_HOST)"
+          echo "REMOTE_SSH_USER: $(REMOTE_SSH_USER)"
           
           # Check if required deployment variables are set
           if [ -z "$(REMOTE_SSH_HOST)" ] || [ -z "$(REMOTE_SSH_USER)" ]; then
             echo "##vso[task.logissue type=warning]Remote deployment not configured"
             echo "##vso[task.logissue type=warning]Please set REMOTE_SSH_HOST and REMOTE_SSH_USER variables"
-            echo "##vso[task.setvariable variable=deploymentConfigured]false"
+            echo "##vso[task.setvariable variable=deploymentConfigured;isOutput=true]false"
           else
             echo "Remote deployment is configured"
             echo "Target: $(REMOTE_SSH_USER)@$(REMOTE_SSH_HOST)"
-            echo "##vso[task.setvariable variable=deploymentConfigured]true"
+            echo "##vso[task.setvariable variable=deploymentConfigured;isOutput=true]true"
           fi
         displayName: 'Check Deployment Configuration'
+        name: checkConfig
 
   - deployment: ApprovalGate
     displayName: 🎯 Deployment Approval
     environment: 'production-approval'  # Requires manual approval in Azure DevOps
-    condition: eq(variables.deploymentConfigured, 'true')
+    dependsOn: CheckDeploymentConfig
+    condition: eq(dependencies.CheckDeploymentConfig.outputs['checkConfig.deploymentConfigured'], 'true')
     strategy:
       runOnce:
         deploy:
@@ -177,7 +179,7 @@ stages:
 - stage: RemoteDeploy
   displayName: 🚀 Deploy to Remote Cluster
   dependsOn: DeploymentApproval
-  condition: and(succeeded(), eq(variables.deploymentConfigured, 'true'))
+  condition: succeeded()
   jobs:
   - deployment: DeployToRemoteCluster
     displayName: Deploy to Remote MicroK8s
