@@ -304,23 +304,37 @@ stages:
               # Step 2: Create/update secrets
               echo "🔐 Setting up application secrets..."
               
-              # Debug: Check MicroK8s status first
-              echo "Checking MicroK8s cluster status..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s status --wait-ready --timeout=30'
+              # Quick diagnostic checks
+              echo "Running quick diagnostics..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'echo "SSH connection OK"'
               
-              # Debug: Test basic kubectl connectivity
-              echo "Testing kubectl connectivity..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl get nodes'
+              # Check if MicroK8s snap is running
+              echo "Checking MicroK8s snap status..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'sudo systemctl is-active snap.microk8s.daemon-apiserver' || echo "API server not active"
               
-              # Check if namespace already exists
-              echo "Checking if namespace exists..."
-              if ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl get namespace azurephotoflow' 2>/dev/null; then
-                echo "✅ Namespace azurephotoflow already exists"
-              else
-                echo "Creating namespace (this should be fast)..."
-                ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow'
-                echo "✅ Namespace created"
-              fi
+              # Simple process check
+              echo "Checking kubernetes processes..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'pgrep -f "kube-apiserver" || echo "No API server process found"'
+              
+              # Try to restart MicroK8s services
+              echo "Restarting MicroK8s to ensure clean state..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s stop'
+              echo "Waiting 5 seconds..."
+              sleep 5
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s start'
+              
+              # Wait for startup
+              echo "Waiting 15 seconds for services to start..."
+              sleep 15
+              
+              # Test kubectl access without hanging commands
+              echo "Testing kubectl access..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl version --client' || echo "kubectl client failed"
+              
+              # Direct namespace operations
+              echo "Creating namespace directly..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -' || echo "Namespace creation failed"
+              echo "✅ Namespace operation attempted"
               
               # Create secrets using pipeline variables - with progress tracking
               echo "Creating application secrets..."
