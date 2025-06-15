@@ -211,16 +211,24 @@ stages:
               mkdir -p ~/.ssh
               chmod 700 ~/.ssh
               
-              # Add SSH key from pipeline variable with proper formatting
-              cat > ~/.ssh/azure_pipeline_key << 'EOF'
-              $(REMOTE_SSH_PRIVATE_KEY)
-              EOF
+              # Create SSH key with proper newline handling
+              # Azure DevOps often strips newlines, so we need to restore them
+              echo "$(REMOTE_SSH_PRIVATE_KEY)" | sed 's/-----BEGIN OPENSSH PRIVATE KEY-----/-----BEGIN OPENSSH PRIVATE KEY-----\n/' | sed 's/-----END OPENSSH PRIVATE KEY-----/\n-----END OPENSSH PRIVATE KEY-----/' | sed 's/ /\n/g' > ~/.ssh/azure_pipeline_key.tmp
+              
+              # Clean up the key format - remove extra spaces and fix structure
+              {
+                echo "-----BEGIN OPENSSH PRIVATE KEY-----"
+                echo "$(REMOTE_SSH_PRIVATE_KEY)" | sed 's/-----BEGIN OPENSSH PRIVATE KEY-----//' | sed 's/-----END OPENSSH PRIVATE KEY-----//' | tr ' ' '\n' | grep -v '^$'
+                echo "-----END OPENSSH PRIVATE KEY-----"
+              } > ~/.ssh/azure_pipeline_key
+              
               chmod 600 ~/.ssh/azure_pipeline_key
               
               # Verify key format
               echo "SSH key format check:"
-              head -1 ~/.ssh/azure_pipeline_key
-              tail -1 ~/.ssh/azure_pipeline_key
+              echo "First line: $(head -1 ~/.ssh/azure_pipeline_key)"
+              echo "Last line: $(tail -1 ~/.ssh/azure_pipeline_key)"
+              echo "Line count: $(wc -l < ~/.ssh/azure_pipeline_key)"
               
               # Test SSH connection
               ssh -i ~/.ssh/azure_pipeline_key \
