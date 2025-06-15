@@ -263,15 +263,15 @@ stages:
               # Update Kubernetes manifests with pipeline values
               cd k8s
               
-              # Update image tags
-              sed -i "s/:latest/:$(Build.BuildId)/g" app/backend-deployment.yaml
-              sed -i "s/:latest/:$(Build.BuildId)/g" app/frontend-deployment.yaml
+              # Update image tags (macOS sed compatibility)
+              sed -i '' "s/:latest/:$(Build.BuildId)/g" app/backend-deployment.yaml
+              sed -i '' "s/:latest/:$(Build.BuildId)/g" app/frontend-deployment.yaml
               
-              # Update configmap with production values  
-              sed -i "s|your-domain.com|$(PRODUCTION_DOMAIN)|g" configmap.yaml
-              sed -i "s|your-domain.com|$(PRODUCTION_DOMAIN)|g" ingress-microk8s.yaml
-              sed -i "s|VITE_API_BASE_URL:.*|VITE_API_BASE_URL: \"https://$(PRODUCTION_DOMAIN)/api\"|g" configmap.yaml
-              sed -i "s|ALLOWED_ORIGINS:.*|ALLOWED_ORIGINS: \"https://$(PRODUCTION_DOMAIN)\"|g" configmap.yaml
+              # Update configmap with production values (macOS sed compatibility)
+              sed -i '' "s|your-domain.com|$(PRODUCTION_DOMAIN)|g" configmap.yaml
+              sed -i '' "s|your-domain.com|$(PRODUCTION_DOMAIN)|g" ingress-microk8s.yaml
+              sed -i '' "s|VITE_API_BASE_URL:.*|VITE_API_BASE_URL: \"https://$(PRODUCTION_DOMAIN)/api\"|g" configmap.yaml
+              sed -i '' "s|ALLOWED_ORIGINS:.*|ALLOWED_ORIGINS: \"https://$(PRODUCTION_DOMAIN)\"|g" configmap.yaml
               
               echo "Deployment files prepared"
             displayName: 'Prepare Deployment Files'
@@ -291,6 +291,32 @@ stages:
               # Load SSH environment
               source ~/.ssh_env
               
+              # Custom timeout function for macOS compatibility
+              run_with_timeout() {
+                  local timeout_duration=$1
+                  shift
+                  local command="$@"
+                  
+                  # Run command in background
+                  eval "$command" &
+                  local pid=$!
+                  
+                  # Wait for completion or timeout
+                  local count=0
+                  while kill -0 $pid 2>/dev/null; do
+                      if [ $count -ge $timeout_duration ]; then
+                          kill $pid 2>/dev/null || true
+                          echo "Command timed out after ${timeout_duration} seconds"
+                          return 124
+                      fi
+                      sleep 1
+                      count=$((count + 1))
+                  done
+                  
+                  wait $pid
+                  return $?
+              }
+              
               echo "📋 Deployment Information:"
               echo "  Target: $SSH_USER@$SSH_HOST"
               echo "  Image Tag: $(Build.BuildId)"
@@ -305,12 +331,13 @@ stages:
               echo "🔐 Setting up application secrets..."
               
               # Create namespace with timeout
-              timeout 60 ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -'
+              echo "Creating namespace..."
+              run_with_timeout 60 ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -'
               echo "✅ Namespace created"
               
               # Create secrets using pipeline variables with timeout and simpler approach
               echo "Creating application secrets..."
-              timeout 120 ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "
+              run_with_timeout 120 ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "
                 microk8s kubectl delete secret azurephotoflow-secrets -n azurephotoflow --ignore-not-found=true
                 microk8s kubectl create secret generic azurephotoflow-secrets \
                   --from-literal=VITE_GOOGLE_CLIENT_ID='$(VITE_GOOGLE_CLIENT_ID)' \
@@ -323,7 +350,7 @@ stages:
               
               # Create registry secret with timeout
               echo "Creating registry secret..."
-              timeout 120 ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "
+              run_with_timeout 120 ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "
                 microk8s kubectl delete secret registry-secret -n azurephotoflow --ignore-not-found=true
                 microk8s kubectl create secret docker-registry registry-secret \
                   --docker-server=ghcr.io \
