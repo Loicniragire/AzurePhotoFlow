@@ -306,34 +306,11 @@ stages:
               
               # Quick diagnostic checks
               echo "Running quick diagnostics..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'echo "SSH connection OK"'
-              
-              # Check if MicroK8s snap is running
-              echo "Checking MicroK8s snap status..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'sudo systemctl is-active snap.microk8s.daemon-apiserver' || echo "API server not active"
-              
-              # Simple process check
-              echo "Checking kubernetes processes..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'pgrep -f "kube-apiserver" || echo "No API server process found"'
-              
-              # Try to restart MicroK8s services
-              echo "Restarting MicroK8s to ensure clean state..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s stop'
-              echo "Waiting 5 seconds..."
-              sleep 5
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s start'
-              
-              # Wait for startup
-              echo "Waiting 15 seconds for services to start..."
-              sleep 15
-              
-              # Test kubectl access without hanging commands
-              echo "Testing kubectl access..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl version --client' || echo "kubectl client failed"
-              
+              python3 scripts/quick_diagnostics.py || echo "Diagnostics failed"
+
               # Direct namespace operations
               echo "Creating namespace directly..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -' || echo "Namespace creation failed"
+              ssh -o ConnectTimeout=5 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -' || echo "Namespace creation failed"
               echo "✅ Namespace operation attempted"
               
               # Create secrets using pipeline variables - with progress tracking
