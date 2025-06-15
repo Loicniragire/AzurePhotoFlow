@@ -308,10 +308,12 @@ stages:
               echo "Running quick diagnostics..."
               python3 scripts/quick_diagnostics.py || echo "Diagnostics failed"
 
-              # Direct namespace operations
-              echo "Creating namespace directly..."
-              ssh -o ConnectTimeout=5 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -' || echo "Namespace creation failed"
-              echo "✅ Namespace operation attempted"
+              # Ensure MicroK8s is ready before continuing
+              echo "Checking MicroK8s readiness..."
+              if ! ssh -o ConnectTimeout=5 $SSH_USER@$SSH_HOST 'microk8s status --wait-ready --timeout=120'; then
+                echo "MicroK8s not ready after waiting" >&2
+                exit 1
+              fi
               
               # Create secrets using pipeline variables - with progress tracking
               echo "Creating application secrets..."
