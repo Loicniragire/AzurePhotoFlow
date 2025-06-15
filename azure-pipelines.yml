@@ -304,34 +304,47 @@ stages:
               # Step 2: Create/update secrets
               echo "🔐 Setting up application secrets..."
               
-              # Create namespace
-              echo "Creating namespace..."
-              ssh -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -'
-              echo "✅ Namespace created"
+              # Debug: Check MicroK8s status first
+              echo "Checking MicroK8s cluster status..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s status --wait-ready --timeout=30'
               
-              # Create secrets using pipeline variables - simplified approach  
+              # Debug: Test basic kubectl connectivity
+              echo "Testing kubectl connectivity..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl get nodes'
+              
+              # Check if namespace already exists
+              echo "Checking if namespace exists..."
+              if ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl get namespace azurephotoflow' 2>/dev/null; then
+                echo "✅ Namespace azurephotoflow already exists"
+              else
+                echo "Creating namespace (this should be fast)..."
+                ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow'
+                echo "✅ Namespace created"
+              fi
+              
+              # Create secrets using pipeline variables - with progress tracking
               echo "Creating application secrets..."
-              ssh -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 $SSH_USER@$SSH_HOST "
-                microk8s kubectl delete secret azurephotoflow-secrets -n azurephotoflow --ignore-not-found=true
-                microk8s kubectl create secret generic azurephotoflow-secrets \
-                  --from-literal=VITE_GOOGLE_CLIENT_ID='$(VITE_GOOGLE_CLIENT_ID)' \
-                  --from-literal=JWT_SECRET_KEY='$(JWT_SECRET_KEY)' \
-                  --from-literal=MINIO_ACCESS_KEY='$(MINIO_ACCESS_KEY)' \
-                  --from-literal=MINIO_SECRET_KEY='$(MINIO_SECRET_KEY)' \
-                  --namespace=azurephotoflow
-              "
+              echo "Step 1: Deleting existing application secret..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl delete secret azurephotoflow-secrets -n azurephotoflow --ignore-not-found=true'
+              echo "Step 2: Creating new application secret..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "microk8s kubectl create secret generic azurephotoflow-secrets \
+                --from-literal=VITE_GOOGLE_CLIENT_ID='$(VITE_GOOGLE_CLIENT_ID)' \
+                --from-literal=JWT_SECRET_KEY='$(JWT_SECRET_KEY)' \
+                --from-literal=MINIO_ACCESS_KEY='$(MINIO_ACCESS_KEY)' \
+                --from-literal=MINIO_SECRET_KEY='$(MINIO_SECRET_KEY)' \
+                --namespace=azurephotoflow"
               echo "✅ Application secrets created"
               
               # Create registry secret
               echo "Creating registry secret..."
-              ssh -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 $SSH_USER@$SSH_HOST "
-                microk8s kubectl delete secret registry-secret -n azurephotoflow --ignore-not-found=true
-                microk8s kubectl create secret docker-registry registry-secret \
-                  --docker-server=ghcr.io \
-                  --docker-username='$(GHCR_USERNAME)' \
-                  --docker-password='$(GHCR_TOKEN)' \
-                  --namespace=azurephotoflow
-              "
+              echo "Step 1: Deleting existing registry secret..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl delete secret registry-secret -n azurephotoflow --ignore-not-found=true'
+              echo "Step 2: Creating new registry secret..."
+              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "microk8s kubectl create secret docker-registry registry-secret \
+                --docker-server=ghcr.io \
+                --docker-username='$(GHCR_USERNAME)' \
+                --docker-password='$(GHCR_TOKEN)' \
+                --namespace=azurephotoflow"
               echo "✅ Registry secret created"
               
               echo "✅ Secrets configured"
