@@ -291,32 +291,6 @@ stages:
               # Load SSH environment
               source ~/.ssh_env
               
-              # Custom timeout function for macOS compatibility
-              run_with_timeout() {
-                  local timeout_duration=$1
-                  shift
-                  local command="$@"
-                  
-                  # Run command in background
-                  eval "$command" &
-                  local pid=$!
-                  
-                  # Wait for completion or timeout
-                  local count=0
-                  while kill -0 $pid 2>/dev/null; do
-                      if [ $count -ge $timeout_duration ]; then
-                          kill $pid 2>/dev/null || true
-                          echo "Command timed out after ${timeout_duration} seconds"
-                          return 124
-                      fi
-                      sleep 1
-                      count=$((count + 1))
-                  done
-                  
-                  wait $pid
-                  return $?
-              }
-              
               echo "📋 Deployment Information:"
               echo "  Target: $SSH_USER@$SSH_HOST"
               echo "  Image Tag: $(Build.BuildId)"
@@ -330,14 +304,14 @@ stages:
               # Step 2: Create/update secrets
               echo "🔐 Setting up application secrets..."
               
-              # Create namespace with timeout
+              # Create namespace
               echo "Creating namespace..."
-              run_with_timeout 60 "ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -'"
+              ssh -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace azurephotoflow --dry-run=client -o yaml | microk8s kubectl apply -f -'
               echo "✅ Namespace created"
               
-              # Create secrets using pipeline variables with timeout and simpler approach  
+              # Create secrets using pipeline variables - simplified approach  
               echo "Creating application secrets..."
-              run_with_timeout 120 "ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST \"
+              ssh -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 $SSH_USER@$SSH_HOST "
                 microk8s kubectl delete secret azurephotoflow-secrets -n azurephotoflow --ignore-not-found=true
                 microk8s kubectl create secret generic azurephotoflow-secrets \
                   --from-literal=VITE_GOOGLE_CLIENT_ID='$(VITE_GOOGLE_CLIENT_ID)' \
@@ -345,19 +319,19 @@ stages:
                   --from-literal=MINIO_ACCESS_KEY='$(MINIO_ACCESS_KEY)' \
                   --from-literal=MINIO_SECRET_KEY='$(MINIO_SECRET_KEY)' \
                   --namespace=azurephotoflow
-              \""
+              "
               echo "✅ Application secrets created"
               
-              # Create registry secret with timeout
+              # Create registry secret
               echo "Creating registry secret..."
-              run_with_timeout 120 "ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST \"
+              ssh -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 $SSH_USER@$SSH_HOST "
                 microk8s kubectl delete secret registry-secret -n azurephotoflow --ignore-not-found=true
                 microk8s kubectl create secret docker-registry registry-secret \
                   --docker-server=ghcr.io \
                   --docker-username='$(GHCR_USERNAME)' \
                   --docker-password='$(GHCR_TOKEN)' \
                   --namespace=azurephotoflow
-              \""
+              "
               echo "✅ Registry secret created"
               
               echo "✅ Secrets configured"
