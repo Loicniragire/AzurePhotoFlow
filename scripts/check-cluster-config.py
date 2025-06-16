@@ -398,53 +398,166 @@ class ClusterConfigChecker:
             json.dump(self.config, f, indent=2)
         print(f"💾 Configuration saved to {output_file}")
 
+def show_usage():
+    """Display usage information and examples."""
+    print("""
+🚀 AzurePhotoFlow Cluster Configuration Checker
+
+DESCRIPTION:
+    Analyzes a remote MicroK8s cluster configuration and provides intelligent
+    deployment recommendations based on current cluster state.
+
+USAGE:
+    python3 check-cluster-config.py [OPTIONS]
+
+OPTIONS:
+    -h, --host HOST         Remote server hostname or IP address
+    -u, --user USER         SSH username for remote connection
+    -p, --port PORT         SSH port (default: 22)
+    -k, --key KEY_PATH      Path to SSH private key file
+    -o, --output FILE       Output JSON file (default: cluster-config.json)
+    --help                  Show this help message and exit
+
+ENVIRONMENT VARIABLES:
+    SSH_HOST or REMOTE_SSH_HOST     Remote server hostname/IP
+    SSH_USER or REMOTE_SSH_USER     SSH username
+    SSH_PORT                        SSH port (default: 22)
+    SSH_KEY                         SSH private key path
+    CONFIG_OUTPUT_FILE              Output file path
+
+EXAMPLES:
+    # Using command line arguments
+    python3 check-cluster-config.py -h 192.168.1.100 -u ubuntu
+    python3 check-cluster-config.py -h k8s.example.com -u admin -k ~/.ssh/id_rsa
+    python3 check-cluster-config.py -h 10.0.0.2 -u loicn -p 2222 -o my-config.json
+    
+    # Using environment variables
+    export SSH_HOST=192.168.1.100
+    export SSH_USER=ubuntu
+    python3 check-cluster-config.py
+    
+    # Pipeline usage (environment variables set by CI/CD)
+    SSH_HOST=10.0.0.2 SSH_USER=loicn python3 check-cluster-config.py
+
+OUTPUT:
+    - Detailed cluster analysis printed to stdout
+    - JSON configuration file saved for programmatic use
+    - Exit code 0 if cluster ready, 1 if issues found
+
+CHECKS PERFORMED:
+    ✅ SSH connectivity and authentication
+    ✅ MicroK8s installation and version
+    ✅ Kubernetes API server responsiveness
+    ✅ Required addons (dns, storage, ingress)
+    ✅ Optional addons (cert-manager, metrics-server)
+    ✅ Namespace existence and contents
+    ✅ Application secrets inventory
+    ✅ Deployment status and health
+    ✅ Storage classes and persistent volumes
+
+DEPLOYMENT RECOMMENDATIONS:
+    • FULL_DEPLOYMENT: Clean install when cluster is empty
+    • UPDATE_DEPLOYMENT: Rolling updates for existing deployments
+    • PARTIAL_DEPLOYMENT: Fix missing/broken components
+    • Specific actions needed for cluster preparation
+""")
+
+def parse_arguments():
+    """Parse command line arguments."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description="AzurePhotoFlow MicroK8s Cluster Configuration Checker",
+        add_help=False
+    )
+    
+    parser.add_argument('-h', '--host', 
+                       help='Remote server hostname or IP address')
+    parser.add_argument('-u', '--user', 
+                       help='SSH username for remote connection')
+    parser.add_argument('-p', '--port', type=int, default=22,
+                       help='SSH port (default: 22)')
+    parser.add_argument('-k', '--key',
+                       help='Path to SSH private key file')
+    parser.add_argument('-o', '--output', default='cluster-config.json',
+                       help='Output JSON file (default: cluster-config.json)')
+    parser.add_argument('--help', action='store_true',
+                       help='Show help message and exit')
+    
+    return parser.parse_args()
+
 def main():
     import os
     
-    # Get connection details from environment
-    ssh_host = os.getenv('SSH_HOST', os.getenv('REMOTE_SSH_HOST', ''))
-    ssh_user = os.getenv('SSH_USER', os.getenv('REMOTE_SSH_USER', ''))
-    ssh_key = os.getenv('SSH_KEY', '')
-    ssh_port = int(os.getenv('SSH_PORT', '22'))
-    output_file = os.getenv('CONFIG_OUTPUT_FILE', 'cluster-config.json')
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    if args.help:
+        show_usage()
+        sys.exit(0)
+    
+    # Get connection details from command line args or environment
+    ssh_host = args.host or os.getenv('SSH_HOST', os.getenv('REMOTE_SSH_HOST', ''))
+    ssh_user = args.user or os.getenv('SSH_USER', os.getenv('REMOTE_SSH_USER', ''))
+    ssh_key = args.key or os.getenv('SSH_KEY', '')
+    ssh_port = args.port or int(os.getenv('SSH_PORT', '22'))
+    output_file = args.output or os.getenv('CONFIG_OUTPUT_FILE', 'cluster-config.json')
     
     if not ssh_host or not ssh_user:
-        print("❌ Error: SSH_HOST and SSH_USER environment variables are required")
+        print("❌ Error: SSH host and user are required")
+        print("\nOptions:")
+        print("  1. Use command line: python3 check-cluster-config.py -h HOST -u USER")
+        print("  2. Set environment: SSH_HOST=host SSH_USER=user python3 check-cluster-config.py")
+        print("  3. Run with --help for full usage information")
         sys.exit(1)
     
     print(f"🎯 Target: {ssh_user}@{ssh_host}:{ssh_port}")
     if ssh_key:
         print(f"🔑 Using SSH key: {ssh_key}")
+    print(f"📁 Output file: {output_file}")
+    print("")
     
     # Run configuration check
-    checker = ClusterConfigChecker(ssh_host, ssh_user, ssh_key, ssh_port)
-    config = checker.run_full_check()
-    
-    # Save results
-    checker.save_config(output_file)
-    
-    # Print summary
-    print("\n" + "="*60)
-    print("📋 CLUSTER CONFIGURATION SUMMARY")
-    print("="*60)
-    
-    if config["cluster_ready"]:
-        print("✅ Cluster is ready for deployment")
-    else:
-        print("⚠️  Cluster needs preparation")
-    
-    if config["actions_needed"]:
-        print("\n🔧 Actions needed:")
-        for action in config["actions_needed"]:
-            print(f"  - {action}")
-    
-    if config["recommendations"]:
-        print("\n💡 Deployment recommendations:")
-        for rec in config["recommendations"]:
-            print(f"  - {rec}")
-    
-    # Exit with appropriate code
-    sys.exit(0 if config["cluster_ready"] else 1)
+    try:
+        checker = ClusterConfigChecker(ssh_host, ssh_user, ssh_key, ssh_port)
+        config = checker.run_full_check()
+        
+        # Save results
+        checker.save_config(output_file)
+        
+        # Print summary
+        print("\n" + "="*60)
+        print("📋 CLUSTER CONFIGURATION SUMMARY")
+        print("="*60)
+        
+        if config["cluster_ready"]:
+            print("✅ Cluster is ready for deployment")
+        else:
+            print("⚠️  Cluster needs preparation")
+        
+        if config["actions_needed"]:
+            print("\n🔧 Actions needed:")
+            for action in config["actions_needed"]:
+                print(f"  - {action}")
+        
+        if config["recommendations"]:
+            print("\n💡 Deployment recommendations:")
+            for rec in config["recommendations"]:
+                print(f"  - {rec}")
+        
+        print(f"\n📄 Detailed results saved to: {output_file}")
+        print("💡 Use this file with smart-deploy.sh for intelligent deployment")
+        
+        # Exit with appropriate code
+        sys.exit(0 if config["cluster_ready"] else 1)
+        
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Operation cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ Error during cluster analysis: {str(e)}")
+        print("💡 Check your SSH connection and credentials")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
