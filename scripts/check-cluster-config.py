@@ -78,21 +78,32 @@ class ClusterConfigChecker:
             "version": None
         }
         
-        # Check if MicroK8s is installed
+        # Check if MicroK8s is installed (try multiple methods)
         success, stdout, _ = self._run_remote_cmd("command -v microk8s", timeout=5)
         if not success:
-            print("❌ MicroK8s not installed")
-            self.config["actions_needed"].append("install_microk8s")
-            return status_info
+            # Try alternative detection methods
+            success, stdout, _ = self._run_remote_cmd("which microk8s", timeout=5)
+            if not success:
+                # Try direct path check
+                success, stdout, _ = self._run_remote_cmd("ls /snap/bin/microk8s", timeout=5)
+                if not success:
+                    # Try snap list
+                    success, stdout, _ = self._run_remote_cmd("snap list microk8s", timeout=5)
+                    if not success:
+                        print("❌ MicroK8s not installed")
+                        self.config["actions_needed"].append("install_microk8s")
+                        return status_info
         
         status_info["installed"] = True
         print("✅ MicroK8s is installed")
         
-        # Get version
-        success, stdout, _ = self._run_remote_cmd("microk8s version --short", timeout=10)
-        if success and stdout:
-            status_info["version"] = stdout
-            print(f"📊 MicroK8s version: {stdout}")
+        # Get version (try different paths)
+        for cmd in ["microk8s version --short", "/snap/bin/microk8s version --short", "sudo microk8s version --short"]:
+            success, stdout, _ = self._run_remote_cmd(cmd, timeout=10)
+            if success and stdout:
+                status_info["version"] = stdout.strip()
+                print(f"📊 MicroK8s version: {stdout.strip()}")
+                break
         
         # Check if running (quick check)
         success, stdout, _ = self._run_remote_cmd("pgrep -f 'kube-apiserver' > /dev/null && echo 'RUNNING'", timeout=5)
@@ -104,10 +115,12 @@ class ClusterConfigChecker:
             self.config["actions_needed"].append("start_microk8s")
         
         # Test API server responsiveness (quick test)
-        success, stdout, _ = self._run_remote_cmd("microk8s kubectl version --client --output=json", timeout=10)
-        if success:
-            status_info["api_responsive"] = True
-            print("✅ kubectl client is responsive")
+        for cmd in ["microk8s kubectl version --client --output=json", "/snap/bin/microk8s kubectl version --client --output=json", "sudo microk8s kubectl version --client --output=json"]:
+            success, stdout, _ = self._run_remote_cmd(cmd, timeout=10)
+            if success:
+                status_info["api_responsive"] = True
+                print("✅ kubectl client is responsive")
+                break
         else:
             print("⚠️  kubectl client issues detected")
             self.config["actions_needed"].append("restart_microk8s")
