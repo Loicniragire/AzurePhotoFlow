@@ -134,8 +134,11 @@ class ClusterConfigChecker:
         required_addons = ["dns", "storage", "ingress"]
         optional_addons = ["cert-manager", "metrics-server", "registry"]
         
-        # Get addon status using multiple command attempts
+        # Get addon status using multiple command attempts (prioritize --format short)
         status_commands = [
+            "microk8s status --format short",
+            "/snap/bin/microk8s status --format short",
+            "sudo microk8s status --format short",
             "microk8s status --format json",
             "/snap/bin/microk8s status --format json",
             "sudo microk8s status --format json",
@@ -153,8 +156,25 @@ class ClusterConfigChecker:
         for cmd in status_commands:
             success, stdout, _ = self._run_remote_cmd(cmd, timeout=15)
             if success and stdout:
-                # Try JSON parsing first
-                if "--format json" in cmd:
+                # Try short format parsing first (cleanest)
+                if "--format short" in cmd:
+                    lines = stdout.split('\n')
+                    for line in lines:
+                        line = line.strip()
+                        if line.startswith("core/") and ":" in line:
+                            # Parse format: core/addon-name: enabled/disabled
+                            parts = line.split(":", 1)
+                            if len(parts) == 2:
+                                addon_full_name = parts[0].strip()
+                                status = parts[1].strip()
+                                # Extract addon name (remove core/ prefix)
+                                addon_name = addon_full_name.replace("core/", "")
+                                addons_info[addon_name] = status
+                    if addons_info:
+                        break
+                        
+                # Try JSON parsing
+                elif "--format json" in cmd:
                     try:
                         status_data = json.loads(stdout)
                         enabled = status_data.get("addons", {}).get("enabled", [])

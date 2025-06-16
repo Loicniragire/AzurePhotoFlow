@@ -1,5 +1,5 @@
 {
-  "cluster_ready": false,
+  "cluster_ready": true,
   "namespaces": {
     "azurephotoflow": {
       "exists": false,
@@ -28,13 +28,12 @@
     "ENABLE_ADDONS: Required addons missing"
   ],
   "actions_needed": [
-    "start_microk8s",
     "enable_addons:dns,storage,ingress",
     "create_namespace:azurephotoflow"
   ],
   "microk8s_status": {
     "installed": true,
-    "running": false,
+    "running": true,
     "api_responsive": true,
     "version": "MicroK8s v1.32.3 revision 8148"
   },
@@ -43,6 +42,6 @@
     "available_classes": [
       "microk8s-hostpath"
     ],
-    "pv_count": 4
+    "pv_count": 0
   }
 }
