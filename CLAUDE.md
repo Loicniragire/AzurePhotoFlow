@@ -36,11 +36,11 @@ dotnet test backend.tests.sln
 ### AI/ML Model Setup
 ```bash
 # Setup Python virtual environment for CLIP model
-python scripts/setup_venv.py --path .venv
+python scripts/ai-ml/setup_venv.py --path .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Export CLIP model to ONNX format (required for backend)
-python scripts/export_clip_onnx.py --output models/model.onnx
+python scripts/ai-ml/export_clip_onnx.py --output models/model.onnx
 ```
 
 ### Docker Development
@@ -129,6 +129,25 @@ dotnet test AzurePhotoFlow.Functions.Tests/
 - CLIP model runs in ONNX Runtime for cross-platform compatibility
 - Vector embeddings stored directly in Qdrant during upload
 - Face recognition and OCR services integrated into upload pipeline
+
+### Scripts Organization
+The `scripts/` directory is organized into logical categories:
+
+- **deployment/**: CI/CD and production deployment scripts
+  - `smart-deploy.sh` - Intelligent deployment orchestration
+  - `check-cluster-config.py` - Cluster configuration analysis
+- **setup/**: Initial installation and configuration
+  - `setup-microk8s.sh` - Complete MicroK8s cluster setup
+  - `prepare-microk8s.sh` - Cluster validation and preparation
+  - `setup-secrets.sh` - Kubernetes secrets management
+  - `install-components.sh` - Optional component installation
+- **ai-ml/**: AI/ML model processing and setup
+  - `export_clip_onnx.py` - CLIP model export to ONNX format
+  - `setup_venv.py` - Python virtual environment setup
+- **monitoring/**: Operational monitoring and troubleshooting
+  - `monitor-k8s.sh` - Kubernetes cluster monitoring dashboard
+- **debugging/**: Development and debugging utilities
+  - `debug-deployment.sh` - Deployment troubleshooting toolkit
 
 ## Infrastructure
 

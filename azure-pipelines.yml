@@ -302,7 +302,7 @@ stages:
               
               # Step 1: Analyze cluster configuration
               echo "🔍 Analyzing cluster configuration..."
-              python3 scripts/check-cluster-config.py
+              python3 scripts/deployment/check-cluster-config.py
               
               # Check if cluster analysis was successful
               if [ $? -eq 0 ]; then
@@ -313,8 +313,8 @@ stages:
               
               # Step 2: Execute smart deployment based on analysis
               echo "🚀 Executing smart deployment..."
-              chmod +x scripts/smart-deploy.sh
-              ./scripts/smart-deploy.sh
+              chmod +x scripts/deployment/smart-deploy.sh
+              ./scripts/deployment/smart-deploy.sh
               
               echo "🎉 Intelligent deployment completed successfully!"
             displayName: 'Deploy to Remote Cluster (Smart)'
