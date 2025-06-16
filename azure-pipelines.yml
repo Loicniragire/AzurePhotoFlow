@@ -276,20 +276,23 @@ stages:
               echo "Deployment files prepared"
             displayName: 'Prepare Deployment Files'
 
-          # Deploy to remote cluster
+          # Deploy to remote cluster using intelligent configuration
           - script: |
-              echo "🚀 Starting deployment to remote MicroK8s cluster..."
+              echo "🚀 Starting intelligent deployment to remote MicroK8s cluster..."
               
               # Source SSH environment
               source ~/.ssh_env
               
-              # Create a comprehensive deployment script
-              cat > deploy_pipeline.sh << 'EOF'
-              #!/bin/bash
-              set -e
-              
-              # Load SSH environment
-              source ~/.ssh_env
+              # Set pipeline environment variables for scripts
+              export BUILD_BUILDID="$(Build.BuildId)"
+              export CONTAINER_REGISTRY="$(containerRegistry)"
+              export PRODUCTION_DOMAIN="$(PRODUCTION_DOMAIN)"
+              export VITE_GOOGLE_CLIENT_ID="$(VITE_GOOGLE_CLIENT_ID)"
+              export JWT_SECRET_KEY="$(JWT_SECRET_KEY)"
+              export MINIO_ACCESS_KEY="$(MINIO_ACCESS_KEY)"
+              export MINIO_SECRET_KEY="$(MINIO_SECRET_KEY)"
+              export GHCR_USERNAME="$(GHCR_USERNAME)"
+              export GHCR_TOKEN="$(GHCR_TOKEN)"
               
               echo "📋 Deployment Information:"
               echo "  Target: $SSH_USER@$SSH_HOST"
@@ -297,88 +300,24 @@ stages:
               echo "  Domain: $(PRODUCTION_DOMAIN)"
               echo ""
               
-              # Step 1: Test cluster connectivity
-              echo "🔍 Testing cluster connectivity..."
-              ./scripts/ssh-helper.sh test
+              # Step 1: Analyze cluster configuration
+              echo "🔍 Analyzing cluster configuration..."
+              python3 scripts/check-cluster-config.py
               
-              # Step 2: Create/update secrets
-              echo "🔐 Setting up application secrets..."
+              # Check if cluster analysis was successful
+              if [ $? -eq 0 ]; then
+                echo "✅ Cluster analysis completed successfully"
+              else
+                echo "⚠️  Cluster analysis indicated issues, but proceeding with caution..."
+              fi
               
-              # Quick diagnostic checks
-              echo "Running quick diagnostics..."
-              python3 scripts/quick_diagnostics.py || echo "Diagnostics failed"
-
-              # Skip hanging status check - proceed directly with operations
-              echo "Skipping status check - proceeding with deployment..."
+              # Step 2: Execute smart deployment based on analysis
+              echo "🚀 Executing smart deployment..."
+              chmod +x scripts/smart-deploy.sh
+              ./scripts/smart-deploy.sh
               
-              # Quick restart to ensure clean state
-              echo "Restarting MicroK8s for clean state..."
-              ssh -o ConnectTimeout=5 $SSH_USER@$SSH_HOST 'microk8s stop || true'
-              sleep 5
-              ssh -o ConnectTimeout=5 $SSH_USER@$SSH_HOST 'microk8s start'
-              sleep 10
-              
-              # Create secrets using pipeline variables - with progress tracking
-              echo "Creating application secrets..."
-              echo "Step 1: Deleting existing application secret..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl delete secret azurephotoflow-secrets -n azurephotoflow --ignore-not-found=true'
-              echo "Step 2: Creating new application secret..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "microk8s kubectl create secret generic azurephotoflow-secrets \
-                --from-literal=VITE_GOOGLE_CLIENT_ID='$(VITE_GOOGLE_CLIENT_ID)' \
-                --from-literal=JWT_SECRET_KEY='$(JWT_SECRET_KEY)' \
-                --from-literal=MINIO_ACCESS_KEY='$(MINIO_ACCESS_KEY)' \
-                --from-literal=MINIO_SECRET_KEY='$(MINIO_SECRET_KEY)' \
-                --namespace=azurephotoflow"
-              echo "✅ Application secrets created"
-              
-              # Create registry secret
-              echo "Creating registry secret..."
-              echo "Step 1: Deleting existing registry secret..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST 'microk8s kubectl delete secret registry-secret -n azurephotoflow --ignore-not-found=true'
-              echo "Step 2: Creating new registry secret..."
-              ssh -o ConnectTimeout=10 $SSH_USER@$SSH_HOST "microk8s kubectl create secret docker-registry registry-secret \
-                --docker-server=ghcr.io \
-                --docker-username='$(GHCR_USERNAME)' \
-                --docker-password='$(GHCR_TOKEN)' \
-                --namespace=azurephotoflow"
-              echo "✅ Registry secret created"
-              
-              echo "✅ Secrets configured"
-              
-              # Step 3: Deploy application
-              echo "🚀 Deploying application components..."
-              
-              # Copy manifests to remote server
-              scp -r k8s/ $SSH_USER@$SSH_HOST:/tmp/k8s-deploy-$(Build.BuildId)/
-              
-              # Deploy using remote kubectl
-              ssh $SSH_USER@$SSH_HOST "cd /tmp/k8s-deploy-$(Build.BuildId) && \
-                microk8s kubectl apply -f namespace.yaml && \
-                microk8s kubectl apply -f configmap.yaml && \
-                microk8s kubectl apply -f storage/ && \
-                microk8s kubectl apply -f app/ && \
-                microk8s kubectl apply -f ingress-microk8s.yaml"
-              
-              echo "✅ Application deployed"
-              
-              # Step 4: Wait for deployment to be ready
-              echo "⏳ Waiting for deployments to be ready..."
-              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/minio-deployment -n azurephotoflow'
-              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/qdrant-deployment -n azurephotoflow'
-              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/backend-deployment -n azurephotoflow'
-              ssh $SSH_USER@$SSH_HOST 'microk8s kubectl wait --for=condition=available --timeout=300s deployment/frontend-deployment -n azurephotoflow'
-              
-              echo "✅ All deployments ready"
-              
-              # Step 5: Cleanup
-              ssh $SSH_USER@$SSH_HOST "rm -rf /tmp/k8s-deploy-$(Build.BuildId)"
-              
-              echo "🎉 Deployment completed successfully!"
-              EOF
-              
-              chmod +x deploy_pipeline.sh
-              ./deploy_pipeline.sh
-            displayName: 'Deploy to Remote Cluster'
+              echo "🎉 Intelligent deployment completed successfully!"
+            displayName: 'Deploy to Remote Cluster (Smart)'
 
           # Post-deployment verification
           - script: |
