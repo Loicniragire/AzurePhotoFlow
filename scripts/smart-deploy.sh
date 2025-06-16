@@ -301,10 +301,25 @@ deploy_full_application() {
     local deploy_dir="/tmp/k8s-deploy-$(date +%s)"
     remote_exec "mkdir -p $deploy_dir" "Creating deployment directory"
     
-    # Use scp to copy files
-    scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no -r k8s/ "$SSH_USER@$SSH_HOST:$deploy_dir/"
+    # Use scp to copy files with SSH key if available
+    local scp_key_option=""
+    if [ -n "$SSH_KEY" ] && [ -f "$SSH_KEY" ]; then
+        scp_key_option="-i $SSH_KEY"
+    fi
     
-    # Deploy in order
+    print_status "Copying Kubernetes manifests to remote server..."
+    if scp $scp_key_option -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r k8s/ "$SSH_USER@$SSH_HOST:$deploy_dir/"; then
+        print_success "Kubernetes manifests copied successfully"
+    else
+        print_error "Failed to copy Kubernetes manifests"
+        return 1
+    fi
+    
+    # Verify files were copied
+    print_status "Verifying copied files..."
+    remote_exec "ls -la $deploy_dir/" "Files in deployment directory:"
+    
+    # Deploy in order - files are copied directly to deploy_dir
     remote_exec "cd $deploy_dir && microk8s kubectl apply -f namespace.yaml" "Creating namespace"
     remote_exec "cd $deploy_dir && microk8s kubectl apply -f configmap.yaml" "Applying configuration"
     remote_exec "cd $deploy_dir && microk8s kubectl apply -f storage/" "Setting up storage"
