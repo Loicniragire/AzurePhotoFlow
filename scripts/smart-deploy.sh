@@ -30,14 +30,24 @@ fi
 
 # Check if jq is available for JSON parsing
 if ! command -v jq >/dev/null 2>&1; then
-    print_error "jq is required but not installed. Installing..."
+    print_warning "jq not found - attempting to install..."
+    
+    # Try different installation methods
     if command -v brew >/dev/null 2>&1; then
-        brew install jq
+        print_status "Installing jq via Homebrew..."
+        brew install jq || {
+            print_error "Failed to install jq via brew"
+            print_info "Falling back to Python JSON parsing"
+            use_python_json=true
+        }
     elif command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update && sudo apt-get install -y jq
+        sudo apt-get update && sudo apt-get install -y jq || {
+            print_error "Failed to install jq via apt"
+            use_python_json=true
+        }
     else
-        print_error "Cannot install jq automatically. Please install it manually."
-        exit 1
+        print_warning "No package manager found - using Python fallback"
+        use_python_json=true
     fi
 fi
 
@@ -72,13 +82,58 @@ check_config_file() {
 # Function to get configuration value
 get_config() {
     local key="$1"
-    jq -r "$key // empty" "$CONFIG_FILE" 2>/dev/null
+    
+    if [ "$use_python_json" = "true" ]; then
+        python3 -c "
+import json, sys
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        data = json.load(f)
+    
+    # Simple key parsing for our use cases
+    if '$key' == '.cluster_ready':
+        print(data.get('cluster_ready', 'false'))
+    elif '$key' == '.namespaces[\"azurephotoflow\"].exists':
+        print(data.get('namespaces', {}).get('azurephotoflow', {}).get('exists', 'false'))
+    elif '$key' == '.secrets[\"azurephotoflow-secrets\"]':
+        print(data.get('secrets', {}).get('azurephotoflow-secrets', 'false'))
+    elif '$key' == '.secrets[\"registry-secret\"]':
+        print(data.get('secrets', {}).get('registry-secret', 'false'))
+    elif '$key' == '.deployments[\"backend-deployment\"].exists':
+        print(data.get('deployments', {}).get('backend-deployment', {}).get('exists', 'false'))
+    elif '$key' == '.deployments[\"frontend-deployment\"].exists':
+        print(data.get('deployments', {}).get('frontend-deployment', {}).get('exists', 'false'))
+    else:
+        print('')
+except:
+    print('')
+" 2>/dev/null
+    else
+        jq -r "$key // empty" "$CONFIG_FILE" 2>/dev/null
+    fi
 }
 
 # Function to check if action is needed
 action_needed() {
     local action="$1"
-    jq -r '.actions_needed[]? // empty' "$CONFIG_FILE" 2>/dev/null | grep -q "$action"
+    
+    if [ "$use_python_json" = "true" ]; then
+        python3 -c "
+import json
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        data = json.load(f)
+    actions = data.get('actions_needed', [])
+    for action_item in actions:
+        if '$action' in action_item:
+            exit(0)
+    exit(1)
+except:
+    exit(1)
+" 2>/dev/null
+    else
+        jq -r '.actions_needed[]? // empty' "$CONFIG_FILE" 2>/dev/null | grep -q "$action"
+    fi
 }
 
 # Function to apply cluster fixes based on configuration
