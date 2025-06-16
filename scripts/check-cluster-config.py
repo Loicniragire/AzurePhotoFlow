@@ -134,34 +134,82 @@ class ClusterConfigChecker:
         required_addons = ["dns", "storage", "ingress"]
         optional_addons = ["cert-manager", "metrics-server", "registry"]
         
-        # Get addon status using structured output when possible
-        success, stdout, _ = self._run_remote_cmd("microk8s status --format json", timeout=15)
-
-        if success and stdout:
-            try:
-                status_data = json.loads(stdout)
-                enabled = status_data.get("addons", {}).get("enabled", [])
-                disabled = status_data.get("addons", {}).get("disabled", [])
-                for name in enabled:
-                    addons_info[name] = "enabled"
-                for name in disabled:
-                    addons_info[name] = "disabled"
-            except json.JSONDecodeError:
-                success = False
-
-        if not success or not addons_info:
-            # Fallback to YAML or plain output parsing
-            success, stdout, _ = self._run_remote_cmd("microk8s status --format yaml", timeout=15)
-            if not success:
-                success, stdout, _ = self._run_remote_cmd("microk8s status", timeout=10)
-
+        # Get addon status using multiple command attempts
+        status_commands = [
+            "microk8s status --format json",
+            "/snap/bin/microk8s status --format json",
+            "sudo microk8s status --format json",
+            "microk8s status --format yaml", 
+            "/snap/bin/microk8s status --format yaml",
+            "sudo microk8s status --format yaml",
+            "microk8s status",
+            "/snap/bin/microk8s status", 
+            "sudo microk8s status"
+        ]
+        
+        success = False
+        stdout = ""
+        
+        for cmd in status_commands:
+            success, stdout, _ = self._run_remote_cmd(cmd, timeout=15)
             if success and stdout:
-                lines = stdout.split('\n')
-                for line in lines:
-                    if ': enabled' in line or ': disabled' in line:
-                        addon_name = line.split(':')[0].strip()
-                        status = 'enabled' if 'enabled' in line else 'disabled'
-                        addons_info[addon_name] = status
+                # Try JSON parsing first
+                if "--format json" in cmd:
+                    try:
+                        status_data = json.loads(stdout)
+                        enabled = status_data.get("addons", {}).get("enabled", [])
+                        disabled = status_data.get("addons", {}).get("disabled", [])
+                        for name in enabled:
+                            addons_info[name] = "enabled"
+                        for name in disabled:
+                            addons_info[name] = "disabled"
+                        if addons_info:
+                            break
+                    except json.JSONDecodeError:
+                        continue
+                else:
+                    # Use text parsing for YAML or plain output
+                    break
+
+        if success and stdout and not addons_info:
+            lines = stdout.split('\n')
+            current_section = None
+            
+            for line in lines:
+                original_line = line  # Keep original for indentation check
+                line = line.strip()
+                
+                # Detect addon sections
+                if line == "enabled:":
+                    current_section = "enabled"
+                    continue
+                elif line == "disabled:":
+                    current_section = "disabled"
+                    continue
+                elif line.startswith("addons:"):
+                    continue
+                elif not line or line.startswith("microk8s") or line.startswith("high-availability"):
+                    current_section = None
+                    continue
+                
+                # Parse addon names in current section
+                if current_section:
+                    # Check if this line contains an addon (indented with 4+ spaces)
+                    if original_line.startswith("    ") or original_line.startswith("\t"):
+                        # Extract addon name (before any whitespace or #)
+                        addon_name = line.split()[0] if line.split() else ""
+                        if addon_name and not addon_name.startswith("#"):
+                            addons_info[addon_name] = current_section
+                    elif line and not original_line.startswith(" ") and not original_line.startswith("\t"):
+                        # Reset section if we hit a non-indented line
+                        if not line.startswith("datastore"):
+                            current_section = None
+                
+                # Also handle old format: addon_name: enabled/disabled
+                if ': enabled' in line or ': disabled' in line:
+                    addon_name = line.split(':')[0].strip()
+                    status = 'enabled' if 'enabled' in line else 'disabled'
+                    addons_info[addon_name] = status
         
         # Check required addons
         missing_required = []
