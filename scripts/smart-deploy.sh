@@ -61,15 +61,21 @@ remote_exec() {
         print_status "$description"
     fi
     
+    # Prepare SSH key option if available
+    local ssh_key_option=""
+    if [ -n "$SSH_KEY" ] && [ -f "$SSH_KEY" ]; then
+        ssh_key_option="-i $SSH_KEY"
+    fi
+    
     # Use timeout command if available, otherwise implement basic timeout
     if command -v timeout >/dev/null 2>&1; then
-        timeout "$timeout" ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 \
+        timeout "$timeout" ssh $ssh_key_option -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 \
             -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
             "$SSH_USER@$SSH_HOST" "$command"
     else
         # macOS fallback - use a background process with timeout
         (
-            ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 \
+            ssh $ssh_key_option -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 \
                 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
                 "$SSH_USER@$SSH_HOST" "$command" &
             local pid=$!

@@ -325,11 +325,13 @@ stages:
               
               source ~/.ssh_env
               
-              # Function to run SSH commands with timeout
+              # Function to run SSH commands with timeout (using SSH key)
               ssh_with_timeout() {
                   local timeout=${1:-30}
                   local cmd=${2}
-                  timeout $timeout ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=2 \
+                  timeout $timeout ssh -i ~/.ssh/azure_pipeline_key \
+                      -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=2 \
+                      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
                       $SSH_USER@$SSH_HOST "$cmd" 2>/dev/null || echo "Command timed out or failed"
               }
               
