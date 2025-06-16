@@ -19,16 +19,37 @@
   "ingress": {},
   "storage_classes": {},
   "addons": {
-    "status": "disabled"
+    "cert-manager": "enabled",
+    "dashboard": "enabled",
+    "dns": "enabled",
+    "ha-cluster": "enabled",
+    "helm": "enabled",
+    "helm3": "enabled",
+    "hostpath-storage": "enabled",
+    "ingress": "enabled",
+    "metallb": "enabled",
+    "metrics-server": "enabled",
+    "registry": "enabled",
+    "storage": "enabled",
+    "cis-hardening": "disabled",
+    "community": "disabled",
+    "gpu": "disabled",
+    "host-access": "disabled",
+    "kube-ovn": "disabled",
+    "mayastor": "disabled",
+    "minio": "disabled",
+    "nvidia": "disabled",
+    "observability": "disabled",
+    "prometheus": "disabled",
+    "rbac": "disabled",
+    "rook-ceph": "disabled"
   },
   "recommendations": [
     "FULL_DEPLOYMENT: Namespace doesn't exist - full deployment needed",
     "CREATE_SECRETS: Application secrets missing",
-    "CREATE_REGISTRY_SECRET: Registry secret missing",
-    "ENABLE_ADDONS: Required addons missing"
+    "CREATE_REGISTRY_SECRET: Registry secret missing"
   ],
   "actions_needed": [
-    "enable_addons:dns,storage,ingress",
     "create_namespace:azurephotoflow"
   ],
   "microk8s_status": {
@@ -42,6 +63,6 @@
     "available_classes": [
       "microk8s-hostpath"
     ],
-    "pv_count": 0
+    "pv_count": 4
   }
 }
