@@ -51,17 +51,41 @@ if ! command -v jq >/dev/null 2>&1; then
     fi
 fi
 
-# Function to execute remote commands
+# Function to execute remote commands with timeout
 remote_exec() {
     local command="$1"
     local description="$2"
+    local timeout="${3:-60}"  # Default 60 second timeout
     
     if [ -n "$description" ]; then
         print_status "$description"
     fi
     
-    ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -o LogLevel=ERROR "$SSH_USER@$SSH_HOST" "$command"
+    # Use timeout command if available, otherwise implement basic timeout
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout" ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 \
+            -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
+            "$SSH_USER@$SSH_HOST" "$command"
+    else
+        # macOS fallback - use a background process with timeout
+        (
+            ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 \
+                -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
+                "$SSH_USER@$SSH_HOST" "$command" &
+            local pid=$!
+            local count=0
+            while kill -0 $pid 2>/dev/null; do
+                if [ $count -ge $timeout ]; then
+                    kill $pid 2>/dev/null || true
+                    print_error "Command timed out after ${timeout} seconds"
+                    return 124
+                fi
+                sleep 1
+                count=$((count + 1))
+            done
+            wait $pid
+        )
+    fi
 }
 
 # Function to check if cluster config exists and is valid
@@ -178,7 +202,33 @@ create_namespace() {
     
     if action_needed "create_namespace:$namespace"; then
         print_status "Creating namespace $namespace..."
-        remote_exec "microk8s kubectl create namespace $namespace" "Creating namespace"
+        
+        # Try multiple kubectl paths with shorter timeout
+        local commands=(
+            "microk8s kubectl create namespace $namespace"
+            "/snap/bin/microk8s kubectl create namespace $namespace"
+            "sudo microk8s kubectl create namespace $namespace"
+        )
+        
+        local success=false
+        for cmd in "${commands[@]}"; do
+            print_status "Attempting: $cmd"
+            if remote_exec "$cmd" "" 30; then  # 30 second timeout
+                success=true
+                break
+            else
+                print_warning "Command failed or timed out, trying next method..."
+            fi
+        done
+        
+        if [ "$success" = "true" ]; then
+            print_success "Namespace $namespace created successfully"
+        else
+            print_error "Failed to create namespace after trying all methods"
+            print_info "You may need to create it manually:"
+            print_info "  ssh $SSH_USER@$SSH_HOST 'microk8s kubectl create namespace $namespace'"
+            return 1
+        fi
     else
         print_info "Namespace $namespace already exists"
     fi
