@@ -134,19 +134,34 @@ class ClusterConfigChecker:
         required_addons = ["dns", "storage", "ingress"]
         optional_addons = ["cert-manager", "metrics-server", "registry"]
         
-        # Get addon status
-        success, stdout, _ = self._run_remote_cmd("microk8s status --format yaml", timeout=15)
-        if not success:
-            # Fallback to simple status
-            success, stdout, _ = self._run_remote_cmd("microk8s status", timeout=10)
-        
+        # Get addon status using structured output when possible
+        success, stdout, _ = self._run_remote_cmd("microk8s status --format json", timeout=15)
+
         if success and stdout:
-            lines = stdout.split('\n')
-            for line in lines:
-                if ': enabled' in line or ': disabled' in line:
-                    addon_name = line.split(':')[0].strip()
-                    status = 'enabled' if 'enabled' in line else 'disabled'
-                    addons_info[addon_name] = status
+            try:
+                status_data = json.loads(stdout)
+                enabled = status_data.get("addons", {}).get("enabled", [])
+                disabled = status_data.get("addons", {}).get("disabled", [])
+                for name in enabled:
+                    addons_info[name] = "enabled"
+                for name in disabled:
+                    addons_info[name] = "disabled"
+            except json.JSONDecodeError:
+                success = False
+
+        if not success or not addons_info:
+            # Fallback to YAML or plain output parsing
+            success, stdout, _ = self._run_remote_cmd("microk8s status --format yaml", timeout=15)
+            if not success:
+                success, stdout, _ = self._run_remote_cmd("microk8s status", timeout=10)
+
+            if success and stdout:
+                lines = stdout.split('\n')
+                for line in lines:
+                    if ': enabled' in line or ': disabled' in line:
+                        addon_name = line.split(':')[0].strip()
+                        status = 'enabled' if 'enabled' in line else 'disabled'
+                        addons_info[addon_name] = status
         
         # Check required addons
         missing_required = []
