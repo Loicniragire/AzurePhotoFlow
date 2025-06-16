@@ -1,0 +1,48 @@
+{
+  "cluster_ready": false,
+  "namespaces": {
+    "azurephotoflow": {
+      "exists": false,
+      "secrets": [],
+      "deployments": [],
+      "services": [],
+      "ingress": [],
+      "pvcs": []
+    }
+  },
+  "secrets": {
+    "azurephotoflow-secrets": false,
+    "registry-secret": false
+  },
+  "deployments": {},
+  "services": {},
+  "ingress": {},
+  "storage_classes": {},
+  "addons": {
+    "status": "disabled"
+  },
+  "recommendations": [
+    "FULL_DEPLOYMENT: Namespace doesn't exist - full deployment needed",
+    "CREATE_SECRETS: Application secrets missing",
+    "CREATE_REGISTRY_SECRET: Registry secret missing",
+    "ENABLE_ADDONS: Required addons missing"
+  ],
+  "actions_needed": [
+    "start_microk8s",
+    "enable_addons:dns,storage,ingress",
+    "create_namespace:azurephotoflow"
+  ],
+  "microk8s_status": {
+    "installed": true,
+    "running": false,
+    "api_responsive": true,
+    "version": "MicroK8s v1.32.3 revision 8148"
+  },
+  "storage": {
+    "default_storage_class": "microk8s-hostpath",
+    "available_classes": [
+      "microk8s-hostpath"
+    ],
+    "pv_count": 4
+  }
+}
