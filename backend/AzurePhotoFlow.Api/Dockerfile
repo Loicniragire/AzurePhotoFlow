@@ -8,7 +8,10 @@ WORKDIR /src
 # 1) Copy the entire POCO project folder into /src/AzurePhotoFlow.POCO
 COPY backend/AzurePhotoFlow.POCO ./AzurePhotoFlow.POCO
 
-# 2) Copy the entire API project folder into /src/AzurePhotoFlow.Api
+# 2) Copy the entire Shared project folder into /src/AzurePhotoFlow.Shared
+COPY backend/AzurePhotoFlow.Shared ./AzurePhotoFlow.Shared
+
+# 3) Copy the entire API project folder into /src/AzurePhotoFlow.Api
 COPY backend/AzurePhotoFlow.Api ./AzurePhotoFlow.Api
 
 # 3) Switch into the API folder (so restore/publish runs in the right place)
@@ -17,9 +20,6 @@ WORKDIR /src/AzurePhotoFlow.Api
 
 # Restore dependencies
 RUN dotnet restore AzurePhotoFlow.Api.csproj
-
-# Copy the rest of your source code
-COPY . .
 
 # Build-time arguments (only if needed for build logic)
 ARG AZURE_BLOB_STORAGE
@@ -36,7 +36,7 @@ ENV MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
 ENV MINIO_SECRET_KEY=$MINIO_SECRET_KEY
 
 # Publish the application in Release mode to the "out" folder
-RUN dotnet publish backend/AzurePhotoFlow.Api/AzurePhotoFlow.Api.csproj \
+RUN dotnet publish AzurePhotoFlow.Api.csproj \
     -c Release \
     -o /app/out 
 
