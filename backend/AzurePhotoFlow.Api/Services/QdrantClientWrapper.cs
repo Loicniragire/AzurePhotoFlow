@@ -114,7 +114,7 @@ public class QdrantClientWrapper : IQdrantClientWrapper
         return new
         {
             id = point.Id.Uuid,
-            vector = point.Vectors.ToArray(),
+            vector = point.Vectors.Vector.Data.ToArray(),
             payload = point.Payload.ToDictionary(
                 kvp => kvp.Key,
                 kvp => ConvertQdrantValue(kvp.Value)
