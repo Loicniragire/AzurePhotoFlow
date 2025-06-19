@@ -396,4 +396,357 @@ public class SearchController : ControllerBase
 
         return result;
     }
+
+    /// <summary>
+    /// Perform complex multi-criteria search combining semantic search, visual similarity, and metadata filters.
+    /// </summary>
+    /// <param name="request">Complex search request with multiple criteria</param>
+    /// <returns>Combined search results with relevance scoring</returns>
+    [HttpPost("query")]
+    public async Task<ActionResult<ComplexSearchResponse>> ComplexSearch([FromBody] ComplexSearchRequest request)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = new ComplexSearchResponse 
+        { 
+            Request = request,
+            Breakdown = new SearchResultBreakdown()
+        };
+
+        try
+        {
+            _logger.LogInformation("Complex search request: Semantic='{SemanticQuery}', Similarity='{SimilarityRef}', Mode={Mode}, Limit={Limit}", 
+                request.SemanticQuery, request.SimilarityReferenceKey, request.CombinationMode, request.Limit);
+
+            // Validate that at least one search criteria is provided
+            if (string.IsNullOrWhiteSpace(request.SemanticQuery) && string.IsNullOrWhiteSpace(request.SimilarityReferenceKey))
+            {
+                return BadRequest(new ComplexSearchResponse 
+                { 
+                    Request = request,
+                    Success = false, 
+                    ErrorMessage = "At least one search criteria must be provided (SemanticQuery or SimilarityReferenceKey)" 
+                });
+            }
+
+            // Validate weights sum to reasonable values for weighted combination
+            if (request.CombinationMode == SearchCombinationMode.WeightedCombination)
+            {
+                var totalWeight = request.SemanticWeight + request.SimilarityWeight;
+                if (totalWeight <= 0.0 || totalWeight > 2.0)
+                {
+                    return BadRequest(new ComplexSearchResponse 
+                    { 
+                        Request = request,
+                        Success = false, 
+                        ErrorMessage = "Combined weights must be greater than 0.0 and reasonable for weighted combination" 
+                    });
+                }
+            }
+
+            var allResults = new List<ComplexSearchResult>();
+            var semanticResults = new List<SemanticSearchResult>();
+            var similarityResults = new List<SimilaritySearchResult>();
+
+            // Build common filters from request
+            var commonFilters = BuildCommonFilters(request.Filters);
+
+            // Perform semantic search if query provided
+            if (!string.IsNullOrWhiteSpace(request.SemanticQuery))
+            {
+                var semanticStopwatch = Stopwatch.StartNew();
+                try
+                {
+                    _logger.LogDebug("Performing semantic search for query: {Query}", request.SemanticQuery);
+                    var queryEmbedding = await _embeddingService.GenerateTextEmbeddingAsync(request.SemanticQuery);
+                    var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, request.Limit * 2, request.Threshold, commonFilters);
+                    
+                    semanticResults = vectorResults.Select(vr => CreateSemanticSearchResult(vr)).ToList();
+                    response.Breakdown.SemanticResults = semanticResults.Count;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Semantic search failed: {Query}", request.SemanticQuery);
+                }
+                response.Breakdown.SemanticSearchTimeMs = semanticStopwatch.ElapsedMilliseconds;
+            }
+
+            // Perform similarity search if reference image provided
+            if (!string.IsNullOrWhiteSpace(request.SimilarityReferenceKey))
+            {
+                var similarityStopwatch = Stopwatch.StartNew();
+                try
+                {
+                    _logger.LogDebug("Performing similarity search for reference: {Reference}", request.SimilarityReferenceKey);
+                    var referenceEmbedding = await _vectorStore.GetEmbeddingAsync(request.SimilarityReferenceKey);
+                    
+                    if (referenceEmbedding != null)
+                    {
+                        var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, request.Limit * 2, request.Threshold, commonFilters);
+                        
+                        // Filter out the reference image itself
+                        similarityResults = vectorResults
+                            .Where(vr => vr.ObjectKey != request.SimilarityReferenceKey)
+                            .Select(vr => CreateSimilaritySearchResult(vr))
+                            .ToList();
+                        
+                        response.Breakdown.SimilarityResults = similarityResults.Count;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Reference image not found for similarity search: {Reference}", request.SimilarityReferenceKey);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Similarity search failed: {Reference}", request.SimilarityReferenceKey);
+                }
+                response.Breakdown.SimilaritySearchTimeMs = similarityStopwatch.ElapsedMilliseconds;
+            }
+
+            // Combine results based on combination mode
+            var combinationStopwatch = Stopwatch.StartNew();
+            allResults = CombineSearchResults(semanticResults, similarityResults, request, response.Breakdown);
+            response.Breakdown.CombinationTimeMs = combinationStopwatch.ElapsedMilliseconds;
+
+            // Apply additional filters if specified
+            allResults = ApplyAdditionalFilters(allResults, request.Filters);
+
+            // Limit and populate response
+            response.Results = allResults.Take(request.Limit).ToList();
+            response.TotalResults = response.Results.Count;
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            response.Success = true;
+
+            _logger.LogInformation("Complex search completed: Found {ResultCount} results in {ProcessingTimeMs}ms", 
+                response.TotalResults, response.ProcessingTimeMs);
+
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid complex search request");
+            response.Success = false;
+            response.ErrorMessage = ex.Message;
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            return BadRequest(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing complex search request");
+            response.Success = false;
+            response.ErrorMessage = "Internal server error occurred while processing search request";
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            return StatusCode(500, response);
+        }
+    }
+
+    private Dictionary<string, object> BuildCommonFilters(SearchFilters? filters)
+    {
+        var commonFilters = new Dictionary<string, object>();
+        
+        if (filters == null) return commonFilters;
+
+        // Add project filter (use first project if multiple specified)
+        if (filters.ProjectNames?.Any() == true)
+        {
+            commonFilters["project_name"] = filters.ProjectNames.First();
+        }
+
+        // Add year filter (use first year if multiple specified)
+        if (filters.Years?.Any() == true)
+        {
+            commonFilters["year"] = filters.Years.First();
+        }
+
+        // Add custom filters
+        if (filters.CustomFilters?.Any() == true)
+        {
+            foreach (var kvp in filters.CustomFilters)
+            {
+                commonFilters[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return commonFilters;
+    }
+
+    private List<ComplexSearchResult> CombineSearchResults(
+        List<SemanticSearchResult> semanticResults, 
+        List<SimilaritySearchResult> similarityResults, 
+        ComplexSearchRequest request,
+        SearchResultBreakdown breakdown)
+    {
+        var combinedResults = new List<ComplexSearchResult>();
+        var resultMap = new Dictionary<string, ComplexSearchResult>();
+
+        // Add semantic results
+        foreach (var semanticResult in semanticResults)
+        {
+            var complexResult = new ComplexSearchResult
+            {
+                ObjectKey = semanticResult.ObjectKey,
+                FileName = semanticResult.FileName,
+                ProjectName = semanticResult.ProjectName,
+                DirectoryName = semanticResult.DirectoryName,
+                Year = semanticResult.Year,
+                UploadDate = semanticResult.UploadDate,
+                ImageUrl = semanticResult.ImageUrl,
+                Metadata = semanticResult.Metadata,
+                SemanticScore = semanticResult.SimilarityScore,
+                MatchedSearchTypes = new List<string> { "semantic" }
+            };
+
+            resultMap[semanticResult.ObjectKey] = complexResult;
+        }
+
+        // Add or merge similarity results
+        foreach (var similarityResult in similarityResults)
+        {
+            if (resultMap.TryGetValue(similarityResult.ObjectKey, out var existingResult))
+            {
+                // Merge with existing semantic result
+                existingResult.SimilarityScore = similarityResult.SimilarityScore;
+                existingResult.MatchedSearchTypes.Add("similarity");
+                breakdown.OverlapResults++;
+            }
+            else
+            {
+                // Add new similarity-only result
+                var complexResult = new ComplexSearchResult
+                {
+                    ObjectKey = similarityResult.ObjectKey,
+                    FileName = similarityResult.FileName,
+                    ProjectName = similarityResult.ProjectName,
+                    DirectoryName = similarityResult.DirectoryName,
+                    Year = similarityResult.Year,
+                    UploadDate = similarityResult.UploadDate,
+                    ImageUrl = similarityResult.ImageUrl,
+                    Metadata = similarityResult.Metadata,
+                    SimilarityScore = similarityResult.SimilarityScore,
+                    MatchedSearchTypes = new List<string> { "similarity" }
+                };
+
+                resultMap[similarityResult.ObjectKey] = complexResult;
+            }
+        }
+
+        // Calculate combined relevance scores based on combination mode
+        foreach (var result in resultMap.Values)
+        {
+            result.RelevanceScore = CalculateRelevanceScore(result, request);
+        }
+
+        // Apply combination mode filtering
+        switch (request.CombinationMode)
+        {
+            case SearchCombinationMode.Union:
+                combinedResults = resultMap.Values.ToList();
+                break;
+                
+            case SearchCombinationMode.Intersection:
+                combinedResults = resultMap.Values
+                    .Where(r => r.MatchedSearchTypes.Count > 1)
+                    .ToList();
+                break;
+                
+            case SearchCombinationMode.WeightedCombination:
+                combinedResults = resultMap.Values.ToList();
+                break;
+        }
+
+        // Sort by relevance score
+        return combinedResults.OrderByDescending(r => r.RelevanceScore).ToList();
+    }
+
+    private double CalculateRelevanceScore(ComplexSearchResult result, ComplexSearchRequest request)
+    {
+        double score = 0.0;
+        double totalWeight = 0.0;
+
+        if (result.SemanticScore.HasValue && !string.IsNullOrWhiteSpace(request.SemanticQuery))
+        {
+            score += result.SemanticScore.Value * request.SemanticWeight;
+            totalWeight += request.SemanticWeight;
+        }
+
+        if (result.SimilarityScore.HasValue && !string.IsNullOrWhiteSpace(request.SimilarityReferenceKey))
+        {
+            score += result.SimilarityScore.Value * request.SimilarityWeight;
+            totalWeight += request.SimilarityWeight;
+        }
+
+        // Normalize by total weight if using weighted combination
+        if (request.CombinationMode == SearchCombinationMode.WeightedCombination && totalWeight > 0)
+        {
+            return score / totalWeight;
+        }
+
+        // For other modes, use the highest individual score
+        var maxScore = Math.Max(result.SemanticScore ?? 0.0, result.SimilarityScore ?? 0.0);
+        
+        // Boost score if result appears in multiple search types
+        if (result.MatchedSearchTypes.Count > 1)
+        {
+            maxScore *= 1.1; // 10% boost for multi-type matches
+        }
+
+        return Math.Min(maxScore, 1.0); // Cap at 1.0
+    }
+
+    private List<ComplexSearchResult> ApplyAdditionalFilters(List<ComplexSearchResult> results, SearchFilters? filters)
+    {
+        if (filters == null) return results;
+
+        var filteredResults = results.AsEnumerable();
+
+        // Filter by project names (if multiple specified)
+        if (filters.ProjectNames?.Count > 1)
+        {
+            filteredResults = filteredResults.Where(r => 
+                filters.ProjectNames.Contains(r.ProjectName ?? ""));
+        }
+
+        // Filter by years (if multiple specified)
+        if (filters.Years?.Count > 1)
+        {
+            filteredResults = filteredResults.Where(r => 
+                filters.Years.Contains(r.Year ?? ""));
+        }
+
+        // Filter by directory names
+        if (filters.DirectoryNames?.Any() == true)
+        {
+            filteredResults = filteredResults.Where(r => 
+                filters.DirectoryNames.Contains(r.DirectoryName ?? ""));
+        }
+
+        // Filter by file extensions
+        if (filters.FileExtensions?.Any() == true)
+        {
+            filteredResults = filteredResults.Where(r => 
+            {
+                var extension = Path.GetExtension(r.FileName)?.TrimStart('.').ToLowerInvariant();
+                return extension != null && filters.FileExtensions.Any(ext => 
+                    ext.ToLowerInvariant() == extension);
+            });
+        }
+
+        // Filter by upload date range
+        if (filters.UploadDateRange != null)
+        {
+            if (filters.UploadDateRange.StartDate.HasValue)
+            {
+                filteredResults = filteredResults.Where(r => 
+                    r.UploadDate >= filters.UploadDateRange.StartDate.Value);
+            }
+            
+            if (filters.UploadDateRange.EndDate.HasValue)
+            {
+                filteredResults = filteredResults.Where(r => 
+                    r.UploadDate <= filters.UploadDateRange.EndDate.Value);
+            }
+        }
+
+        return filteredResults.ToList();
+    }
 }

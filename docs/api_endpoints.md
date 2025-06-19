@@ -461,9 +461,146 @@ Advanced visual similarity search with detailed request model for complex querie
 - Sub-second response times for most queries
 - Cosine similarity scoring for accurate ranking
 
-## Future Search Endpoints (Planned)
+### Complex Multi-Criteria Search
 
-- `POST /api/search/query` - Complex multi-criteria search queries
+#### `POST /api/search/query`
+
+Perform advanced search queries combining semantic search, visual similarity, and metadata filters with flexible combination modes.
+
+**Authorization:** JWT Bearer token required
+
+**Request Body:**
+```json
+{
+  "SemanticQuery": "dogs playing in water",
+  "SimilarityReferenceKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+  "Limit": 20,
+  "Threshold": 0.6,
+  "CombinationMode": "WeightedCombination",
+  "SemanticWeight": 0.7,
+  "SimilarityWeight": 0.3,
+  "Filters": {
+    "ProjectNames": ["vacation_photos", "family_trips"],
+    "Years": ["2024"],
+    "DirectoryNames": ["beach_day", "pool_party"],
+    "FileExtensions": ["jpg", "png"],
+    "UploadDateRange": {
+      "StartDate": "2024-01-01T00:00:00Z",
+      "EndDate": "2024-12-31T23:59:59Z"
+    },
+    "CustomFilters": {
+      "camera_make": "Canon"
+    }
+  }
+}
+```
+
+**Request Parameters:**
+- `SemanticQuery` (string, optional): Natural language search query
+- `SimilarityReferenceKey` (string, optional): Reference image for visual similarity
+- `Limit` (int, 1-100, default: 20): Maximum results to return
+- `Threshold` (double, 0.0-1.0, default: 0.5): Minimum similarity threshold
+- `CombinationMode` (enum): How to combine multiple search types
+  - `Union` (0): Combine all results (more results)
+  - `Intersection` (1): Only results found in both searches (fewer, more relevant)
+  - `WeightedCombination` (2): Weighted scoring based on search weights
+- `SemanticWeight` (double, 0.0-1.0, default: 0.5): Weight for semantic search results
+- `SimilarityWeight` (double, 0.0-1.0, default: 0.5): Weight for similarity search results
+- `Filters` (object, optional): Advanced filtering options
+
+**Search Filters:**
+- `ProjectNames` (array): Filter by specific project names
+- `Years` (array): Filter by specific years
+- `DirectoryNames` (array): Filter by directory names
+- `FileExtensions` (array): Filter by file extensions (e.g., "jpg", "png")
+- `UploadDateRange` (object): Filter by upload date range
+- `CustomFilters` (object): Custom key-value metadata filters
+
+**Success Response (200):**
+```json
+{
+  "Request": {
+    "SemanticQuery": "dogs playing in water",
+    "SimilarityReferenceKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+    "CombinationMode": "WeightedCombination",
+    "SemanticWeight": 0.7,
+    "SimilarityWeight": 0.3
+  },
+  "Results": [
+    {
+      "ObjectKey": "2024/1705401600/vacation_photos/beach_day/IMG_1235.jpg",
+      "RelevanceScore": 0.91,
+      "SemanticScore": 0.88,
+      "SimilarityScore": 0.95,
+      "MatchedSearchTypes": ["semantic", "similarity"],
+      "FileName": "IMG_1235.jpg",
+      "ProjectName": "vacation_photos",
+      "DirectoryName": "beach_day",
+      "Year": "2024",
+      "UploadDate": "2024-01-16T10:35:00Z",
+      "ImageUrl": "https://storage.example.com/2024/...",
+      "Metadata": {
+        "path": "2024/1705401600/vacation_photos/beach_day/IMG_1235.jpg",
+        "project_name": "vacation_photos"
+      }
+    }
+  ],
+  "TotalResults": 1,
+  "ProcessingTimeMs": 287,
+  "Breakdown": {
+    "SemanticResults": 12,
+    "SimilarityResults": 8,
+    "OverlapResults": 3,
+    "SemanticSearchTimeMs": 156,
+    "SimilaritySearchTimeMs": 89,
+    "CombinationTimeMs": 42
+  },
+  "Success": true,
+  "ErrorMessage": null
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "Request": null,
+  "Results": [],
+  "TotalResults": 0,
+  "ProcessingTimeMs": 5,
+  "Success": false,
+  "ErrorMessage": "At least one search criteria must be provided (SemanticQuery or SimilarityReferenceKey)"
+}
+```
+
+### Complex Search Features
+
+**Multi-Modal Search:**
+- Combines semantic text search with visual similarity search
+- Flexible weighting system for different search types
+- Multiple combination modes for different use cases
+
+**Advanced Filtering:**
+- Project and directory-based organization
+- File type and date range filtering
+- Custom metadata filtering capabilities
+- Multiple filter values with OR/AND logic
+
+**Intelligent Scoring:**
+- Weighted combination of semantic and similarity scores
+- Boost scoring for results found in multiple search types
+- Normalized relevance scoring (0.0-1.0)
+
+**Performance Analytics:**
+- Detailed timing breakdown for each search component
+- Result overlap analysis between search types
+- Processing time tracking for optimization
+
+**Combination Modes:**
+- **Union**: Maximum recall - returns all results from both searches
+- **Intersection**: Maximum precision - only results found in both searches
+- **WeightedCombination**: Balanced approach with configurable weights
+
+## Future Search Endpoints (Planned)
 
 ### Face Recognition (Coming Soon)
 - `POST /api/facerecognition/detect` - Detect faces in images
@@ -547,6 +684,72 @@ Advanced visual similarity search with detailed request model for complex querie
   ],
   "TotalResults": 0,
   "ProcessingTimeMs": 0,
+  "Success": true,
+  "ErrorMessage": null
+}
+```
+
+### ComplexSearchRequest
+```json
+{
+  "SemanticQuery": "string", // Natural language query (optional)
+  "SimilarityReferenceKey": "string", // Reference image path (optional)
+  "Limit": 20, // Max results (1-100, default: 20)
+  "Threshold": 0.5, // Similarity threshold (0.0-1.0, default: 0.5)
+  "CombinationMode": "WeightedCombination", // Union|Intersection|WeightedCombination
+  "SemanticWeight": 0.5, // Semantic search weight (0.0-1.0, default: 0.5)
+  "SimilarityWeight": 0.5, // Similarity search weight (0.0-1.0, default: 0.5)
+  "Filters": {
+    "ProjectNames": ["string"], // Optional project filters
+    "Years": ["string"], // Optional year filters
+    "DirectoryNames": ["string"], // Optional directory filters
+    "FileExtensions": ["string"], // Optional file extension filters
+    "UploadDateRange": {
+      "StartDate": "2024-01-01T00:00:00Z",
+      "EndDate": "2024-12-31T23:59:59Z"
+    },
+    "CustomFilters": {
+      "key": "value" // Custom metadata filters
+    }
+  }
+}
+```
+
+### ComplexSearchResponse
+```json
+{
+  "Request": {
+    // Original request parameters
+  },
+  "Results": [
+    {
+      "ObjectKey": "string", // Image path
+      "RelevanceScore": 0.85, // Combined relevance score (0.0-1.0)
+      "SemanticScore": 0.82, // Semantic similarity score (optional)
+      "SimilarityScore": 0.88, // Visual similarity score (optional)
+      "MatchedSearchTypes": ["semantic", "similarity"], // Search types that matched
+      "FileName": "string",
+      "ProjectName": "string",
+      "DirectoryName": "string",
+      "Year": "string",
+      "UploadDate": "2024-01-01T00:00:00Z",
+      "ImageUrl": "string",
+      "Metadata": {
+        "path": "string",
+        "project_name": "string"
+      }
+    }
+  ],
+  "TotalResults": 0,
+  "ProcessingTimeMs": 0,
+  "Breakdown": {
+    "SemanticResults": 0, // Number of semantic search results
+    "SimilarityResults": 0, // Number of similarity search results
+    "OverlapResults": 0, // Number of overlapping results
+    "SemanticSearchTimeMs": 0, // Time for semantic search
+    "SimilaritySearchTimeMs": 0, // Time for similarity search
+    "CombinationTimeMs": 0 // Time for combining results
+  },
   "Success": true,
   "ErrorMessage": null
 }
@@ -732,6 +935,46 @@ curl -X POST "http://localhost:5000/api/search/similarity" \
     "Threshold": 0.8,
     "ProjectName": "vacation_photos",
     "Year": "2024"
+  }'
+```
+
+**Complex Multi-Criteria Search with cURL:**
+```bash
+curl -X POST "http://localhost:5000/api/search/query" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "SemanticQuery": "dogs playing in water",
+    "SimilarityReferenceKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+    "Limit": 20,
+    "Threshold": 0.6,
+    "CombinationMode": "WeightedCombination",
+    "SemanticWeight": 0.7,
+    "SimilarityWeight": 0.3,
+    "Filters": {
+      "ProjectNames": ["vacation_photos"],
+      "Years": ["2024"],
+      "FileExtensions": ["jpg", "png"]
+    }
+  }'
+```
+
+**Semantic-Only Complex Search with cURL:**
+```bash
+curl -X POST "http://localhost:5000/api/search/query" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "SemanticQuery": "sunset landscape mountains",
+    "Limit": 10,
+    "Threshold": 0.7,
+    "Filters": {
+      "DirectoryNames": ["landscapes", "nature"],
+      "UploadDateRange": {
+        "StartDate": "2024-06-01T00:00:00Z",
+        "EndDate": "2024-08-31T23:59:59Z"
+      }
+    }
   }'
 ```
 
