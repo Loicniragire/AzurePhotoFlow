@@ -16,7 +16,7 @@ Before starting, ensure you have:
 Run our automated cluster preparation script:
 
 ```bash
-./scripts/prepare-cluster.sh
+./scripts/setup/prepare-microk8s.sh
 ```
 
 This script will check all requirements and give you a detailed report.

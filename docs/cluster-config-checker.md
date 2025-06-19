@@ -15,7 +15,7 @@ This tool analyzes your remote MicroK8s cluster and provides:
 ### Basic Usage
 ```bash
 # Check your cluster with command line arguments
-python3 scripts/check-cluster-config.py -h 10.0.0.2 -u loicn
+python3 scripts/deployment/check-cluster-config.py -h 10.0.0.2 -u loicn
 
 # Using environment variables
 export SSH_HOST=10.0.0.2

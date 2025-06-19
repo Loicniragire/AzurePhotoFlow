@@ -33,14 +33,15 @@ Follow these steps in order:
 For remote clusters, eliminate password prompts by setting up SSH key authentication:
 
 ```bash
-# Setup SSH keys and configure passwordless access
-./scripts/setup-ssh-keys.sh -h YOUR_SERVER_IP -u YOUR_USERNAME
+# Manual SSH setup (automated scripts not available)
+# Generate SSH key
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/azurephotoflow-k8s
 
-# Load SSH environment variables
-source ~/.azurephotoflow-ssh.env
+# Copy public key to remote server
+ssh-copy-id -i ~/.ssh/azurephotoflow-k8s.pub user@YOUR_SERVER_IP
 
-# Test SSH connection and MicroK8s access
-./scripts/ssh-helper.sh test
+# Test SSH connection
+ssh -i ~/.ssh/azurephotoflow-k8s user@YOUR_SERVER_IP
 ```
 
 **Alternative: Manual SSH Setup**
@@ -68,18 +69,14 @@ export SSH_KEY=~/.ssh/azurephotoflow-k8s
 **For Local Clusters:**
 ```bash
 # Run the comprehensive cluster check
-./scripts/prepare-cluster.sh
+./scripts/setup/prepare-microk8s.sh
 ```
 
 **For Remote MicroK8s Clusters (SSH):**
 ```bash
-# Check remote cluster via SSH
-./scripts/prepare-microk8s-remote.sh -h YOUR_SERVER_IP -u YOUR_USERNAME
-
-# Or set environment variables
-export SSH_HOST=YOUR_SERVER_IP
-export SSH_USER=YOUR_USERNAME
-./scripts/prepare-microk8s-remote.sh
+# For remote clusters, manually SSH and run:
+ssh user@YOUR_SERVER_IP
+./scripts/setup/prepare-microk8s.sh
 ```
 
 This will check:
@@ -96,13 +93,13 @@ If the preparation script shows missing components, install them:
 
 ```bash
 # Install all required components automatically
-./scripts/install-components.sh all
+./scripts/setup/install-components.sh all
 
 # Or install individually:
-./scripts/install-components.sh nginx-ingress    # Required
-./scripts/install-components.sh cert-manager     # Recommended for SSL
-./scripts/install-components.sh metrics-server   # Recommended for monitoring
-./scripts/install-components.sh storage-class    # Required if no default exists
+./scripts/setup/install-components.sh nginx-ingress    # Required
+./scripts/setup/install-components.sh cert-manager     # Recommended for SSL
+./scripts/setup/install-components.sh metrics-server   # Recommended for monitoring
+./scripts/setup/install-components.sh storage-class    # Required if no default exists
 ```
 
 ### Step 3: Validate Cluster Readiness
@@ -110,12 +107,10 @@ If the preparation script shows missing components, install them:
 Verify everything is working:
 
 ```bash
-# Quick verification of all components
-./scripts/verify-step.sh all
-
-# Or verify individual components:
-./scripts/verify-step.sh ingress    # Check NGINX Ingress
-./scripts/verify-step.sh storage    # Check storage classes
+# Manual verification of components
+kubectl get nodes
+kubectl get pods -n ingress-nginx
+kubectl get storageclass
 ./scripts/verify-step.sh pvc        # Test PVC creation
 ```
 
@@ -130,13 +125,14 @@ Verify everything is working:
 **For Local Clusters:**
 ```bash
 # Interactive secrets setup
-./scripts/setup-secrets.sh
+./scripts/setup/setup-secrets.sh
 ```
 
 **For Remote Clusters:**
 ```bash
-# Setup secrets on remote cluster via SSH
-./scripts/setup-secrets-remote.sh -h YOUR_SERVER_IP -u YOUR_USERNAME
+# For remote clusters, manually SSH and run:
+ssh user@YOUR_SERVER_IP
+./scripts/setup/setup-secrets.sh
 ```
 
 You'll need to provide:
@@ -201,14 +197,21 @@ Replace `your-domain.com` with your actual domain in:
 
 **For Local Clusters:**
 ```bash
-# One-command deployment
-./scripts/deploy-k8s.sh production latest
+# Manual deployment using kubectl
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/storage/
+kubectl apply -f k8s/app/
+kubectl apply -f k8s/ingress.yaml
 ```
 
 **For Remote Clusters:**
 ```bash
-# Deploy to remote cluster via SSH
-./scripts/deploy-k8s-remote.sh production latest -h YOUR_SERVER_IP -u YOUR_USERNAME
+# For remote clusters, copy files and deploy:
+scp -r k8s/ user@YOUR_SERVER_IP:~/
+ssh user@YOUR_SERVER_IP
+kubectl apply -f k8s/
 ```
 
 This will:
@@ -224,7 +227,7 @@ This will:
 **For Local Clusters:**
 ```bash
 # Monitor deployment status
-./scripts/monitor-k8s.sh
+./scripts/monitoring/monitor-k8s.sh
 
 # Check specific components
 kubectl get pods -n azurephotoflow
@@ -238,7 +241,8 @@ kubectl logs -f deployment/backend-deployment -n azurephotoflow
 **For Remote Clusters:**
 ```bash
 # Monitor remote deployment status
-./scripts/monitor-k8s-remote.sh -h YOUR_SERVER_IP -u YOUR_USERNAME
+ssh user@YOUR_SERVER_IP
+./scripts/monitoring/monitor-k8s.sh
 
 # Run health checks
 ./scripts/monitor-k8s-remote.sh -h YOUR_SERVER_IP -u YOUR_USERNAME health

@@ -52,7 +52,7 @@ Your deployment strategy includes:
 
 1. **Run the secrets setup script:**
    ```bash
-   ./scripts/setup-secrets.sh
+   ./scripts/setup/setup-secrets.sh
    ```
 
 2. **Or manually create secrets:**
@@ -97,7 +97,8 @@ Your deployment strategy includes:
 
 1. **Quick deployment (all at once):**
    ```bash
-   ./scripts/deploy-k8s.sh production latest
+   # Deploy using kubectl
+   kubectl apply -f k8s/
    ```
 
 2. **Or step-by-step deployment:**
@@ -139,7 +140,7 @@ Your deployment strategy includes:
 
 1. **Check deployment status:**
    ```bash
-   ./scripts/monitor-k8s.sh
+   ./scripts/monitoring/monitor-k8s.sh
    ```
 
 2. **Test application endpoints:**
