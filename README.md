@@ -1,11 +1,11 @@
 # Project Title: AzurePhotoFlow
 
 ## Overview
-AzurePhotoFlow is a cloud-native application designed to help users manage, analyze, and search their photo collections. It leverages various Azure services for robust and scalable photo processing and storage.
+AzurePhotoFlow is a cloud-native application designed to help users manage, analyze, and search their photo collections. It leverages open-source services and self-hosted infrastructure for cost-effective, scalable photo processing and storage.
 
 ## Features
 - **User Authentication (Google Login):** Secure user registration and login via Google.
-- **Image Upload and Storage:** Securely upload and store photos in Azure Blob Storage.
+- **Image Upload and Storage:** Securely upload and store photos in MinIO S3-compatible object storage.
 - **AI-Based Photo Tagging and Classification:** Automated image analysis to generate descriptive tags and categories.
 - **Face Recognition:** Identify and tag individuals in photos.
 - **Optical Character Recognition (OCR):** Extract text from images.
@@ -14,32 +14,29 @@ AzurePhotoFlow is a cloud-native application designed to help users manage, anal
 - **Vector Embeddings:** Embeddings are computed during upload and stored directly in Qdrant for similarity search.
 
 ## Architecture
-AzurePhotoFlow utilizes a modern cloud architecture with the following key components:
-- **Frontend:** A React-based single-page application using Vite for building and development.
-- **Backend:** An ASP.NET Core Web API that handles business logic, image processing, and interaction with Azure services.
-- **Azure Services:**
-    - **Azure Blob Storage:** For storing photo uploads.
-    - **Azure Functions:** For serverless image processing tasks.
-    - **Azure Cosmos DB or Azure SQL Database:** For storing metadata and user information.
-    - **Azure Computer Vision:** For image analysis and tagging.
-    - **Azure Cognitive Search:** For advanced search capabilities.
-    - **Azure App Service:** For hosting the backend API.
-    - **User Authentication:** Google Login is implemented for user authentication and authorization, managed via the backend API.
-    - **Azure API Management:** To manage and secure APIs.
+AzurePhotoFlow utilizes a modern cloud-native architecture with open-source services for cost efficiency:
+- **Frontend:** React 18 + Vite + Material-UI single-page application
+- **Backend:** ASP.NET Core 8 Web API with clean architecture patterns
+- **Core Services:**
+    - **MinIO:** S3-compatible object storage for photo uploads and file management
+    - **Qdrant:** Vector database for embeddings storage and similarity search
+    - **CLIP Model:** OpenAI CLIP vision transformer running on ONNX Runtime for semantic search
+    - **Google OAuth:** User authentication and authorization
+    - **Docker/Kubernetes:** Container orchestration and deployment
+    - **Nginx:** Reverse proxy and load balancing
 
 [A simple diagram or further details can be added here later.]
 
 ## Getting Started
 
 ### Prerequisites
-- .NET SDK (6.0 or later)
+- .NET SDK (8.0 or later)
 - Node.js and npm (LTS versions, e.g., Node 18.x/20.x, npm 9.x/10.x or later)
-- Azure CLI
-- Terraform
+- Docker and Docker Compose
+- Python 3.8+ (for CLIP model export)
 - Git
-- The environment variable `EMBEDDING_SERVICE_URL` should point to the HTTP endpoint of your embedding service (e.g. `http://embedding:80/api/Embedding`).
-- The embedding service itself requires `QDRANT_URL`, `QDRANT_COLLECTION`, and `CLIP_MODEL_PATH` to be configured.
-- `ALLOWED_ORIGINS` (optional): comma-separated list of origins allowed by the backend CORS policy. Defaults to `http://localhost`.
+- Kubernetes (optional, for production deployment)
+- Terraform (optional, for infrastructure management)
 
 ### Exporting the CLIP Model
 The backend expects an ONNX version of the CLIP vision model. Create the Python virtual environment first:
@@ -69,14 +66,18 @@ dotnet build
 dotnet run
 ```
 
-### Docker Compose
-To start all services including MinIO and Qdrant locally, use:
+### Docker Compose Setup
+Start all services including the backend API, frontend, MinIO object storage, and Qdrant vector database:
 
 ```bash
 docker compose up
 ```
 
-MinIO will be available at `http://localhost:9000` with the console at `http://localhost:9001` using the default credentials `minioadmin:minioadmin`.
+**Service Endpoints:**
+- **Application:** `http://localhost:80` (via Nginx reverse proxy)
+- **MinIO Storage:** `http://localhost:9000` (API) / `http://localhost:9001` (Console)
+- **Qdrant Dashboard:** `http://localhost:6333/dashboard`
+- **Default Credentials:** MinIO uses `minioadmin:minioadmin`
 
 ### Frontend Setup
 ```bash

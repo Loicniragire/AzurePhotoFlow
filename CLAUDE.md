@@ -60,13 +60,13 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 - **Frontend**: React 18 + Vite + Material-UI for responsive photo management interface
 - **Backend**: ASP.NET Core 8 Web API with clean architecture patterns
 - **AI/ML**: CLIP vision model for semantic search and image embeddings
-- **Storage**: MinIO (local) / Azure Blob Storage (production) for images
-- **Database**: Qdrant vector database for embeddings, Azure Cosmos DB for metadata
+- **Storage**: MinIO S3-compatible object storage for images and file management
+- **Database**: Qdrant vector database for embeddings and similarity search
 - **Authentication**: Google OAuth with JWT tokens
 
 ### Backend Projects Structure
-- `AzurePhotoFlow.Api` - Main Web API application
-- `AzurePhotoFlow.Functions` - Azure Functions for serverless processing
+- `AzurePhotoFlow.Api` - Main Web API application with integrated AI processing
+- `AzurePhotoFlow.Functions` - Background processing functions (legacy Azure Functions structure)
 - `AzurePhotoFlow.POCO` - Data models and DTOs
 - `AzurePhotoFlow.Shared` - Shared utilities across projects
 
@@ -82,15 +82,20 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 ### Required Environment Variables
 - `VITE_GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `JWT_SECRET_KEY` - JWT token signing key
-- `QDRANT_URL` - Vector database connection
-- `QDRANT_COLLECTION` - Collection name for embeddings
+- `QDRANT_URL` - Qdrant vector database connection (e.g., `localhost:6333`)
+- `QDRANT_COLLECTION` - Collection name for embeddings storage
 - `CLIP_MODEL_PATH` - Path to ONNX model file (`/models/model.onnx`)
-- `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` - Object storage config
+- `MINIO_ENDPOINT` - MinIO server endpoint (e.g., `localhost:9000`)
+- `MINIO_ACCESS_KEY` - MinIO access key (default: `minioadmin`)
+- `MINIO_SECRET_KEY` - MinIO secret key (default: `minioadmin`)
+- `ENABLE_EMBEDDINGS` - Enable/disable AI embeddings processing (`true`/`false`)
 - `ALLOWED_ORIGINS` - CORS origins (comma-separated)
+- `OPENAI_API_KEY` - OpenAI API key for additional AI features (optional)
 
 ### Development vs Production
-- Use `MODE=development` for local development with MinIO
-- Use `MODE=production` for Azure deployment with Blob Storage
+- Use `MODE=development` for local development
+- Use `MODE=production` for production deployment
+- Both modes use MinIO for object storage and Qdrant for vector database
 
 ## Testing
 
@@ -156,9 +161,10 @@ The `scripts/` directory is organized into logical categories:
 - MinIO provides S3-compatible object storage
 - Qdrant handles vector similarity search
 
-### Azure Deployment
+### Production Deployment
+- Kubernetes with MicroK8s for container orchestration
 - Terraform manages infrastructure as code
-- Azure DevOps handles CI/CD pipeline
-- Container images pushed to GitHub Container Registry
+- GitHub Container Registry for container images
+- Self-hosted infrastructure to reduce cloud costs
 
 The solution file `AzurePhotoFlow.generated.sln` contains all projects for comprehensive building and testing.
