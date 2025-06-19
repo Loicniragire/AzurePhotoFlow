@@ -86,6 +86,13 @@ public class QdrantVectorStore : IVectorStore
         }
         catch (Exception ex)
         {
+            // Check if the error is due to collection not existing or being empty
+            if (ex.Message.Contains("doesn't exist") || ex.Message.Contains("Not found"))
+            {
+                _logger.LogWarning("QdrantVectorStore: Collection '{Collection}' not found or empty. This usually means no images have been uploaded and processed yet.", _collection);
+                return new List<VectorSearchResult>(); // Return empty results instead of throwing
+            }
+            
             _logger.LogError(ex, "QdrantVectorStore: Failed to search vectors in collection '{Collection}'. Error: {ErrorMessage}", 
                 _collection, ex.Message);
             throw;
