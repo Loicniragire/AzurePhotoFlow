@@ -230,4 +230,74 @@ public class QdrantClientWrapper : IQdrantClientWrapper
         public double Score { get; set; }
         public Dictionary<string, object>? Payload { get; set; }
     }
+
+    public async Task<PointData?> GetPointAsync(string collection, string pointId)
+    {
+        try
+        {
+            _logger.LogInformation("QdrantClientWrapper: Retrieving point '{PointId}' from collection '{Collection}'", 
+                pointId, collection);
+
+            var response = await _httpClient.GetAsync($"{_baseUrl}/collections/{collection}/points/{pointId}");
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("QdrantClientWrapper: Point '{PointId}' not found in collection '{Collection}'", 
+                    pointId, collection);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("QdrantClientWrapper: Failed to get point. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                throw new Exception($"Get point failed: {response.StatusCode} - {errorContent}");
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var pointResponse = JsonSerializer.Deserialize<PointResponseWrapper>(responseContent, new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            });
+
+            if (pointResponse?.Result == null)
+            {
+                _logger.LogWarning("QdrantClientWrapper: Point '{PointId}' not found in response from collection '{Collection}'", 
+                    pointId, collection);
+                return null;
+            }
+
+            var result = new PointData
+            {
+                Id = pointResponse.Result.Id,
+                Vector = pointResponse.Result.Vector ?? Array.Empty<float>(),
+                Payload = pointResponse.Result.Payload ?? new Dictionary<string, object>()
+            };
+
+            _logger.LogInformation("QdrantClientWrapper: Successfully retrieved point '{PointId}' from collection '{Collection}'", 
+                pointId, collection);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QdrantClientWrapper: Error retrieving point '{PointId}' from collection '{Collection}'", 
+                pointId, collection);
+            throw;
+        }
+    }
+
+    // Helper classes for point retrieval deserialization
+    private class PointResponseWrapper
+    {
+        public PointResponseData? Result { get; set; }
+    }
+
+    private class PointResponseData
+    {
+        public string Id { get; set; } = string.Empty;
+        public float[]? Vector { get; set; }
+        public Dictionary<string, object>? Payload { get; set; }
+    }
 }

@@ -92,6 +92,36 @@ public class QdrantVectorStore : IVectorStore
         }
     }
 
+    public async Task<float[]?> GetEmbeddingAsync(string objectKey)
+    {
+        try
+        {
+            _logger.LogInformation("QdrantVectorStore: Retrieving embedding for ObjectKey: {ObjectKey} from collection '{Collection}'", 
+                objectKey, _collection);
+
+            // Generate the same UUID that was used during upsert
+            var uuid = GenerateUuidFromString(objectKey);
+            
+            // Use the Qdrant client to retrieve the specific point by ID
+            var pointData = await _client.GetPointAsync(_collection, uuid);
+            
+            if (pointData == null)
+            {
+                _logger.LogWarning("QdrantVectorStore: No embedding found for ObjectKey: {ObjectKey} (UUID: {UUID})", objectKey, uuid);
+                return null;
+            }
+
+            _logger.LogInformation("QdrantVectorStore: Successfully retrieved embedding for ObjectKey: {ObjectKey}", objectKey);
+            return pointData.Vector;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QdrantVectorStore: Failed to retrieve embedding for ObjectKey: {ObjectKey} from collection '{Collection}'. Error: {ErrorMessage}", 
+                objectKey, _collection, ex.Message);
+            throw;
+        }
+    }
+
     private static string GenerateUuidFromString(string input)
     {
         using var md5 = MD5.Create();

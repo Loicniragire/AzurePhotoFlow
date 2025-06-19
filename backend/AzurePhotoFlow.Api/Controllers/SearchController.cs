@@ -149,9 +149,202 @@ public class SearchController : ControllerBase
             request.Year);
     }
 
+    /// <summary>
+    /// Find visually similar images based on a reference image.
+    /// </summary>
+    /// <param name="objectKey">Object key/path of the reference image</param>
+    /// <param name="limit">Maximum number of results to return (1-100, default: 20)</param>
+    /// <param name="threshold">Minimum similarity threshold (0.0-1.0, default: 0.5)</param>
+    /// <param name="projectName">Optional project name filter</param>
+    /// <param name="year">Optional year filter</param>
+    /// <returns>Visual similarity search results with similarity scores</returns>
+    [HttpGet("similarity")]
+    public async Task<ActionResult<SimilaritySearchResponse>> SimilaritySearch(
+        [FromQuery] string objectKey,
+        [FromQuery] int limit = 20,
+        [FromQuery] double threshold = 0.5,
+        [FromQuery] string? projectName = null,
+        [FromQuery] string? year = null)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = new SimilaritySearchResponse { ReferenceObjectKey = objectKey };
+
+        try
+        {
+            _logger.LogInformation("Similarity search request: ObjectKey='{ObjectKey}', Limit={Limit}, Threshold={Threshold}, Project={Project}, Year={Year}", 
+                objectKey, limit, threshold, projectName, year);
+
+            // Validate input parameters
+            if (string.IsNullOrWhiteSpace(objectKey))
+            {
+                return BadRequest(new SimilaritySearchResponse 
+                { 
+                    ReferenceObjectKey = objectKey ?? "", 
+                    Success = false, 
+                    ErrorMessage = "Reference image object key cannot be empty" 
+                });
+            }
+
+            if (limit < 1 || limit > 100)
+            {
+                return BadRequest(new SimilaritySearchResponse 
+                { 
+                    ReferenceObjectKey = objectKey, 
+                    Success = false, 
+                    ErrorMessage = "Limit must be between 1 and 100" 
+                });
+            }
+
+            if (threshold < 0.0 || threshold > 1.0)
+            {
+                return BadRequest(new SimilaritySearchResponse 
+                { 
+                    ReferenceObjectKey = objectKey, 
+                    Success = false, 
+                    ErrorMessage = "Threshold must be between 0.0 and 1.0" 
+                });
+            }
+
+            // Get the embedding for the reference image
+            _logger.LogDebug("Retrieving embedding for reference image: {ObjectKey}", objectKey);
+            var referenceEmbedding = await _vectorStore.GetEmbeddingAsync(objectKey);
+            
+            if (referenceEmbedding == null)
+            {
+                return NotFound(new SimilaritySearchResponse 
+                { 
+                    ReferenceObjectKey = objectKey, 
+                    Success = false, 
+                    ErrorMessage = "Reference image not found or embedding not available" 
+                });
+            }
+
+            // Build search filters
+            var filters = new Dictionary<string, object>();
+            if (!string.IsNullOrWhiteSpace(projectName))
+            {
+                filters["project_name"] = projectName;
+            }
+            if (!string.IsNullOrWhiteSpace(year))
+            {
+                filters["year"] = year;
+            }
+
+            // Perform vector similarity search
+            _logger.LogDebug("Performing similarity search with {Dimensions} dimensional reference vector", referenceEmbedding.Length);
+            var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, limit + 1, threshold, filters);
+
+            // Filter out the reference image itself and convert results
+            var searchResults = vectorResults
+                .Where(vr => vr.ObjectKey != objectKey) // Exclude reference image
+                .Take(limit) // Limit results after excluding reference
+                .Select(vr => CreateSimilaritySearchResult(vr))
+                .ToList();
+
+            // Populate response
+            response.Results = searchResults;
+            response.TotalResults = searchResults.Count;
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            response.Success = true;
+
+            _logger.LogInformation("Similarity search completed: Found {ResultCount} results in {ProcessingTimeMs}ms for reference '{ObjectKey}'", 
+                response.TotalResults, response.ProcessingTimeMs, objectKey);
+
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid similarity search request: {ObjectKey}", objectKey);
+            response.Success = false;
+            response.ErrorMessage = ex.Message;
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            return BadRequest(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing similarity search request: {ObjectKey}", objectKey);
+            response.Success = false;
+            response.ErrorMessage = "Internal server error occurred while processing search request";
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            return StatusCode(500, response);
+        }
+    }
+
+    /// <summary>
+    /// Advanced visual similarity search with detailed request model.
+    /// </summary>
+    /// <param name="request">Detailed similarity search request</param>
+    /// <returns>Visual similarity search results</returns>
+    [HttpPost("similarity")]
+    public async Task<ActionResult<SimilaritySearchResponse>> SimilaritySearchPost([FromBody] SimilaritySearchRequest request)
+    {
+        // Delegate to GET method with parameters from request body
+        return await SimilaritySearch(
+            request.ObjectKey, 
+            request.Limit, 
+            request.Threshold, 
+            request.ProjectName, 
+            request.Year);
+    }
+
     private static SemanticSearchResult CreateSemanticSearchResult(VectorSearchResult vectorResult)
     {
         var result = new SemanticSearchResult
+        {
+            ObjectKey = vectorResult.ObjectKey,
+            SimilarityScore = vectorResult.SimilarityScore,
+            Metadata = vectorResult.Metadata
+        };
+
+        // Extract metadata fields
+        if (vectorResult.Metadata.TryGetValue("path", out var pathObj) && pathObj is string path)
+        {
+            result.ObjectKey = path;
+            
+            // Parse file information from object key path
+            // Expected format: {year}/{timestamp}/{projectName}/{directoryName}/{fileName}
+            var pathParts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (pathParts.Length >= 1)
+            {
+                result.FileName = pathParts[^1]; // Last part is filename
+            }
+            if (pathParts.Length >= 2)
+            {
+                result.DirectoryName = pathParts[^2]; // Second to last is directory
+            }
+            if (pathParts.Length >= 3)
+            {
+                result.ProjectName = pathParts[^3]; // Third to last is project
+            }
+            if (pathParts.Length >= 4)
+            {
+                result.Year = pathParts[^4]; // Fourth to last might be year or timestamp
+            }
+        }
+
+        // Extract other metadata fields if available
+        if (vectorResult.Metadata.TryGetValue("project_name", out var projectObj) && projectObj is string project)
+        {
+            result.ProjectName = project;
+        }
+        if (vectorResult.Metadata.TryGetValue("year", out var yearObj) && yearObj is string yearStr)
+        {
+            result.Year = yearStr;
+        }
+        if (vectorResult.Metadata.TryGetValue("upload_date", out var uploadObj) && uploadObj is string uploadStr)
+        {
+            if (DateTime.TryParse(uploadStr, out var uploadDate))
+            {
+                result.UploadDate = uploadDate;
+            }
+        }
+
+        return result;
+    }
+
+    private static SimilaritySearchResult CreateSimilaritySearchResult(VectorSearchResult vectorResult)
+    {
+        var result = new SimilaritySearchResult
         {
             ObjectKey = vectorResult.ObjectKey,
             SimilarityScore = vectorResult.SimilarityScore,
