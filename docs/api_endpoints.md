@@ -353,9 +353,116 @@ Advanced semantic search with detailed request model for complex queries.
 - Efficient vector similarity search
 - Similarity scores for result ranking
 
+### Visual Similarity Search
+
+#### `GET /api/search/similarity`
+
+Find visually similar images based on a reference image using CLIP embeddings.
+
+**Authorization:** JWT Bearer token required
+
+**Query Parameters:**
+- `objectKey` (string, required): Object key/path of the reference image
+- `limit` (int, optional, default: 20): Maximum results to return (1-100)
+- `threshold` (double, optional, default: 0.5): Minimum similarity threshold (0.0-1.0)
+- `projectName` (string, optional): Filter results by specific project
+- `year` (string, optional): Filter results by year
+
+**Example Request:**
+```bash
+GET /api/search/similarity?objectKey=2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg&limit=10&threshold=0.7
+```
+
+**Success Response (200):**
+```json
+{
+  "ReferenceObjectKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+  "Results": [
+    {
+      "ObjectKey": "2024/1705401600/vacation_photos/beach_day/IMG_1235.jpg",
+      "SimilarityScore": 0.89,
+      "FileName": "IMG_1235.jpg",
+      "ProjectName": "vacation_photos",
+      "DirectoryName": "beach_day",
+      "Year": "2024",
+      "UploadDate": "2024-01-16T10:35:00Z",
+      "ImageUrl": "https://storage.example.com/2024/...",
+      "Metadata": {
+        "path": "2024/1705401600/vacation_photos/beach_day/IMG_1235.jpg",
+        "project_name": "vacation_photos"
+      }
+    }
+  ],
+  "TotalResults": 1,
+  "ProcessingTimeMs": 156,
+  "Success": true,
+  "ErrorMessage": null
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "ReferenceObjectKey": "",
+  "Results": [],
+  "TotalResults": 0,
+  "ProcessingTimeMs": 8,
+  "Success": false,
+  "ErrorMessage": "Reference image object key cannot be empty"
+}
+```
+
+**Error Response (404):**
+```json
+{
+  "ReferenceObjectKey": "invalid/path.jpg",
+  "Results": [],
+  "TotalResults": 0,
+  "ProcessingTimeMs": 45,
+  "Success": false,
+  "ErrorMessage": "Reference image not found or embedding not available"
+}
+```
+
+#### `POST /api/search/similarity`
+
+Advanced visual similarity search with detailed request model for complex queries.
+
+**Authorization:** JWT Bearer token required
+
+**Request Body:**
+```json
+{
+  "ObjectKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+  "Limit": 15,
+  "Threshold": 0.8,
+  "ProjectName": "vacation_photos",
+  "Year": "2024"
+}
+```
+
+**Response:** Same format as GET endpoint
+
+### Similarity Search Features
+
+**Visual Analysis:**
+- Uses CLIP vision embeddings for semantic visual understanding
+- Finds images with similar composition, colors, and subjects
+- Works across different image formats and resolutions
+
+**Smart Filtering:**
+- Automatically excludes the reference image from results
+- Project-based filtering for organized searches
+- Year-based temporal filtering
+- Configurable similarity thresholds for precision control
+
+**Performance:**
+- Leverages Qdrant vector database for fast similarity search
+- Sub-second response times for most queries
+- Cosine similarity scoring for accurate ranking
+
 ## Future Search Endpoints (Planned)
 
-- `GET /api/search/similarity` - Find visually similar images
 - `POST /api/search/query` - Complex multi-criteria search queries
 
 ### Face Recognition (Coming Soon)
@@ -404,6 +511,44 @@ Advanced semantic search with detailed request model for complex queries.
 {
   "ObjectKey": "string", // Storage path
   "Vector": [0.1, 0.2, 0.3, ...] // 512-dimensional float array
+}
+```
+
+### SimilaritySearchRequest
+```json
+{
+  "ObjectKey": "string", // Reference image path (required)
+  "Limit": 20, // Max results (1-100, default: 20)
+  "Threshold": 0.5, // Similarity threshold (0.0-1.0, default: 0.5)
+  "ProjectName": "string", // Optional project filter
+  "Year": "string" // Optional year filter
+}
+```
+
+### SimilaritySearchResponse
+```json
+{
+  "ReferenceObjectKey": "string", // Reference image path
+  "Results": [
+    {
+      "ObjectKey": "string", // Similar image path
+      "SimilarityScore": 0.85, // Similarity score (0.0-1.0)
+      "FileName": "string",
+      "ProjectName": "string",
+      "DirectoryName": "string",
+      "Year": "string",
+      "UploadDate": "2024-01-01T00:00:00Z",
+      "ImageUrl": "string",
+      "Metadata": {
+        "path": "string",
+        "project_name": "string"
+      }
+    }
+  ],
+  "TotalResults": 0,
+  "ProcessingTimeMs": 0,
+  "Success": true,
+  "ErrorMessage": null
 }
 ```
 
@@ -562,6 +707,32 @@ curl -X POST "http://localhost:5000/api/image/raw" \
 curl -X POST "http://localhost:5000/api/auth/google-login" \
   -H "Content-Type: application/json" \
   -d '{"Token": "google-id-token-here"}'
+```
+
+**Semantic Search with cURL:**
+```bash
+curl -X GET "http://localhost:5000/api/search/semantic?query=dogs%20playing%20in%20water&limit=10&threshold=0.6" \
+  -H "Authorization: Bearer <jwt_token>"
+```
+
+**Visual Similarity Search with cURL:**
+```bash
+curl -X GET "http://localhost:5000/api/search/similarity?objectKey=2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg&limit=10&threshold=0.7" \
+  -H "Authorization: Bearer <jwt_token>"
+```
+
+**Advanced Similarity Search with cURL:**
+```bash
+curl -X POST "http://localhost:5000/api/search/similarity" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ObjectKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+    "Limit": 15,
+    "Threshold": 0.8,
+    "ProjectName": "vacation_photos",
+    "Year": "2024"
+  }'
 ```
 
 For more detailed testing scenarios and examples, see the [Setup Guide](setup.md).
