@@ -19,8 +19,11 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException("MinIO configuration is missing.");
             }
 
+            // Remove http:// prefix if present, as MinIO client expects just hostname:port
+            var cleanEndpoint = endpoint.Replace("http://", "").Replace("https://", "");
+
             return new MinioClient()
-                .WithEndpoint(endpoint)
+                .WithEndpoint(cleanEndpoint)
                 .WithCredentials(accessKey, secretKey)
                 .Build();
         });
