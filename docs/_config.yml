@@ -1,28 +1,17 @@
 title: AzurePhotoFlow
 description: Cloud-native AI-powered photo management with open-source technologies
-theme: minima
+remote_theme: pages-themes/minimal@v0.2.0
 baseurl: "/AzurePhotoFlow"
 url: "https://loicniragire.github.io"
 
 plugins:
+  - jekyll-remote-theme
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-seo-tag
 
 markdown: kramdown
 highlighter: rouge
-
-navigation:
-  - title: Home
-    url: /
-  - title: Architecture
-    url: /architecture
-  - title: API Docs
-    url: /api_endpoints
-  - title: Setup
-    url: /setup
-  - title: Deployment
-    url: /CICD_DEPLOYMENT
 
 header_pages:
   - architecture.md
@@ -39,3 +28,4 @@ exclude:
   - .jekyll-metadata
   - Gemfile
   - Gemfile.lock
+  - "*.gemspec"
