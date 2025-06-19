@@ -7,6 +7,7 @@ Welcome to AzurePhotoFlow - a cloud-native AI-powered photo management applicati
 - [🏠 **Overview & Architecture**](architecture.md) - System design and components
 - [🚀 **Getting Started**](../README.md) - Installation and setup guide
 - [⚙️ **API Documentation**](api_endpoints.md) - REST API reference
+- [🔗 **Frontend Integration**](frontend_integration.md) - Frontend API integration guide
 - [🐳 **Deployment Guide**](CICD_DEPLOYMENT.md) - CI/CD and production deployment
 - [☸️ **Kubernetes Setup**](CLUSTER_PREPARATION.md) - Container orchestration guide
 
@@ -50,6 +51,7 @@ For detailed setup instructions, see the [Getting Started Guide](../README.md).
 |---------|-------------|
 | [Architecture](architecture.md) | System design and component interaction |
 | [API Endpoints](api_endpoints.md) | REST API documentation |
+| [Frontend Integration](frontend_integration.md) | Frontend API integration and authentication |
 | [Setup Guide](setup.md) | Development environment setup |
 | [Deployment](CICD_DEPLOYMENT.md) | Production deployment strategies |
 | [UI Guidelines](ui_guidelines.md) | Frontend development standards |

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import searchService from '../services/searchService';
 import '../styles/NaturalLanguageSearch.css';
 
 const NaturalLanguageSearch = () => {
@@ -18,10 +18,10 @@ const NaturalLanguageSearch = () => {
         setError('');
 
         try {
-            const response = await axios.post('/api/natural-language-search', { query });
-            setResults(response.data.results || []);
+            const response = await searchService.searchSemantic(query);
+            setResults(response.results || []);
         } catch (err) {
-            setError('Failed to process the query. Please try again later.');
+            setError(err.message || 'Failed to process the query. Please try again later.');
             console.error('Search error:', err);
         } finally {
             setIsLoading(false);
@@ -46,9 +46,13 @@ const NaturalLanguageSearch = () => {
                 {results.length > 0 ? (
                     <ul>
                         {results.map((result, index) => (
-                            <li key={index} className="search-result-item">
+                            <li key={result.objectKey || index} className="search-result-item">
                                 <img src={result.imageUrl} alt={result.altText || 'Image'} />
-                                <p>{result.metadata || 'No metadata available'}</p>
+                                <div className="result-metadata">
+                                    <p><strong>File:</strong> {result.metadata?.fileName || 'Unknown'}</p>
+                                    {result.metadata?.projectName && <p><strong>Project:</strong> {result.metadata.projectName}</p>}
+                                    {result.similarityScore && <p><strong>Score:</strong> {(result.similarityScore * 100).toFixed(1)}%</p>}
+                                </div>
                             </li>
                         ))}
                     </ul>
