@@ -126,7 +126,7 @@ const App = () => {
                 </IconButton>
               )}
               <Typography variant="h6" noWrap component="div">
-                Loic Portraits
+                Photo Flow
               </Typography>
               <div style={{ flexGrow: 1 }} />
               {isAuthenticated && (
@@ -186,7 +186,7 @@ const App = () => {
         </div>
         <footer style={{ textAlign: "center", padding: theme.spacing(2) }}>
           <Typography variant="body2" color="textSecondary">
-            &copy; {new Date().getFullYear()} Loic Portraits LLC. All rights reserved.
+            &copy; {new Date().getFullYear()} Photo Flow. All rights reserved.
           </Typography>
         </footer>
       </Router>

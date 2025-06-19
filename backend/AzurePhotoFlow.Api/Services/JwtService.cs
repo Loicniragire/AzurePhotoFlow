@@ -6,8 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 public class JwtService
 {
     private readonly SymmetricSecurityKey _jwtKey;
-    private const string Issuer = "loicportraits.azurewebsites.net";
-    private const string Audience = "loicportraits.azurewebsites.net";
+    private const string Issuer = "photoflow.app";
+    private const string Audience = "photoflow.app";
 
     public JwtService(SymmetricSecurityKey jwtKey)
     {
