@@ -1,0 +1,112 @@
+.system-status {
+    max-width: 500px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.system-status.ready {
+    border-left: 4px solid #28a745;
+}
+
+.system-status.not-ready {
+    border-left: 4px solid #ffc107;
+}
+
+.system-status.loading {
+    border-left: 4px solid #007bff;
+    text-align: center;
+}
+
+.system-status.error {
+    border-left: 4px solid #dc3545;
+    text-align: center;
+}
+
+.system-status h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.status-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+}
+
+.status-item.success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+}
+
+.status-item.warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+}
+
+.status-icon {
+    font-size: 1.2rem;
+}
+
+.status-text {
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.status-message {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.status-message p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.status-message ol {
+    margin: 10px 0;
+    padding-left: 20px;
+    color: #666;
+}
+
+.status-message li {
+    margin: 5px 0;
+}
+
+.refresh-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background-color 0.2s ease;
+}
+
+.refresh-btn:hover {
+    background-color: #0056b3;
+}
+
+@media (max-width: 768px) {
+    .system-status {
+        margin: 15px;
+        padding: 15px;
+    }
+}
