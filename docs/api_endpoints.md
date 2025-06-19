@@ -343,8 +343,8 @@ Authorization: Bearer <jwt_token>
 ```
 
 **Token Details:**
-- **Issuer**: `photoflow.app`
-- **Audience**: `photoflow.app`
+- **Issuer**: `loicportraits.azurewebsites.net`
+- **Audience**: `loicportraits.azurewebsites.net`
 - **Signing**: HMAC SHA-256 with secret key
 - **Expiration**: Configurable (check token claims)
 

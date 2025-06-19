@@ -133,13 +133,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // options.Authority = "https://accounts.google.com";
 
         // Set the expected audience and issuer to match the values in your generated JWT.
-        options.Audience = "photoflow.app";
+        options.Audience = "loicportraits.azurewebsites.net";
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = "photoflow.app",
+            ValidIssuer = "loicportraits.azurewebsites.net",
             ValidateAudience = true,
-            ValidAudience = "photoflow.app",
+            ValidAudience = "loicportraits.azurewebsites.net",
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             // Use the same secret key that you use to generate your JWT.
