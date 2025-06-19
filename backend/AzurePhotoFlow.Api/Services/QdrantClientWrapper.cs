@@ -122,6 +122,88 @@ public class QdrantClientWrapper : IQdrantClientWrapper
         };
     }
     
+    public async Task<SearchResult> SearchAsync(string collection, float[] vector, int limit, double threshold, Dictionary<string, object>? filter = null)
+    {
+        try
+        {
+            _logger.LogInformation("QdrantClientWrapper: Searching collection '{Collection}' with limit {Limit} and threshold {Threshold}", 
+                collection, limit, threshold);
+
+            var searchRequest = new
+            {
+                vector = vector,
+                limit = limit,
+                score_threshold = threshold,
+                with_payload = true,
+                filter = filter != null && filter.Any() ? CreateFilter(filter) : null
+            };
+
+            var json = JsonSerializer.Serialize(searchRequest, new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            });
+
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{_baseUrl}/collections/{collection}/points/search", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("QdrantClientWrapper: Failed to search. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                throw new Exception($"Search failed: {response.StatusCode} - {errorContent}");
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var searchResponse = JsonSerializer.Deserialize<SearchResponseWrapper>(responseContent, new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            });
+
+            var result = new SearchResult
+            {
+                Points = searchResponse?.Result?.Select(p => new SearchResultPoint
+                {
+                    Id = p.Id,
+                    Score = p.Score,
+                    Payload = p.Payload ?? new Dictionary<string, object>()
+                }).ToList() ?? new List<SearchResultPoint>()
+            };
+
+            _logger.LogInformation("QdrantClientWrapper: Found {ResultCount} results for search in collection '{Collection}'", 
+                result.Points.Count, collection);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QdrantClientWrapper: Error searching collection '{Collection}'", collection);
+            throw;
+        }
+    }
+
+    private object? CreateFilter(Dictionary<string, object> filter)
+    {
+        var conditions = new List<object>();
+
+        foreach (var kvp in filter)
+        {
+            if (kvp.Value is string stringValue)
+            {
+                conditions.Add(new
+                {
+                    key = kvp.Key,
+                    match = new { value = stringValue }
+                });
+            }
+        }
+
+        if (!conditions.Any())
+            return null;
+
+        return new { must = conditions };
+    }
+
     private object ConvertQdrantValue(Qdrant.Client.Grpc.Value value)
     {
         if (!string.IsNullOrEmpty(value.StringValue))
@@ -134,5 +216,18 @@ public class QdrantClientWrapper : IQdrantClientWrapper
             return value.BoolValue;
         
         return value.StringValue ?? "";
+    }
+
+    // Helper classes for deserialization
+    private class SearchResponseWrapper
+    {
+        public List<SearchResponsePoint>? Result { get; set; }
+    }
+
+    private class SearchResponsePoint
+    {
+        public string Id { get; set; } = string.Empty;
+        public double Score { get; set; }
+        public Dictionary<string, object>? Payload { get; set; }
     }
 }

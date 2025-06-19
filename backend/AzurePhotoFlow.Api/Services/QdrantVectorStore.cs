@@ -67,54 +67,16 @@ public class QdrantVectorStore : IVectorStore
             _logger.LogInformation("QdrantVectorStore: Starting vector search in collection '{Collection}' with limit {Limit} and threshold {Threshold}", 
                 _collection, limit, threshold);
 
-            var searchRequest = new SearchPoints
-            {
-                CollectionName = _collection,
-                Vector = queryVector,
-                Limit = (uint)limit,
-                ScoreThreshold = (float)threshold,
-                WithPayload = new WithPayloadSelector { Enable = true }
-            };
-
-            // Add metadata filters if provided
-            if (filter != null && filter.Any())
-            {
-                var conditions = new List<Condition>();
-                foreach (var kvp in filter)
-                {
-                    if (kvp.Value is string stringValue)
-                    {
-                        conditions.Add(new Condition
-                        {
-                            Field = new FieldCondition
-                            {
-                                Key = kvp.Key,
-                                Match = new Match { Value = new QdrantValue { StringValue = stringValue } }
-                            }
-                        });
-                    }
-                }
-
-                if (conditions.Any())
-                {
-                    searchRequest.Filter = new Filter();
-                    searchRequest.Filter.Must.AddRange(conditions);
-                }
-            }
-
             _logger.LogDebug("QdrantVectorStore: Executing search request for collection '{Collection}'", _collection);
-            var searchResponse = await _client.SearchAsync(searchRequest);
+            var searchResponse = await _client.SearchAsync(_collection, queryVector, limit, threshold, filter);
             
-            var results = searchResponse.Result.Select(point => new VectorSearchResult
+            var results = searchResponse.Points.Select(point => new VectorSearchResult
             {
                 ObjectKey = point.Payload.ContainsKey("object_key") ? 
-                    point.Payload["object_key"].StringValue : 
-                    point.Payload.ContainsKey("path") ? point.Payload["path"].StringValue : "",
+                    point.Payload["object_key"].ToString() ?? "" :
+                    point.Payload.ContainsKey("path") ? point.Payload["path"].ToString() ?? "" : "",
                 SimilarityScore = point.Score,
-                Metadata = point.Payload.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => ExtractPayloadValue(kvp.Value)
-                )
+                Metadata = point.Payload
             }).ToList();
 
             _logger.LogInformation("QdrantVectorStore: Found {ResultCount} results for vector search in collection '{Collection}'", 
@@ -128,18 +90,6 @@ public class QdrantVectorStore : IVectorStore
                 _collection, ex.Message);
             throw;
         }
-    }
-
-    private static object ExtractPayloadValue(QdrantValue value)
-    {
-        return value.KindCase switch
-        {
-            QdrantValue.KindOneofCase.StringValue => value.StringValue,
-            QdrantValue.KindOneofCase.IntegerValue => value.IntegerValue,
-            QdrantValue.KindOneofCase.DoubleValue => value.DoubleValue,
-            QdrantValue.KindOneofCase.BoolValue => value.BoolValue,
-            _ => value.ToString()
-        };
     }
 
     private static string GenerateUuidFromString(string input)
