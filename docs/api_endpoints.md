@@ -256,12 +256,107 @@ Check if the embedding service is running and available.
 }
 ```
 
-## Future Endpoints (Planned)
+## Search & Discovery
 
-### Search (Coming Soon)
-- `GET /api/search/semantic` - Natural language image search
-- `GET /api/search/similarity` - Find similar images
-- `POST /api/search/query` - Complex search queries
+### Semantic Search
+
+#### `GET /api/search/semantic`
+
+Search for images using natural language queries powered by AI embeddings.
+
+**Authorization:** JWT Bearer token required
+
+**Query Parameters:**
+- `query` (string, required): Natural language search query (e.g., "photos of dogs in parks")
+- `limit` (int, optional, default: 20): Maximum results to return (1-100)
+- `threshold` (double, optional, default: 0.5): Minimum similarity threshold (0.0-1.0)
+- `projectName` (string, optional): Filter results by specific project
+- `year` (string, optional): Filter results by year
+
+**Example Request:**
+```bash
+GET /api/search/semantic?query=dogs%20playing%20in%20water&limit=10&threshold=0.6
+```
+
+**Success Response (200):**
+```json
+{
+  "Query": "dogs playing in water",
+  "Results": [
+    {
+      "ObjectKey": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+      "SimilarityScore": 0.87,
+      "FileName": "IMG_1234.jpg",
+      "ProjectName": "vacation_photos",
+      "DirectoryName": "beach_day",
+      "Year": "2024",
+      "UploadDate": "2024-01-16T10:30:00Z",
+      "ImageUrl": "https://storage.example.com/2024/...",
+      "Metadata": {
+        "path": "2024/1705401600/vacation_photos/beach_day/IMG_1234.jpg",
+        "project_name": "vacation_photos"
+      }
+    }
+  ],
+  "TotalResults": 5,
+  "ProcessingTimeMs": 245,
+  "Success": true,
+  "ErrorMessage": null
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "Query": "",
+  "Results": [],
+  "TotalResults": 0,
+  "ProcessingTimeMs": 12,
+  "Success": false,
+  "ErrorMessage": "Search query cannot be empty"
+}
+```
+
+#### `POST /api/search/semantic`
+
+Advanced semantic search with detailed request model for complex queries.
+
+**Authorization:** JWT Bearer token required
+
+**Request Body:**
+```json
+{
+  "Query": "sunset photos with mountains",
+  "Limit": 15,
+  "Threshold": 0.7,
+  "ProjectName": "landscape_photography",
+  "Year": "2023"
+}
+```
+
+**Response:** Same format as GET endpoint
+
+### Search Features
+
+**Natural Language Processing:**
+- Understands context and semantic meaning
+- Handles synonyms and related terms
+- Works with descriptive phrases and scenes
+
+**Filtering Options:**
+- Project-based filtering for organized searches
+- Year-based temporal filtering
+- Configurable similarity thresholds for precision control
+
+**Performance:**
+- Sub-second response times for most queries
+- Efficient vector similarity search
+- Similarity scores for result ranking
+
+## Future Search Endpoints (Planned)
+
+- `GET /api/search/similarity` - Find visually similar images
+- `POST /api/search/query` - Complex multi-criteria search queries
 
 ### Face Recognition (Coming Soon)
 - `POST /api/facerecognition/detect` - Detect faces in images
