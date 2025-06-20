@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import searchService from '../services/searchService';
-import SystemStatus from './SystemStatus';
+import apiClient from '../services/apiClient';
 import '../styles/ImageSearch.css';
-import '../styles/SystemStatus.css';
 
 const ImageSearch = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -11,6 +10,44 @@ const ImageSearch = () => {
     const [error, setError] = useState('');
     const [searchMeta, setSearchMeta] = useState(null);
     const [hasSearched, setHasSearched] = useState(false);
+    
+    // Search parameters
+    const [filters, setFilters] = useState({
+        year: '',
+        projectName: '',
+        limit: 20,
+        threshold: 0.5
+    });
+    
+    // Available options for filters
+    const [availableProjects, setAvailableProjects] = useState([]);
+    const [availableYears, setAvailableYears] = useState([]);
+    const [filtersLoading, setFiltersLoading] = useState(false);
+
+    // Load available projects and years for filtering
+    useEffect(() => {
+        const loadFilterOptions = async () => {
+            setFiltersLoading(true);
+            try {
+                const response = await apiClient.get('/api/images/projects');
+                const projects = response.data || [];
+                
+                // Extract unique project names and years
+                const uniqueProjects = [...new Set(projects.map(p => p.name).filter(Boolean))];
+                const uniqueYears = [...new Set(projects.map(p => p.year).filter(Boolean))];
+                
+                setAvailableProjects(uniqueProjects);
+                setAvailableYears(uniqueYears.sort((a, b) => b - a)); // Sort years descending
+            } catch (err) {
+                console.error('Failed to load filter options:', err);
+                // Don't show error for this, it's optional
+            } finally {
+                setFiltersLoading(false);
+            }
+        };
+
+        loadFilterOptions();
+    }, []);
 
     const handleSearch = async () => {
         if (!searchQuery.trim()) {
@@ -23,12 +60,20 @@ const ImageSearch = () => {
         setHasSearched(true);
 
         try {
-            const response = await searchService.searchSemantic(searchQuery);
+            // Prepare search options with filters
+            const searchOptions = {};
+            if (filters.projectName) searchOptions.projectName = filters.projectName;
+            if (filters.year) searchOptions.year = filters.year;
+            if (filters.limit && filters.limit !== 20) searchOptions.limit = filters.limit;
+            if (filters.threshold && filters.threshold !== 0.5) searchOptions.threshold = filters.threshold;
+
+            const response = await searchService.searchSemantic(searchQuery, searchOptions);
             setSearchResults(response.results || []);
             setSearchMeta({
                 totalResults: response.totalResults || 0,
                 processingTime: response.processingTimeMs || 0,
-                query: response.query || searchQuery
+                query: response.query || searchQuery,
+                appliedFilters: searchOptions
             });
 
             // If no results, provide helpful feedback
@@ -72,8 +117,68 @@ const ImageSearch = () => {
                 Search your images using natural language. Try: "dogs playing", "sunset photos", "people at beach"
             </p>
 
-            {/* System status check */}
-            <SystemStatus />
+            {/* Search Filters */}
+            <div className="search-filters">
+                <div className="filter-row">
+                    <div className="filter-group">
+                        <label htmlFor="project-filter">Project:</label>
+                        <select
+                            id="project-filter"
+                            value={filters.projectName}
+                            onChange={(e) => setFilters(prev => ({ ...prev, projectName: e.target.value }))}
+                            disabled={filtersLoading}
+                        >
+                            <option value="">All Projects</option>
+                            {availableProjects.map(project => (
+                                <option key={project} value={project}>{project}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="filter-group">
+                        <label htmlFor="year-filter">Year:</label>
+                        <select
+                            id="year-filter"
+                            value={filters.year}
+                            onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
+                            disabled={filtersLoading}
+                        >
+                            <option value="">All Years</option>
+                            {availableYears.map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="filter-group">
+                        <label htmlFor="limit-filter">Results:</label>
+                        <select
+                            id="limit-filter"
+                            value={filters.limit}
+                            onChange={(e) => setFilters(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
+                        >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
+
+                    <div className="filter-group">
+                        <label htmlFor="threshold-filter">Similarity:</label>
+                        <select
+                            id="threshold-filter"
+                            value={filters.threshold}
+                            onChange={(e) => setFilters(prev => ({ ...prev, threshold: parseFloat(e.target.value) }))}
+                        >
+                            <option value={0.3}>Low (30%)</option>
+                            <option value={0.5}>Medium (50%)</option>
+                            <option value={0.7}>High (70%)</option>
+                            <option value={0.9}>Very High (90%)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             
             <div className="search-bar">
                 <input
@@ -137,10 +242,24 @@ const ImageSearch = () => {
             {/* Search metadata */}
             {searchMeta && !error && (
                 <div className="search-meta">
-                    <p>
-                        Found {searchMeta.totalResults} result{searchMeta.totalResults !== 1 ? 's' : ''} 
-                        for "{searchMeta.query}" in {searchMeta.processingTime}ms
-                    </p>
+                    <div className="search-stats">
+                        <p>
+                            Found {searchMeta.totalResults} result{searchMeta.totalResults !== 1 ? 's' : ''} 
+                            for "{searchMeta.query}" in {searchMeta.processingTime}ms
+                        </p>
+                        {searchMeta.appliedFilters && Object.keys(searchMeta.appliedFilters).length > 0 && (
+                            <div className="applied-filters">
+                                <span>Filters: </span>
+                                {Object.entries(searchMeta.appliedFilters).map(([key, value]) => (
+                                    <span key={key} className="filter-tag">
+                                        {key === 'projectName' ? 'Project' : 
+                                         key === 'threshold' ? 'Similarity' : 
+                                         key.charAt(0).toUpperCase() + key.slice(1)}: {value}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 

@@ -291,5 +291,117 @@
         padding: 6px 12px;
         font-size: 0.85rem;
     }
+    
+    .search-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-group label {
+        margin-bottom: 5px;
+    }
+    
+    .filter-group select {
+        width: 100%;
+    }
+}
+
+/* Search Filters */
+.search-filters {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.filter-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+    flex: 1;
+}
+
+.filter-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.filter-group select:hover {
+    border-color: #007bff;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.filter-group select:disabled {
+    background: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Applied filters display */
+.applied-filters {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.applied-filters span:first-child {
+    font-weight: 500;
+    color: #666;
+}
+
+.filter-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.search-stats {
+    text-align: left;
+}
+
+.search-stats > p {
+    margin-bottom: 5px;
 }
 
