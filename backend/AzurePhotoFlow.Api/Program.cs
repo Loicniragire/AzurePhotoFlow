@@ -103,7 +103,7 @@ builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 104_857_600; // 100MB
+    options.MultipartBodyLengthLimit = UploadConfigHelper.GetMultipartBodyLengthLimit();
 });
 
 // Retrieve and Validate Environment Variables

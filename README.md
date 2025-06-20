@@ -92,6 +92,9 @@ npm run dev
 ### Infrastructure Setup
 The infrastructure for AzurePhotoFlow is managed using Terraform. Scripts are located in the `infrastructure/` directory. Refer to the `docs/setup.md` for detailed deployment instructions (even if the doc is currently empty).
 
+## Configuration
+The backend limits upload sizes for multipart requests. By default the limit is **100MB**. To allow larger uploads (for example large zip archives), set the environment variable `MAX_UPLOAD_SIZE_MB` to the desired size in megabytes before starting the backend.
+
 ## Usage
 [Placeholder - This section will be updated with detailed instructions on how to use the application's features. Key functionalities include user registration/login, photo uploading, browsing photo galleries, searching for photos using various criteria (tags, text in images, natural language), and viewing recognized faces.]
 
