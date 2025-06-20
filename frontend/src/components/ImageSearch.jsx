@@ -29,12 +29,12 @@ const ImageSearch = () => {
         const loadFilterOptions = async () => {
             setFiltersLoading(true);
             try {
-                const response = await apiClient.get('/api/images/projects');
+                const response = await apiClient.get('/api/image/projects');
                 const projects = response.data || [];
                 
                 // Extract unique project names and years
-                const uniqueProjects = [...new Set(projects.map(p => p.name).filter(Boolean))];
-                const uniqueYears = [...new Set(projects.map(p => p.year).filter(Boolean))];
+                const uniqueProjects = [...new Set(projects.map(p => p.Name).filter(Boolean))];
+                const uniqueYears = [...new Set(projects.map(p => new Date(p.Datestamp).getFullYear()).filter(Boolean))];
                 
                 setAvailableProjects(uniqueProjects);
                 setAvailableYears(uniqueYears.sort((a, b) => b - a)); // Sort years descending

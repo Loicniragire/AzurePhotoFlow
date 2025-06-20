@@ -175,7 +175,7 @@ const App = () => {
                 <Route element={<RequireAuth isAuthenticated={isAuthenticated} loading={loading} />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/upload" element={<ImageUpload />} />
-                  <Route path="/search" element={<ImageSearch />} />
+                  <Route path="/search" element={<ImageSearch key="image-search-v2" />} />
                   <Route path="/naturallanguage" element={<NaturalLanguageSearch />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/facerecognition" element={<FaceRecognition />} />
