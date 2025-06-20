@@ -5,27 +5,27 @@ namespace Api.Models;
 public class ProjectInfo
 {
     [Required]
-    [JsonPropertyName("ProjectName")]
+    [JsonPropertyName("projectName")]
     public string Name { get; set; }
 
     [Required]
-    [JsonPropertyName("TimeStamp")]
+    [JsonPropertyName("timestamp")]
     public DateTime Datestamp { get; set; }
 
-    [JsonPropertyName("Directories")]
+    [JsonPropertyName("directories")]
     public List<ProjectDirectory> Directories { get; set; } = new List<ProjectDirectory>();
 }
 
 public class ProjectDirectory
 {
     [Required]
-    [JsonPropertyName("DirectoryName")]
+    [JsonPropertyName("directoryName")]
     public string Name { get; set; }
 
-    [JsonPropertyName("RawFilesCount")]
+    [JsonPropertyName("rawFilesCount")]
     public int RawFilesCount { get; set; }
 
-    [JsonPropertyName("ProcessedFilesCount")]
+    [JsonPropertyName("processedFilesCount")]
     public int ProcessedFilesCount { get; set; }
 }
 
