@@ -3,7 +3,8 @@ import searchService from '../services/searchService';
 import apiClient from '../services/apiClient';
 import '../styles/ImageSearch.css';
 
-const ImageSearch = () => {
+const ImageSearchNew = () => {
+    console.log('ImageSearchNew component loaded - VERSION WITHOUT SystemStatus');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -311,5 +312,5 @@ const ImageSearch = () => {
     );
 };
 
-export default ImageSearch;
+export default ImageSearchNew;
 

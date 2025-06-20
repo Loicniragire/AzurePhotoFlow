@@ -18,7 +18,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { QueryClient, QueryClientProvider } from "react-query"; 
 import Home from "./components/Home";
 import ImageUpload from "./components/ImageUpload";
-import ImageSearch from "./components/ImageSearch";
+import ImageSearchNew from "./components/ImageSearch";
 import NaturalLanguageSearch from "./components/NaturalLanguageSearch";
 import Dashboard from "./components/Dashboard";
 import FaceRecognition from "./components/FaceRecognition";
@@ -175,7 +175,7 @@ const App = () => {
                 <Route element={<RequireAuth isAuthenticated={isAuthenticated} loading={loading} />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/upload" element={<ImageUpload />} />
-                  <Route path="/search" element={<ImageSearch key="image-search-v2" />} />
+                  <Route path="/search" element={<ImageSearchNew />} />
                   <Route path="/naturallanguage" element={<NaturalLanguageSearch />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/facerecognition" element={<FaceRecognition />} />
