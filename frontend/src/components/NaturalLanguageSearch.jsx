@@ -7,6 +7,7 @@ const NaturalLanguageSearch = () => {
     const [results, setResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [searchMeta, setSearchMeta] = useState(null);
 
     const handleSearch = async () => {
         if (!query.trim()) {
@@ -20,6 +21,17 @@ const NaturalLanguageSearch = () => {
         try {
             const response = await searchService.searchSemantic(query);
             setResults(response.results || []);
+            setSearchMeta({
+                totalResults: response.totalResults || 0,
+                totalImagesSearched: response.totalImagesSearched || 0,
+                processingTime: response.processingTimeMs || 0,
+                query: response.query || query
+            });
+
+            // Only set error if there are truly no images in the collection
+            if (response.totalImagesSearched === 0) {
+                setError('No images found in collection. Try uploading some images first.');
+            }
         } catch (err) {
             setError(err.message || 'Failed to process the query. Please try again later.');
             console.error('Search error:', err);
@@ -42,6 +54,22 @@ const NaturalLanguageSearch = () => {
 
             {error && <p className="error-message">{error}</p>}
 
+            {/* Search metadata */}
+            {searchMeta && (
+                <div className="search-meta">
+                    <div className="search-stats">
+                        <p>
+                            Found {searchMeta.totalResults} result{searchMeta.totalResults !== 1 ? 's' : ''} 
+                            for &quot;{searchMeta.query}&quot; in {searchMeta.processingTime}ms
+                        </p>
+                        <p className="search-scope">
+                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''}
+                            {searchMeta.totalImagesSearched === 0 && " (No images found in collection - try uploading some images first)"}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="search-results">
                 {results.length > 0 ? (
                     <ul>
@@ -57,7 +85,21 @@ const NaturalLanguageSearch = () => {
                         ))}
                     </ul>
                 ) : (
-                    !isLoading && <p>No results found.</p>
+                    !isLoading && searchMeta && (
+                        <div className="no-results">
+                            {searchMeta.totalImagesSearched > 0 ? (
+                                <>
+                                    <p>🔍 No images found matching your search.</p>
+                                    <p>Try different keywords or check your search terms.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p>📁 No images available to search.</p>
+                                    <p>Upload some images first to enable searching.</p>
+                                </>
+                            )}
+                        </div>
+                    )
                 )}
             </div>
         </div>

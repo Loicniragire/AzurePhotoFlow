@@ -82,9 +82,10 @@ const ImageSearchNew = () => {
                 appliedFilters: searchOptions
             });
 
-            // If no results, provide helpful feedback
-            if (!response.results || response.results.length === 0) {
-                setError('No images found for your search. Try uploading some images first or use different search terms.');
+            // Only set error if there are truly no images in the collection
+            // Let the UI handle "no results" display without setting error state
+            if (response.totalImagesSearched === 0) {
+                setError('No images found in collection. Try uploading some images first.');
             }
         } catch (err) {
             console.error('Search error:', err);
@@ -246,7 +247,7 @@ const ImageSearchNew = () => {
             )}
 
             {/* Search metadata */}
-            {searchMeta && !error && (
+            {searchMeta && (
                 <div className="search-meta">
                     <div className="search-stats">
                         <p>
@@ -309,10 +310,19 @@ const ImageSearchNew = () => {
                         ))}
                     </div>
                 ) : (
-                    hasSearched && !isLoading && !error && (
+                    hasSearched && !isLoading && (
                         <div className="no-results">
-                            <p>🔍 No images found matching your search.</p>
-                            <p>Try different keywords or upload more images.</p>
+                            {searchMeta && searchMeta.totalImagesSearched > 0 ? (
+                                <>
+                                    <p>🔍 No images found matching your search.</p>
+                                    <p>Try different keywords, adjust your similarity threshold, or check your filters.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p>📁 No images available to search.</p>
+                                    <p>Upload some images first to enable searching.</p>
+                                </>
+                            )}
                         </div>
                     )
                 )}
