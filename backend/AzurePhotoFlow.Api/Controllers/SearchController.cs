@@ -96,6 +96,9 @@ public class SearchController : ControllerBase
                 filters["year"] = year;
             }
 
+            // Get total count of images being searched
+            var totalImagesSearched = await _vectorStore.GetTotalCountAsync(filters);
+
             // Perform vector similarity search
             _logger.LogDebug("Performing vector search with {Dimensions} dimensional query vector", queryEmbedding.Length);
             var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, limit, threshold, filters);
@@ -106,6 +109,7 @@ public class SearchController : ControllerBase
             // Populate response
             response.Results = searchResults;
             response.TotalResults = searchResults.Count;
+            response.TotalImagesSearched = totalImagesSearched;
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
             response.Success = true;
 

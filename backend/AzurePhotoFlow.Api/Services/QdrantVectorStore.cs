@@ -129,6 +129,32 @@ public class QdrantVectorStore : IVectorStore
         }
     }
 
+    public async Task<long> GetTotalCountAsync(Dictionary<string, object>? filter = null)
+    {
+        try
+        {
+            _logger.LogInformation("QdrantVectorStore: Getting total count for collection '{Collection}'", _collection);
+            
+            var count = await _client.GetCountAsync(_collection, filter);
+            
+            _logger.LogInformation("QdrantVectorStore: Collection '{Collection}' has {Count} total images", _collection, count);
+            return count;
+        }
+        catch (Exception ex)
+        {
+            // Check if the error is due to collection not existing
+            if (ex.Message.Contains("doesn't exist") || ex.Message.Contains("Not found"))
+            {
+                _logger.LogWarning("QdrantVectorStore: Collection '{Collection}' not found. This usually means no images have been uploaded and processed yet.", _collection);
+                return 0; // Return 0 instead of throwing
+            }
+            
+            _logger.LogError(ex, "QdrantVectorStore: Failed to get total count for collection '{Collection}'. Error: {ErrorMessage}", 
+                _collection, ex.Message);
+            throw;
+        }
+    }
+
     private static string GenerateUuidFromString(string input)
     {
         using var md5 = MD5.Create();

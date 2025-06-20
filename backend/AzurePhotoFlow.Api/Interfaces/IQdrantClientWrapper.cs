@@ -24,6 +24,14 @@ public interface IQdrantClientWrapper
     /// <param name="pointId">Point ID to retrieve</param>
     /// <returns>Point data with vector and payload if found</returns>
     Task<PointData?> GetPointAsync(string collection, string pointId);
+    
+    /// <summary>
+    /// Get the total count of points in the collection.
+    /// </summary>
+    /// <param name="collection">Collection name</param>
+    /// <param name="filter">Optional metadata filter</param>
+    /// <returns>Total count of points matching the filter</returns>
+    Task<long> GetCountAsync(string collection, Dictionary<string, object>? filter = null);
 }
 
 /// <summary>

@@ -288,6 +288,57 @@ public class QdrantClientWrapper : IQdrantClientWrapper
         }
     }
 
+    public async Task<long> GetCountAsync(string collection, Dictionary<string, object>? filter = null)
+    {
+        try
+        {
+            _logger.LogInformation("QdrantClientWrapper: Getting count for collection '{Collection}'", collection);
+
+            var countRequest = new
+            {
+                filter = filter != null && filter.Any() ? CreateFilter(filter) : null
+            };
+
+            var json = JsonSerializer.Serialize(countRequest, new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            });
+
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{_baseUrl}/collections/{collection}/points/count", content);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("QdrantClientWrapper: Collection '{Collection}' not found", collection);
+                return 0;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("QdrantClientWrapper: Failed to get count. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                throw new Exception($"Get count failed: {response.StatusCode} - {errorContent}");
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var countResponse = JsonSerializer.Deserialize<CountResponseWrapper>(responseContent, new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            });
+
+            var count = countResponse?.Result?.Count ?? 0;
+            _logger.LogInformation("QdrantClientWrapper: Collection '{Collection}' has {Count} points", collection, count);
+
+            return count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QdrantClientWrapper: Error getting count for collection '{Collection}'", collection);
+            throw;
+        }
+    }
+
     // Helper classes for point retrieval deserialization
     private class PointResponseWrapper
     {
@@ -299,5 +350,16 @@ public class QdrantClientWrapper : IQdrantClientWrapper
         public string Id { get; set; } = string.Empty;
         public float[]? Vector { get; set; }
         public Dictionary<string, object>? Payload { get; set; }
+    }
+
+    // Helper classes for count response deserialization
+    private class CountResponseWrapper
+    {
+        public CountResponseData? Result { get; set; }
+    }
+
+    private class CountResponseData
+    {
+        public long Count { get; set; }
     }
 }

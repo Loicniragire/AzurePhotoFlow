@@ -76,6 +76,7 @@ const ImageSearchNew = () => {
             setSearchResults(response.results || []);
             setSearchMeta({
                 totalResults: response.totalResults || 0,
+                totalImagesSearched: response.totalImagesSearched || 0,
                 processingTime: response.processingTimeMs || 0,
                 query: response.query || searchQuery,
                 appliedFilters: searchOptions
@@ -119,7 +120,7 @@ const ImageSearchNew = () => {
         <div className="image-search">
             <h2>AI-Powered Image Search</h2>
             <p className="search-description">
-                Search your images using natural language. Try: "dogs playing", "sunset photos", "people at beach"
+                Search your images using natural language. Try: &quot;dogs playing&quot;, &quot;sunset photos&quot;, &quot;people at beach&quot;
             </p>
 
             {/* Search Filters */}
@@ -250,7 +251,11 @@ const ImageSearchNew = () => {
                     <div className="search-stats">
                         <p>
                             Found {searchMeta.totalResults} result{searchMeta.totalResults !== 1 ? 's' : ''} 
-                            for "{searchMeta.query}" in {searchMeta.processingTime}ms
+                            for &quot;{searchMeta.query}&quot; in {searchMeta.processingTime}ms
+                        </p>
+                        <p className="search-scope">
+                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''}
+                            {searchMeta.totalImagesSearched === 0 && " (No images found in collection - try uploading some images first)"}
                         </p>
                         {searchMeta.appliedFilters && Object.keys(searchMeta.appliedFilters).length > 0 && (
                             <div className="applied-filters">

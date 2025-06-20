@@ -23,4 +23,11 @@ public interface IVectorStore
     /// <param name="objectKey">The object key to retrieve the embedding for</param>
     /// <returns>The embedding vector if found, null otherwise</returns>
     Task<float[]?> GetEmbeddingAsync(string objectKey);
+    
+    /// <summary>
+    /// Get the total number of images in the vector store.
+    /// </summary>
+    /// <param name="filter">Optional metadata filter conditions</param>
+    /// <returns>The total count of images matching the filter</returns>
+    Task<long> GetTotalCountAsync(Dictionary<string, object>? filter = null);
 }
