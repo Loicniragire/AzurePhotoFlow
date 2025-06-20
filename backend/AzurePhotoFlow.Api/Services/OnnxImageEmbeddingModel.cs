@@ -56,15 +56,15 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 
     private float[] CreateDeterministicEmbedding(string text)
     {
-        // Create a 512-dimensional embedding based on text hash
-        var embedding = new float[512];
+        // Create embedding with same dimensions as vision model output (38400)
+        var embedding = new float[38400];
         
         // Use text content to generate deterministic values
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(text.ToLowerInvariant().Trim()));
         
         // Convert hash bytes to float values
-        for (int i = 0; i < 512; i++)
+        for (int i = 0; i < 38400; i++)
         {
             var byteIndex = i % hash.Length;
             var wordIndex = (i / hash.Length) % text.Length;
@@ -82,15 +82,19 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 
     private void AddSemanticSimilarity(string text, float[] embedding)
     {
-        // Simple semantic grouping for common photo-related terms
+        // Enhanced semantic grouping for common photo-related terms
         var semanticGroups = new Dictionary<string[], float[]>
         {
-            { new[] { "dog", "dogs", "puppy", "puppies", "pet", "pets" }, new float[] { 0.8f, 0.2f, 0.5f, 0.9f } },
-            { new[] { "cat", "cats", "kitten", "kittens", "feline" }, new float[] { 0.7f, 0.3f, 0.6f, 0.8f } },
-            { new[] { "tree", "trees", "forest", "woods", "nature" }, new float[] { 0.1f, 0.9f, 0.2f, 0.7f } },
-            { new[] { "water", "ocean", "sea", "lake", "river", "beach" }, new float[] { 0.2f, 0.1f, 0.8f, 0.6f } },
-            { new[] { "car", "cars", "vehicle", "automobile", "truck" }, new float[] { 0.9f, 0.1f, 0.3f, 0.4f } },
-            { new[] { "person", "people", "human", "man", "woman", "child" }, new float[] { 0.5f, 0.7f, 0.9f, 0.3f } }
+            { new[] { "dog", "dogs", "puppy", "puppies", "pet", "pets", "canine" }, new float[] { 0.8f, 0.2f, 0.5f, 0.9f, 0.7f, 0.3f, 0.6f, 0.4f } },
+            { new[] { "cat", "cats", "kitten", "kittens", "feline" }, new float[] { 0.7f, 0.3f, 0.6f, 0.8f, 0.5f, 0.9f, 0.2f, 0.4f } },
+            { new[] { "tree", "trees", "forest", "woods", "nature", "plant", "leaf", "leaves" }, new float[] { 0.1f, 0.9f, 0.2f, 0.7f, 0.6f, 0.4f, 0.8f, 0.3f } },
+            { new[] { "water", "ocean", "sea", "lake", "river", "beach", "wave", "waves" }, new float[] { 0.2f, 0.1f, 0.8f, 0.6f, 0.9f, 0.3f, 0.7f, 0.5f } },
+            { new[] { "car", "cars", "vehicle", "automobile", "truck", "road", "street" }, new float[] { 0.9f, 0.1f, 0.3f, 0.4f, 0.8f, 0.6f, 0.2f, 0.7f } },
+            { new[] { "person", "people", "human", "man", "woman", "child", "face", "portrait" }, new float[] { 0.5f, 0.7f, 0.9f, 0.3f, 0.8f, 0.1f, 0.6f, 0.4f } },
+            { new[] { "sky", "cloud", "clouds", "blue", "sunset", "sunrise" }, new float[] { 0.3f, 0.8f, 0.1f, 0.9f, 0.5f, 0.7f, 0.2f, 0.6f } },
+            { new[] { "building", "house", "architecture", "city", "urban" }, new float[] { 0.6f, 0.2f, 0.9f, 0.4f, 0.7f, 0.1f, 0.8f, 0.3f } },
+            { new[] { "food", "meal", "eating", "restaurant", "kitchen" }, new float[] { 0.4f, 0.9f, 0.2f, 0.6f, 0.8f, 0.3f, 0.7f, 0.1f } },
+            { new[] { "flower", "flowers", "garden", "bloom", "petal" }, new float[] { 0.8f, 0.4f, 0.6f, 0.2f, 0.9f, 0.7f, 0.1f, 0.5f } }
         };
 
         var lowerText = text.ToLowerInvariant();
@@ -99,10 +103,26 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         {
             if (group.Key.Any(keyword => lowerText.Contains(keyword)))
             {
-                // Blend semantic features into specific positions of the embedding
-                for (int i = 0; i < group.Value.Length && i < 50; i++)
+                // Blend semantic features into multiple positions across the embedding
+                // Use more positions to create stronger semantic signals
+                for (int i = 0; i < group.Value.Length && i < 100; i++)
                 {
-                    embedding[i * 10] += group.Value[i] * 0.3f; // Add semantic signal
+                    var positions = new[] { i * 100, i * 200 + 50, i * 300 + 100, i * 400 + 150 };
+                    foreach (var pos in positions)
+                    {
+                        if (pos < embedding.Length)
+                        {
+                            embedding[pos] += group.Value[i] * 0.5f; // Stronger semantic signal
+                        }
+                    }
+                }
+                
+                // Add word-specific patterns based on common characteristics
+                var wordHash = text.GetHashCode();
+                for (int i = 0; i < 1000; i++)
+                {
+                    var pos = (Math.Abs(wordHash) + i * 7) % embedding.Length;
+                    embedding[pos] += (float)Math.Sin(wordHash * 0.01 + i) * 0.2f;
                 }
                 break;
             }
