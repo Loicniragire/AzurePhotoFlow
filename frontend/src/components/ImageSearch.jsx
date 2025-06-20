@@ -3,6 +3,12 @@ import searchService from '../services/searchService';
 import apiClient from '../services/apiClient';
 import '../styles/ImageSearch.css';
 
+export const extractFilterOptions = (projects) => {
+    const uniqueProjects = [...new Set(projects.map(p => p.projectName).filter(Boolean))];
+    const uniqueYears = [...new Set(projects.map(p => new Date(p.timestamp).getFullYear()).filter(Boolean))];
+    return { uniqueProjects, uniqueYears };
+};
+
 const ImageSearchNew = () => {
     console.log('ImageSearchNew component loaded - VERSION WITHOUT SystemStatus');
     const [searchQuery, setSearchQuery] = useState('');
@@ -32,11 +38,9 @@ const ImageSearchNew = () => {
             try {
                 const response = await apiClient.get('/api/image/projects');
                 const projects = response.data || [];
-                
-                // Extract unique project names and years
-                const uniqueProjects = [...new Set(projects.map(p => p.Name).filter(Boolean))];
-                const uniqueYears = [...new Set(projects.map(p => new Date(p.Datestamp).getFullYear()).filter(Boolean))];
-                
+
+                const { uniqueProjects, uniqueYears } = extractFilterOptions(projects);
+
                 setAvailableProjects(uniqueProjects);
                 setAvailableYears(uniqueYears.sort((a, b) => b - a)); // Sort years descending
             } catch (err) {
