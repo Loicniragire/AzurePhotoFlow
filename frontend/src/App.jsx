@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -176,6 +176,7 @@ const App = () => {
                   <Route path="/" element={<Home />} />
                   <Route path="/upload" element={<ImageUpload />} />
                   <Route path="/search" element={<ImageSearchNew />} />
+				  <Route path="/Search" element={<Navigate to="/search" replace />} />
                   <Route path="/naturallanguage" element={<NaturalLanguageSearch />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/facerecognition" element={<FaceRecognition />} />
