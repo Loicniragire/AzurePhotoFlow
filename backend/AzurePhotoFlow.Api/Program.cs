@@ -38,7 +38,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.WriteIndented = true;
     })
     .ConfigureApiBehaviorOptions(options =>
@@ -54,9 +54,9 @@ builder.Services.AddControllers()
 
             return new BadRequestObjectResult(new
             {
-                Status = StatusCodes.Status400BadRequest,
-                Message = "Validation errors occurred",
-                Errors = errors
+                status = StatusCodes.Status400BadRequest,
+                message = "Validation errors occurred",
+                errors
             });
         };
     });

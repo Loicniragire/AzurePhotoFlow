@@ -61,8 +61,8 @@ public class ImageController : ControllerBase
 
             return Ok(new
             {
-                Message = "Directory uploaded and files extracted successfully.",
-                Files = result
+                message = "Directory uploaded and files extracted successfully.",
+                files = result
             });
         }
         catch (Exception ex)
@@ -112,8 +112,8 @@ public class ImageController : ControllerBase
 
             return Ok(new
             {
-                Message = "Processed directory uploaded and files extracted successfully.",
-                Files = result
+                message = "Processed directory uploaded and files extracted successfully.",
+                files = result
             });
         }
         catch (InvalidOperationException ex)
@@ -121,7 +121,7 @@ public class ImageController : ControllerBase
             // Handle specific exception for missing raw files
             return BadRequest(new
             {
-                Message = ex.Message
+                message = ex.Message
             });
         }
         catch (Exception ex)

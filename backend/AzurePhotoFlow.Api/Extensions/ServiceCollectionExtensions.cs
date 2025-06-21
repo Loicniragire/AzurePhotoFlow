@@ -34,6 +34,13 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddVectorStore(this IServiceCollection services)
     {
         services.AddHttpClient<IQdrantClientWrapper, QdrantClientWrapper>();
+        services.AddSingleton(provider =>
+        {
+            var host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
+            var portEnv = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6333";
+            var port = int.TryParse(portEnv, out var p) ? p : 6333;
+            return new QdrantClient(host, port);
+        });
         services.AddSingleton<IVectorStore, QdrantVectorStore>();
 
         return services;
