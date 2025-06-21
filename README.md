@@ -9,9 +9,10 @@ AzurePhotoFlow is a cloud-native application designed to help users manage, anal
 - **AI-Based Photo Tagging and Classification:** Automated image analysis to generate descriptive tags and categories.
 - **Face Recognition:** Identify and tag individuals in photos.
 - **Optical Character Recognition (OCR):** Extract text from images.
-- **Semantic Search (Natural Language Search):** Search photos using natural language queries.
+- **Semantic Search (Natural Language Search):** Search photos using natural language queries powered by real CLIP text encoders.
 - **Metadata-based Search:** Search photos based on metadata like filename, date, and tags.
-- **Vector Embeddings:** Embeddings are computed during upload and stored directly in Qdrant for similarity search.
+- **Vector Embeddings:** Vision and text embeddings are computed during upload and stored directly in Qdrant for similarity search.
+- **Advanced AI Matching:** Text-to-image semantic similarity using shared CLIP embedding space for accurate results.
 
 ## Architecture
 AzurePhotoFlow utilizes a modern cloud-native architecture with open-source services for cost efficiency:
@@ -20,7 +21,7 @@ AzurePhotoFlow utilizes a modern cloud-native architecture with open-source serv
 - **Core Services:**
     - **MinIO:** S3-compatible object storage for photo uploads and file management
     - **Qdrant:** Vector database for embeddings storage and similarity search
-    - **CLIP Model:** OpenAI CLIP vision transformer running on ONNX Runtime for semantic search
+    - **CLIP Models:** OpenAI CLIP vision and text transformers running on ONNX Runtime for semantic search
     - **Google OAuth:** User authentication and authorization
     - **Docker/Kubernetes:** Container orchestration and deployment
     - **Nginx:** Reverse proxy and load balancing
@@ -38,21 +39,27 @@ AzurePhotoFlow utilizes a modern cloud-native architecture with open-source serv
 - Kubernetes (optional, for production deployment)
 - Terraform (optional, for infrastructure management)
 
-### Exporting the CLIP Model
-The backend expects an ONNX version of the CLIP vision model. Create the Python virtual environment first:
+### Exporting the CLIP Models
+The backend expects ONNX versions of both CLIP vision and text models. Create the Python virtual environment first:
 
 ```bash
 python scripts/setup_venv.py --path .venv
 source .venv/bin/activate  # on Windows use .venv\Scripts\activate
 ```
 
-Then run the helper script to export the model:
+Then run the helper script to export both models:
 
 ```bash
-python scripts/export_clip_onnx.py --output models/model.onnx
+python scripts/ai-ml/export_clip_onnx.py --output models
 ```
 
-This downloads the pre-trained model and saves the ONNX file under `models/`. The `docker-compose.yml` mounts this directory so the backend container can access the model at `/models/model.onnx`.
+This downloads the pre-trained CLIP model and exports both vision and text encoders:
+- `models/vision_model.onnx` - For generating image embeddings
+- `models/text_model.onnx` - For generating text embeddings  
+- `models/tokenizer/` - CLIP tokenizer files
+- `models/model.onnx` - Backward compatibility symlink to vision model
+
+The `docker-compose.yml` mounts this directory so the backend container can access both models.
 
 ### Backend Setup
 ```bash

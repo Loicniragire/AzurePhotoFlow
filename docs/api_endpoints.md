@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AzurePhotoFlow API is a .NET 8 Web API application designed for AI-powered photo management with semantic search capabilities. It provides endpoints for user authentication, image upload/management, AI embedding generation, and project organization.
+The AzurePhotoFlow API is a .NET 8 Web API application designed for AI-powered photo management with semantic search capabilities using CLIP vision and text models. It provides endpoints for user authentication, image upload/management, AI embedding generation, and project organization.
 
 **Base URL**: 
 - Development: `http://localhost:5000/api`
@@ -212,7 +212,7 @@ Retrieve project information with optional filtering.
 
 #### `POST /api/embedding/generate`
 
-Generate CLIP model embeddings for images in a ZIP file for semantic search.
+Generate CLIP vision model embeddings for images in a ZIP file for semantic search.
 
 **Authorization:** JWT Bearer token required
 
@@ -228,7 +228,7 @@ Generate CLIP model embeddings for images in a ZIP file for semantic search.
 
 **Process:**
 1. Extracts images from ZIP file
-2. Generates 512-dimensional embeddings using CLIP model
+2. Generates 38,400-dimensional embeddings using CLIP vision model
 3. Stores vectors in Qdrant database for similarity search
 4. Associates metadata with vectors
 
@@ -262,7 +262,7 @@ Check if the embedding service is running and available.
 
 #### `GET /api/search/semantic`
 
-Search for images using natural language queries powered by AI embeddings.
+Search for images using natural language queries powered by CLIP text embeddings matched against CLIP vision embeddings.
 
 **Authorization:** JWT Bearer token required
 
@@ -319,7 +319,7 @@ GET /api/search/semantic?query=dogs%20playing%20in%20water&limit=10&threshold=0.
 
 #### `POST /api/search/semantic`
 
-Advanced semantic search with detailed request model for complex queries.
+Advanced semantic search with detailed request model for complex queries using CLIP text-to-image matching.
 
 **Authorization:** JWT Bearer token required
 

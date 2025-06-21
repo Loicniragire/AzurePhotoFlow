@@ -39,8 +39,14 @@ dotnet test backend.tests.sln
 python scripts/ai-ml/setup_venv.py --path .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Export CLIP model to ONNX format (required for backend)
-python scripts/ai-ml/export_clip_onnx.py --output models/model.onnx
+# Export CLIP vision and text models to ONNX format (required for backend)
+python scripts/ai-ml/export_clip_onnx.py --output models
+
+# This creates:
+# - models/vision_model.onnx (for image embeddings)
+# - models/text_model.onnx (for text embeddings)  
+# - models/tokenizer/ (CLIP tokenizer files)
+# - models/model.onnx (backward compatibility symlink)
 ```
 
 ### Docker Development
@@ -59,7 +65,7 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 ### Core Components
 - **Frontend**: React 18 + Vite + Material-UI for responsive photo management interface
 - **Backend**: ASP.NET Core 8 Web API with clean architecture patterns
-- **AI/ML**: CLIP vision model for semantic search and image embeddings
+- **AI/ML**: CLIP vision and text models for semantic search and image embeddings
 - **Storage**: MinIO S3-compatible object storage for images and file management
 - **Database**: Qdrant vector database for embeddings and similarity search
 - **Authentication**: Google OAuth with JWT tokens
@@ -71,11 +77,12 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 - `AzurePhotoFlow.Shared` - Shared utilities across projects
 
 ### Key Features
-- **Semantic Search**: Natural language queries using CLIP embeddings
+- **Semantic Search**: Natural language queries using CLIP text and vision embeddings
 - **Face Recognition**: Automated face detection and tagging
 - **OCR**: Text extraction from images  
 - **Metadata Extraction**: EXIF data processing
 - **Bulk Upload**: ZIP file support with project organization
+- **Advanced AI**: Real CLIP text encoder for accurate text-to-image semantic matching
 
 ## Environment Configuration
 
@@ -84,7 +91,8 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 - `JWT_SECRET_KEY` - JWT token signing key
 - `QDRANT_URL` - Qdrant vector database connection (e.g., `localhost:6333`)
 - `QDRANT_COLLECTION` - Collection name for embeddings storage
-- `CLIP_MODEL_PATH` - Path to ONNX model file (`/models/model.onnx`)
+- `CLIP_MODEL_PATH` - Path to ONNX vision model file (`/models/model.onnx` or `/models/vision_model.onnx`)
+- `MAX_UPLOAD_SIZE_MB` - Maximum file upload size in megabytes (default: 100MB)
 - `MINIO_ENDPOINT` - MinIO server endpoint (e.g., `localhost:9000`)
 - `MINIO_ACCESS_KEY` - MinIO access key (default: `minioadmin`)
 - `MINIO_SECRET_KEY` - MinIO secret key (default: `minioadmin`)

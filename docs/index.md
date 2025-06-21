@@ -13,7 +13,7 @@ Welcome to AzurePhotoFlow - a cloud-native AI-powered photo management applicati
 
 ## Features
 
-- **🤖 AI-Powered Search**: Natural language queries using CLIP vision model
+- **🤖 AI-Powered Search**: Natural language queries using CLIP vision and text models
 - **🖼️ Smart Photo Management**: Automated tagging and organization
 - **👥 Face Recognition**: Person identification and tagging
 - **📝 OCR Support**: Text extraction from images
@@ -24,7 +24,7 @@ Welcome to AzurePhotoFlow - a cloud-native AI-powered photo management applicati
 
 - **Frontend**: React 18 + Vite + Material-UI
 - **Backend**: ASP.NET Core 8 with clean architecture
-- **AI/ML**: CLIP model on ONNX Runtime for semantic search
+- **AI/ML**: CLIP vision and text models on ONNX Runtime for semantic search
 - **Storage**: MinIO for objects, Qdrant for vectors
 - **Deployment**: Kubernetes with MicroK8s
 - **Authentication**: Google OAuth with JWT

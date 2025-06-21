@@ -9,8 +9,8 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application built w
 ```
 +-------------------+    +-------------------+    +-------------------+
 |   Frontend        |    |   Backend API     |    |   AI/ML Engine    |
-|   React + Vite    |--->|   ASP.NET Core    |--->|   CLIP + ONNX     |
-|   Material-UI     |    |   Clean Arch      |    |   Runtime         |
+|   React + Vite    |--->|   ASP.NET Core    |--->|   CLIP Vision +   |
+|   Material-UI     |    |   Clean Arch      |    |   Text + ONNX     |
 +-------------------+    +-------------------+    +-------------------+
          |                       |                       |
          |                       v                       |
@@ -61,25 +61,26 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application built w
 - `FaceRecognitionController`: Face detection and person tagging
 
 **Services**:
-- `EmbeddingService`: CLIP model interface and vector generation
+- `EmbeddingService`: CLIP vision and text model interface for vector generation
 - `ImageUploadService`: File processing and storage management
 - `SearchService`: Query processing and result ranking
 - `VectorStore`: Qdrant database abstraction
 - `MetadataExtractorService`: EXIF data processing
 
 ### 3. AI/ML Engine
-**Technology**: OpenAI CLIP vision transformer on ONNX Runtime
+**Technology**: OpenAI CLIP vision and text transformers on ONNX Runtime
 
 **Model Details**:
-- Pre-trained CLIP vision model (`openai/clip-vit-base-patch32`)
-- 512-dimensional vector embeddings
+- Pre-trained CLIP vision model (`openai/clip-vit-base-patch32`) - 350MB ONNX
+- Pre-trained CLIP text model (`openai/clip-vit-base-patch32`) - 252MB ONNX
+- 38,400-dimensional vector embeddings (50 x 768)
 - Cross-platform inference with ONNX Runtime
 - Local processing for cost efficiency
 
 **Capabilities**:
-- Semantic image understanding
-- Natural language query processing
-- Image-text similarity scoring
+- Semantic image understanding using vision encoder
+- Natural language query processing using text encoder
+- Accurate text-to-image similarity scoring in shared embedding space
 - Face detection and recognition
 - OCR text extraction
 

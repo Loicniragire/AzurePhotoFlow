@@ -51,9 +51,10 @@ MINIO_SECRET_KEY=minioadmin
 QDRANT_URL=localhost:6333
 QDRANT_COLLECTION=test
 
-# AI Model
+# AI Models
 CLIP_MODEL_PATH=/models/model.onnx
 ENABLE_EMBEDDINGS=true
+MAX_UPLOAD_SIZE_MB=1000
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:80
@@ -61,7 +62,7 @@ ALLOWED_ORIGINS=http://localhost:80
 
 ### 3. AI Model Setup
 
-The backend requires an ONNX version of the CLIP vision model. Set up the Python environment and export the model:
+The backend requires ONNX versions of both CLIP vision and text models. Set up the Python environment and export the models:
 
 ```bash
 # Create Python virtual environment
@@ -71,11 +72,17 @@ python scripts/ai-ml/setup_venv.py --path .venv
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate   # Windows
 
-# Export CLIP model to ONNX format
-python scripts/ai-ml/export_clip_onnx.py --output models/model.onnx
+# Export CLIP vision and text models to ONNX format
+python scripts/ai-ml/export_clip_onnx.py --output models
 ```
 
-This downloads the pre-trained CLIP model and converts it to ONNX format for cross-platform compatibility.
+This downloads the pre-trained CLIP model and converts both vision and text encoders to ONNX format:
+- `models/vision_model.onnx` - For generating image embeddings (350MB)
+- `models/text_model.onnx` - For generating text embeddings (252MB)
+- `models/tokenizer/` - CLIP tokenizer files for text processing
+- `models/model.onnx` - Backward compatibility symlink to vision model
+
+Both models are required for accurate semantic search functionality.
 
 ### 4. Start Development Environment
 
