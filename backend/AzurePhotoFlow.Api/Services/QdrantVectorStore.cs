@@ -34,12 +34,9 @@ public class QdrantVectorStore : IVectorStore
                 _logger.LogDebug("QdrantVectorStore: Processing embedding for ObjectKey: {ObjectKey}, Vector null: {VectorNull}, Vector length: {VectorLength}", 
                     e.ObjectKey, e.Vector == null, e.Vector?.Length ?? 0);
                 
-                // Generate a deterministic UUID from the ObjectKey to maintain consistency
-                var uuid = GenerateUuidFromString(e.ObjectKey);
-                
                 var point = new PointStruct
                 {
-                    Id = new PointId { Uuid = uuid },
+                    Id = new PointId { Uuid = e.ObjectKey },
                     Vectors = e.Vector
                 };
                 point.Payload.Add("path", new QdrantValue { StringValue = e.ObjectKey });
@@ -106,15 +103,12 @@ public class QdrantVectorStore : IVectorStore
             _logger.LogInformation("QdrantVectorStore: Retrieving embedding for ObjectKey: {ObjectKey} from collection '{Collection}'", 
                 objectKey, _collection);
 
-            // Generate the same UUID that was used during upsert
-            var uuid = GenerateUuidFromString(objectKey);
-            
             // Use the Qdrant client to retrieve the specific point by ID
-            var pointData = await _client.GetPointAsync(_collection, uuid);
+            var pointData = await _client.GetPointAsync(_collection, objectKey);
             
             if (pointData == null)
             {
-                _logger.LogWarning("QdrantVectorStore: No embedding found for ObjectKey: {ObjectKey} (UUID: {UUID})", objectKey, uuid);
+                _logger.LogWarning("QdrantVectorStore: No embedding found for ObjectKey: {ObjectKey}", objectKey);
                 return null;
             }
 
@@ -160,16 +154,4 @@ public class QdrantVectorStore : IVectorStore
         return await Task.FromResult(_collection);
     }
 
-    private static string GenerateUuidFromString(string input)
-    {
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
-        
-        // Convert MD5 hash to UUID format (version 3)
-        hash[6] = (byte)((hash[6] & 0x0F) | 0x30); // Version 3
-        hash[8] = (byte)((hash[8] & 0x3F) | 0x80); // Variant bits
-        
-        var uuid = new Guid(hash);
-        return uuid.ToString();
-    }
 }
