@@ -155,6 +155,11 @@ public class QdrantVectorStore : IVectorStore
         }
     }
 
+    public async Task<string> GetCollectionNameAsync()
+    {
+        return await Task.FromResult(_collection);
+    }
+
     private static string GenerateUuidFromString(string input)
     {
         using var md5 = MD5.Create();

@@ -24,6 +24,7 @@ const NaturalLanguageSearch = () => {
             setSearchMeta({
                 totalResults: response.totalResults || 0,
                 totalImagesSearched: response.totalImagesSearched || 0,
+                collectionName: response.collectionName || 'unknown',
                 processingTime: response.processingTimeMs || 0,
                 query: response.query || query
             });
@@ -63,7 +64,8 @@ const NaturalLanguageSearch = () => {
                             for &quot;{searchMeta.query}&quot; in {searchMeta.processingTime}ms
                         </p>
                         <p className="search-scope">
-                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''}
+                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''} 
+                            in collection "{searchMeta.collectionName}"
                             {searchMeta.totalImagesSearched === 0 && " (No images found in collection - try uploading some images first)"}
                         </p>
                     </div>

@@ -110,6 +110,7 @@ public class SearchController : ControllerBase
             response.Results = searchResults;
             response.TotalResults = searchResults.Count;
             response.TotalImagesSearched = totalImagesSearched;
+            response.CollectionName = await _vectorStore.GetCollectionNameAsync();
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
             response.Success = true;
 

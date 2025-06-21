@@ -30,4 +30,10 @@ public interface IVectorStore
     /// <param name="filter">Optional metadata filter conditions</param>
     /// <returns>The total count of images matching the filter</returns>
     Task<long> GetTotalCountAsync(Dictionary<string, object>? filter = null);
+    
+    /// <summary>
+    /// Get the name of the collection being used by the vector store.
+    /// </summary>
+    /// <returns>The collection name</returns>
+    Task<string> GetCollectionNameAsync();
 }

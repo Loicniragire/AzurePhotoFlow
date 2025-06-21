@@ -40,6 +40,7 @@ export const searchSemantic = async (query, options = {}) => {
             results: transformSearchResults(response.data.results || []),
             totalResults: response.data.totalResults || 0,
             totalImagesSearched: response.data.totalImagesSearched || 0,
+            collectionName: response.data.collectionName || 'unknown',
             processingTimeMs: response.data.processingTimeMs || 0,
             query: response.data.query
         };
