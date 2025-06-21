@@ -255,8 +255,7 @@ const ImageSearchNew = () => {
                             for &quot;{searchMeta.query}&quot; in {searchMeta.processingTime}ms
                         </p>
                         <p className="search-scope">
-                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''} 
-                            in collection "{searchMeta.collectionName}"
+                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''} in collection "{searchMeta.collectionName}"
                             {searchMeta.totalImagesSearched === 0 && " (No images found in collection - try uploading some images first)"}
                         </p>
                         {searchMeta.appliedFilters && Object.keys(searchMeta.appliedFilters).length > 0 && (
