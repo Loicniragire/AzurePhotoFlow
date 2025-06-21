@@ -124,14 +124,18 @@ builder.Logging.AddJsonConsole(options =>
 builder.Services.AddMinioClient();
 builder.Services.AddVectorStore();
 
-builder.Services.AddSingleton(_ =>
+builder.Services.AddSingleton<InferenceSession>(serviceProvider =>
 {
+    var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
     string modelPath = Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "clip_vision_traced.pt";
+    logger.LogInformation("[MODEL DEBUG] Loading CLIP vision model from: {ModelPath}", modelPath);
 
 	// InferenceSession: A core class provided by the ONNX Runtime that encapsulates a model and provides
 	// methods for executing inference. It loads an ONNX model and prepares it for efficient execution
 	// using available hardware.
-    return new InferenceSession(modelPath);
+    var session = new InferenceSession(modelPath);
+    logger.LogInformation("[MODEL DEBUG] CLIP vision model loaded successfully");
+    return session;
 });
 
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
@@ -155,27 +159,36 @@ builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
         
         if (File.Exists(textModelPath))
         {
-            Console.WriteLine($"Loading CLIP text model from: {textModelPath}");
+            var programLogger = sp.GetRequiredService<ILogger<Program>>();
+            programLogger.LogInformation("[MODEL DEBUG] Loading CLIP text model from: {TextModelPath}", textModelPath);
             textSession = new InferenceSession(textModelPath);
+            programLogger.LogInformation("[MODEL DEBUG] CLIP text model loaded successfully");
             
             // Load tokenizer if available (for future use)
             if (Directory.Exists(tokenizerPath))
             {
-                Console.WriteLine($"Tokenizer directory found: {tokenizerPath}");
+                programLogger.LogInformation("[MODEL DEBUG] Tokenizer directory found: {TokenizerPath}", tokenizerPath);
                 tokenizer = new Dictionary<string, object>();
+            }
+            else
+            {
+                programLogger.LogInformation("[MODEL DEBUG] Tokenizer directory not found at: {TokenizerPath}", tokenizerPath);
             }
         }
         else
         {
-            Console.WriteLine($"Text model not found at: {textModelPath}, using fallback text embeddings");
+            var programLogger = sp.GetRequiredService<ILogger<Program>>();
+            programLogger.LogInformation("[MODEL DEBUG] Text model not found at: {TextModelPath}, using fallback text embeddings", textModelPath);
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Failed to load text model: {ex.Message}, using fallback text embeddings");
+        var programLogger = sp.GetRequiredService<ILogger<Program>>();
+        programLogger.LogWarning("Failed to load text model: {ErrorMessage}, using fallback text embeddings", ex.Message);
     }
     
-    return new OnnxImageEmbeddingModel(visionSession, textSession, tokenizer);
+    var logger = sp.GetRequiredService<ILogger<OnnxImageEmbeddingModel>>();
+    return new OnnxImageEmbeddingModel(visionSession, textSession, tokenizer, logger);
 });
 builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 

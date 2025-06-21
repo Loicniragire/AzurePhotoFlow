@@ -15,19 +15,30 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
     private readonly InferenceSession _visionSession;
     private readonly InferenceSession? _textSession;
     private readonly Dictionary<string, object>? _tokenizer;
+    private readonly ILogger<OnnxImageEmbeddingModel> _logger;
     private const int InputSize = 224;
     private const int EmbeddingSize = 38400; // 50 * 768
     private const int MaxTokenLength = 77;
 
-    public OnnxImageEmbeddingModel(InferenceSession visionSession, InferenceSession? textSession = null, Dictionary<string, object>? tokenizer = null)
+    public OnnxImageEmbeddingModel(InferenceSession visionSession, InferenceSession? textSession = null, Dictionary<string, object>? tokenizer = null, ILogger<OnnxImageEmbeddingModel>? logger = null)
     {
         _visionSession = visionSession;
         _textSession = textSession;
         _tokenizer = tokenizer;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<OnnxImageEmbeddingModel>.Instance;
+        
+        // Debug log which models are available
+        _logger.LogInformation("[EMBEDDING DEBUG] OnnxImageEmbeddingModel initialized:");
+        _logger.LogInformation("[EMBEDDING DEBUG] - Vision model: Available (for image embeddings)");
+        _logger.LogInformation("[EMBEDDING DEBUG] - Text model: {TextModelStatus} (for text embeddings)", 
+            textSession != null ? "Available (CLIP text model)" : "NOT AVAILABLE (will use fallback)");
+        _logger.LogInformation("[EMBEDDING DEBUG] - Tokenizer: {TokenizerStatus}", 
+            tokenizer != null ? "Available" : "NOT AVAILABLE");
     }
 
     public async Task<float[]> GenerateImageEmbedding(Stream imageStream)
     {
+        _logger.LogInformation("[EMBEDDING DEBUG] Using vision model for image embedding generation");
         using var image = await SixLaborsImage.LoadAsync<Rgb24>(imageStream);
         image.Mutate(x => x.Resize(InputSize, InputSize));
 
@@ -79,16 +90,18 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         // If no text model available, fall back to placeholder
         if (_textSession == null || _tokenizer == null)
         {
+            _logger.LogInformation("[EMBEDDING DEBUG] No text model available - using fallback hash-based text embedding for: '{Text}'", text);
             return GenerateTextEmbeddingFromString(text);
         }
 
         try
         {
+            _logger.LogInformation("[EMBEDDING DEBUG] Using CLIP text model for text embedding generation: '{Text}'", text);
             return GenerateRealTextEmbedding(text);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to generate real text embedding: {ex.Message}");
+            _logger.LogWarning("[EMBEDDING DEBUG] CLIP text model failed: {ErrorMessage} - falling back to hash-based embedding for: '{Text}'", ex.Message, text);
             // Fall back to placeholder on error
             return GenerateTextEmbeddingFromString(text);
         }
