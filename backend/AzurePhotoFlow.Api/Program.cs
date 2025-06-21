@@ -17,6 +17,7 @@ DotNetEnv.Env.Load();
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(80);
+    options.Limits.MaxRequestBodySize = UploadConfigHelper.GetMultipartBodyLengthLimit();
 });
 
 // Configure Services
@@ -96,8 +97,42 @@ builder.Services.AddSingleton<IQdrantClientWrapper, QdrantClientWrapper>();
 builder.Services.AddSingleton<IVectorStore, QdrantVectorStore>();
 builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
 {
-    var session = sp.GetRequiredService<InferenceSession>();
-    return new OnnxImageEmbeddingModel(session);
+    var visionSession = sp.GetRequiredService<InferenceSession>();
+    
+    // Try to load text model if available
+    InferenceSession textSession = null;
+    Dictionary<string, object> tokenizer = null;
+    
+    try
+    {
+        var clipModelPath = Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "/models/model.onnx";
+        var modelsDir = Path.GetDirectoryName(clipModelPath);
+        var textModelPath = Path.Combine(modelsDir, "text_model.onnx");
+        var tokenizerPath = Path.Combine(modelsDir, "tokenizer");
+        
+        if (File.Exists(textModelPath))
+        {
+            Console.WriteLine($"Loading CLIP text model from: {textModelPath}");
+            textSession = new InferenceSession(textModelPath);
+            
+            // Load tokenizer if available (for future use)
+            if (Directory.Exists(tokenizerPath))
+            {
+                Console.WriteLine($"Tokenizer directory found: {tokenizerPath}");
+                tokenizer = new Dictionary<string, object>();
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Text model not found at: {textModelPath}, using fallback text embeddings");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Failed to load text model: {ex.Message}, using fallback text embeddings");
+    }
+    
+    return new OnnxImageEmbeddingModel(visionSession, textSession, tokenizer);
 });
 builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 

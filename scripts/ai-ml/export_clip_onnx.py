@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Utility to export a CLIP vision model to ONNX."""
+"""Utility to export CLIP vision and text models to ONNX."""
 
 import argparse
 import os
 import importlib.util
 
 import torch
-from transformers import CLIPModel
+from transformers import CLIPModel, CLIPTokenizer
 
 
 os.environ["HF_HOME"] = "./.hf_cache"
 
 
-def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-patch32"):
-    """Export the vision part of a CLIP model to ONNX."""
+def export_clip_model(output_dir: str, model_name: str = "openai/clip-vit-base-patch32"):
+    """Export both vision and text parts of a CLIP model to ONNX."""
     if importlib.util.find_spec("onnx") is None:
         raise RuntimeError(
             "onnx package is required to export the model. Install it via 'pip install onnx'."
@@ -29,6 +29,9 @@ def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-
     )
     model.eval()
 
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Export Vision Model
     class VisionWrapper(torch.nn.Module):
         def __init__(self, vision_model):
             super().__init__()
@@ -37,28 +40,76 @@ def export_clip_model(output_path: str, model_name: str = "openai/clip-vit-base-
         def forward(self, pixel_values):
             return self.vision_model(pixel_values).last_hidden_state
 
-    wrapper = VisionWrapper(model.vision_model)
-    dummy_input = torch.zeros((1, 3, 224, 224), dtype=torch.float32)
+    vision_wrapper = VisionWrapper(model.vision_model)
+    vision_dummy_input = torch.zeros((1, 3, 224, 224), dtype=torch.float32)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    print("📤 Exporting to ONNX...")
+    vision_output_path = os.path.join(output_dir, "vision_model.onnx")
+    print("📤 Exporting vision model to ONNX...")
 
     torch.onnx.export(
-        wrapper,
-        dummy_input,
-        output_path,
+        vision_wrapper,
+        vision_dummy_input,
+        vision_output_path,
         input_names=["input"],
         output_names=["output"],
         dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
         opset_version=14,
     )
 
-    print(f"Model exported to {output_path}")
+    print(f"Vision model exported to {vision_output_path}")
+
+    # Export Text Model
+    class TextWrapper(torch.nn.Module):
+        def __init__(self, text_model):
+            super().__init__()
+            self.text_model = text_model
+
+        def forward(self, input_ids, attention_mask):
+            return self.text_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+
+    text_wrapper = TextWrapper(model.text_model)
+    
+    # Create dummy text inputs (max length 77 for CLIP)
+    text_dummy_input_ids = torch.zeros((1, 77), dtype=torch.long)
+    text_dummy_attention_mask = torch.ones((1, 77), dtype=torch.long)
+
+    text_output_path = os.path.join(output_dir, "text_model.onnx")
+    print("📤 Exporting text model to ONNX...")
+
+    torch.onnx.export(
+        text_wrapper,
+        (text_dummy_input_ids, text_dummy_attention_mask),
+        text_output_path,
+        input_names=["input_ids", "attention_mask"],
+        output_names=["output"],
+        dynamic_axes={
+            "input_ids": {0: "batch", 1: "sequence"}, 
+            "attention_mask": {0: "batch", 1: "sequence"},
+            "output": {0: "batch", 1: "sequence"}
+        },
+        opset_version=14,
+    )
+
+    print(f"Text model exported to {text_output_path}")
+
+    # Save tokenizer for text processing
+    tokenizer = CLIPTokenizer.from_pretrained(model_name)
+    tokenizer_path = os.path.join(output_dir, "tokenizer")
+    tokenizer.save_pretrained(tokenizer_path)
+    print(f"Tokenizer saved to {tokenizer_path}")
+
+    # Create backward compatibility symlink for vision model
+    legacy_path = os.path.join(output_dir, "model.onnx")
+    if not os.path.exists(legacy_path):
+        os.symlink("vision_model.onnx", legacy_path)
+        print(f"Created backward compatibility symlink: {legacy_path}")
+
+    print("✅ CLIP model export complete!")
 
 def main():
     parser = argparse.ArgumentParser(description="Export CLIP model to ONNX")
     parser.add_argument("--model", default="openai/clip-vit-base-patch32", help="HuggingFace model name")
-    parser.add_argument("--output", default="models/model.onnx", help="Output path for ONNX model")
+    parser.add_argument("--output", default="models", help="Output directory for ONNX models")
     args = parser.parse_args()
     export_clip_model(args.output, args.model)
 
