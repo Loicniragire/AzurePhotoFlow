@@ -109,6 +109,8 @@ public class SearchController : ControllerBase
             _logger.LogDebug("Performing vector search with {Dimensions} dimensional query vector", queryEmbedding.Length);
             var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, limit, threshold, filters);
 
+			_logger.LogDebug("Vector search results size: {Count}", vectorResults.Count());
+
             // Convert vector search results to semantic search results
             var searchResults = vectorResults.Select(vr => CreateSemanticSearchResult(vr)).ToList();
 
@@ -328,6 +330,7 @@ public class SearchController : ControllerBase
             SimilarityScore = vectorResult.SimilarityScore,
             Metadata = vectorResult.Metadata
         };
+
 
         // Extract metadata fields
         if (vectorResult.Metadata.TryGetValue("path", out var pathObj) && pathObj is string path)
