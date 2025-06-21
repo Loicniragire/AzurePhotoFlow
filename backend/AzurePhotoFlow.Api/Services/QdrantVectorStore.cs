@@ -64,6 +64,21 @@ public class QdrantVectorStore : IVectorStore
             _logger.LogInformation("QdrantVectorStore: Starting vector search in collection '{Collection}' with limit {Limit} and threshold {Threshold}", 
                 _collection, limit, threshold);
 
+            // Log detailed query information
+            _logger.LogInformation("QdrantVectorStore: Query vector details - Length: {VectorLength}, First 5 values: [{Values}]",
+                queryVector.Length, 
+                string.Join(", ", queryVector.Take(5).Select(v => v.ToString("F4"))));
+            
+            if (filter != null && filter.Any())
+            {
+                _logger.LogInformation("QdrantVectorStore: Applied filters: {Filters}", 
+                    string.Join(", ", filter.Select(kvp => $"{kvp.Key}={kvp.Value}")));
+            }
+            else
+            {
+                _logger.LogInformation("QdrantVectorStore: No filters applied");
+            }
+
             _logger.LogDebug("QdrantVectorStore: Executing search request for collection '{Collection}'", _collection);
             var searchResponse = await _client.SearchAsync(_collection, queryVector, limit, threshold, filter);
             

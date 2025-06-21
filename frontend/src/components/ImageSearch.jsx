@@ -10,7 +10,6 @@ export const extractFilterOptions = (projects) => {
 };
 
 const ImageSearchNew = () => {
-    console.log('ImageSearchNew component loaded - VERSION WITHOUT SystemStatus');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);

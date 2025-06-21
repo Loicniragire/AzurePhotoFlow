@@ -143,6 +143,31 @@ public class QdrantClientWrapper : IQdrantClientWrapper
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
             });
 
+            // Log the exact Qdrant search request details
+            _logger.LogInformation("QdrantClientWrapper: Sending search request to Qdrant");
+            _logger.LogInformation("QdrantClientWrapper: Request URL: {Url}", $"{_baseUrl}/collections/{collection}/points/search");
+            _logger.LogInformation("QdrantClientWrapper: Vector length: {VectorLength}, First 5 values: [{Values}]", 
+                vector.Length, string.Join(", ", vector.Take(5).Select(v => v.ToString("F4"))));
+            
+            // Log the filter object if present
+            if (searchRequest.filter != null)
+            {
+                var filterJson = JsonSerializer.Serialize(searchRequest.filter, new JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true 
+                });
+                _logger.LogInformation("QdrantClientWrapper: Applied filter: {Filter}", filterJson);
+            }
+            else
+            {
+                _logger.LogInformation("QdrantClientWrapper: No filter applied");
+            }
+
+            // Log the complete request body (truncated if too long)
+            var truncatedJson = json.Length > 500 ? json.Substring(0, 500) + "..." : json;
+            _logger.LogInformation("QdrantClientWrapper: Request body: {RequestBody}", truncatedJson);
+
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync($"{_baseUrl}/collections/{collection}/points/search", content);
 
@@ -155,6 +180,11 @@ public class QdrantClientWrapper : IQdrantClientWrapper
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
+            
+            // Log response status and basic info
+            _logger.LogInformation("QdrantClientWrapper: Received response from Qdrant. Status: {StatusCode}, Content length: {ContentLength}", 
+                response.StatusCode, responseContent.Length);
+            
             var searchResponse = JsonSerializer.Deserialize<SearchResponseWrapper>(responseContent, new JsonSerializerOptions 
             { 
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
@@ -172,6 +202,22 @@ public class QdrantClientWrapper : IQdrantClientWrapper
 
             _logger.LogInformation("QdrantClientWrapper: Found {ResultCount} results for search in collection '{Collection}'", 
                 result.Points.Count, collection);
+
+            // Log detailed results info
+            if (result.Points.Any())
+            {
+                _logger.LogInformation("QdrantClientWrapper: Top result - ID: {TopId}, Score: {TopScore}", 
+                    result.Points.First().Id, result.Points.First().Score);
+                
+                // Log score distribution
+                var scores = result.Points.Select(p => p.Score).ToList();
+                _logger.LogInformation("QdrantClientWrapper: Score range - Min: {MinScore:F4}, Max: {MaxScore:F4}, Avg: {AvgScore:F4}", 
+                    scores.Min(), scores.Max(), scores.Average());
+            }
+            else
+            {
+                _logger.LogWarning("QdrantClientWrapper: No results found despite collection having data");
+            }
 
             return result;
         }

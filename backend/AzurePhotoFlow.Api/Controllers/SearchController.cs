@@ -82,8 +82,10 @@ public class SearchController : ControllerBase
             }
 
             // Generate embedding for the search query
-            _logger.LogDebug("Generating text embedding for query: {Query}", query);
+            _logger.LogInformation("SearchController: Generating text embedding for query: '{Query}'", query);
             var queryEmbedding = await _embeddingService.GenerateTextEmbeddingAsync(query);
+            _logger.LogInformation("SearchController: Generated text embedding - Length: {Length}, First 5 values: [{Values}]", 
+                queryEmbedding.Length, string.Join(", ", queryEmbedding.Take(5).Select(v => v.ToString("F4"))));
 
             // Build search filters
             var filters = new Dictionary<string, object>();
