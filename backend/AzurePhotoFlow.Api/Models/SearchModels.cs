@@ -146,3 +146,12 @@ public class VectorSearchResult
     public double SimilarityScore { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();
 }
+
+public class CountResponse
+{
+    public long Count { get; set; }
+    public string? CollectionName { get; set; }
+    public Dictionary<string, object>? Filters { get; set; }
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+}

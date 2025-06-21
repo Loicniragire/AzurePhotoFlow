@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Globalization;
 
+/// <summary>
+/// Image upload, management, and project organization endpoints.
+/// Handles ZIP archive processing, AI analysis, and file organization.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class ImageController : ControllerBase
@@ -26,13 +30,56 @@ public class ImageController : ControllerBase
     }
 
     /// <summary>
-    /// Uploads a directory containing image files as a zip file.
-    /// Path to the directory is constructed as: {timestamp}/{projectName}/{directoryName}/{fileName}
-    /// The directory is extracted and each image file is uploaded to the Azure Blob Storage.
+    /// Upload a ZIP archive containing images and automatically organize them with AI processing.
     /// </summary>
-    /// <param name="timeStamp">The timestamp to assign to this upload..</param>
-    /// <param name="projectName">The name of the project.</param>
-    /// <param name="directoryFile">The zip file containing the directory.</param>
+    /// <param name="timeStamp">Timestamp for organizing uploads (ISO 8601 format)</param>
+    /// <param name="projectName">Project name for categorizing the upload</param>
+    /// <param name="directoryFile">ZIP file containing images to upload</param>
+    /// <returns>Upload results with processing status and file information</returns>
+    /// <response code="200">Successfully uploaded and processed images</response>
+    /// <response code="400">Invalid request parameters or file format</response>
+    /// <response code="401">Unauthorized - requires authentication</response>
+    /// <response code="413">File too large</response>
+    /// <remarks>
+    /// This endpoint accepts a ZIP archive containing image files and processes them with AI features:
+    /// 
+    /// **Features:**
+    /// - Automatic image extraction from ZIP archives
+    /// - AI-powered image embeddings generation using CLIP model
+    /// - EXIF metadata extraction
+    /// - Face detection and recognition
+    /// - OCR (text extraction from images)
+    /// - Organized storage with hierarchical structure
+    /// 
+    /// **File Organization:**
+    /// Images are stored using the path structure: `{timestamp}/{projectName}/{directoryName}/{fileName}`
+    /// 
+    /// **Supported Formats:**
+    /// - ZIP archives (.zip)
+    /// - Image formats: JPEG, PNG, GIF, BMP, TIFF, WebP
+    /// 
+    /// **Processing:**
+    /// - Each image generates vector embeddings for semantic search
+    /// - Metadata is extracted and indexed for filtering
+    /// - Face recognition data is computed for people search
+    /// - OCR text is extracted for text-based search
+    /// 
+    /// **Example:**
+    /// 
+    ///     POST /api/image/raw
+    ///     Content-Type: multipart/form-data
+    ///     Authorization: Bearer {jwt_token}
+    ///     
+    ///     timeStamp: 2024-01-15T10:30:00.000Z
+    ///     projectName: "Wedding_Photos"
+    ///     directoryFile: [ZIP file containing images]
+    /// 
+    /// **Response includes:**
+    /// - Upload statistics (files processed, errors, processing time)
+    /// - Individual file processing results
+    /// - Generated metadata and AI analysis results
+    /// 
+    /// </remarks>
 	[Authorize(Roles = "FullAccess")]
     [HttpPost("raw")]
     public async Task<IActionResult> UploadDirectory(DateTime timeStamp, string projectName, IFormFile directoryFile)
@@ -72,16 +119,45 @@ public class ImageController : ControllerBase
     }
 
 	/// <summary>
-	/// Uploads a directory containing processed image files as a zip file.
-	/// Path to the directory is constructed as: {timestamp.year}/{timestamp}/{projectName}/{directoryName}/{fileName}
-	/// The directory is extracted and each image file is uploaded to the Azure Blob Storage.
+	/// Upload processed/edited images associated with an existing raw file collection.
 	/// </summary>
-	/// <param name="timeStamp">The timestamp to assign to this upload..</param>
-	/// <param name="projectName">The name of the project.</param>
-	/// <param name="rawfileDirectoryName">The name of the directory within this project for which to associate the
-	/// processed files. Suppose a project have 5 rolls of film named roll1, roll2,,roll5. This parameter states the
-	/// roll to associate these processed files.</param>
-	/// <param name="directoryFile">The zip file containing the directory.</param>
+	/// <param name="timeStamp">Timestamp matching the original raw file upload</param>
+	/// <param name="projectName">Project name matching the original raw file upload</param>
+	/// <param name="rawfileDirectoryName">Directory name of the associated raw files (e.g., "roll1", "roll2")</param>
+	/// <param name="directoryFile">ZIP file containing processed/edited images</param>
+	/// <returns>Upload results for processed image files</returns>
+	/// <response code="200">Successfully uploaded processed images</response>
+	/// <response code="400">Invalid request parameters or missing associated raw files</response>
+	/// <response code="401">Unauthorized - requires authentication</response>
+	/// <remarks>
+	/// This endpoint uploads processed or edited versions of previously uploaded raw images.
+	/// It maintains the relationship between raw and processed files through the directory structure.
+	/// 
+	/// **File Organization:**
+	/// Processed files are stored as: `{timestamp.year}/{timestamp}/{projectName}/Processed/{rawfileDirectoryName}/{fileName}`
+	/// 
+	/// **Use Cases:**
+	/// - Upload edited/retouched versions of photos
+	/// - Associate processed images with specific film rolls or sessions
+	/// - Maintain version control between raw and processed images
+	/// - Link final deliverables to original captures
+	/// 
+	/// **Example Workflow:**
+	/// 1. Upload raw files: `/api/image/raw` with projectName="Wedding" and directory="roll1"
+	/// 2. Process/edit the images externally
+	/// 3. Upload processed files: `/api/image/processed` with same projectName="Wedding" and rawfileDirectoryName="roll1"
+	/// 
+	/// **Requirements:**
+	/// - The referenced raw file directory must exist
+	/// - Timestamp should match the original raw file upload
+	/// - Project name must match the original raw file upload
+	/// 
+	/// **Processing:**
+	/// - AI embeddings are generated for processed images
+	/// - Metadata links to original raw files
+	/// - Separate indexing for processed vs raw versions
+	/// 
+	/// </remarks>
     [HttpPost("processed")]
     public async Task<IActionResult> UploadProcessedFiles(DateTime timeStamp, string projectName, string rawfileDirectoryName, IFormFile directoryFile)
     {
@@ -131,11 +207,42 @@ public class ImageController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes a project and all its associated files.
-    /// Deletes at the project level, which includes all directories and files within the project.
+    /// Delete an entire project and all its associated files, images, and metadata.
     /// </summary>
-    /// <param name="projectName">The name of the project to delete.</param>
-    /// <param name="timestamp">The timestamp of the project to delete.</param>
+    /// <param name="projectName">Name of the project to delete</param>
+    /// <param name="timestamp">Timestamp of the specific project instance to delete</param>
+    /// <returns>Confirmation of successful deletion</returns>
+    /// <response code="200">Project successfully deleted</response>
+    /// <response code="400">Invalid project name or timestamp</response>
+    /// <response code="401">Unauthorized - requires authentication</response>
+    /// <response code="404">Project not found</response>
+    /// <remarks>
+    /// **⚠️ WARNING: This operation is irreversible!**
+    /// 
+    /// This endpoint permanently deletes:
+    /// - All raw and processed image files
+    /// - All generated AI embeddings and metadata
+    /// - All face recognition data
+    /// - All OCR text data
+    /// - All project structure and organization
+    /// 
+    /// **Deletion Scope:**
+    /// - Removes the entire project directory: `{timestamp.year}/{timestamp}/{projectName}/`
+    /// - Deletes all subdirectories (RawFiles, Processed, etc.)
+    /// - Removes vector database entries for all images in the project
+    /// - Cleans up associated metadata and search indexes
+    /// 
+    /// **Use Cases:**
+    /// - Clean up test or temporary projects
+    /// - Remove projects that are no longer needed
+    /// - Comply with data retention policies
+    /// - Free up storage space
+    /// 
+    /// **Example:**
+    /// 
+    ///     DELETE /api/image/projects?projectName=Wedding_2024&timestamp=2024-01-15T10:30:00.000Z
+    /// 
+    /// </remarks>
     [HttpDelete("projects")]
     public async Task<IActionResult> DeleteProject(string projectName, DateTime timestamp)
     {
@@ -155,6 +262,63 @@ public class ImageController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Retrieve a list of projects with optional filtering and detailed information.
+    /// </summary>
+    /// <param name="year">Filter projects by year (e.g., "2024")</param>
+    /// <param name="projectName">Filter by specific project name</param>
+    /// <param name="timestamp">Filter by specific timestamp (yyyy-MM-dd format)</param>
+    /// <returns>List of projects with metadata and statistics</returns>
+    /// <response code="200">Successfully retrieved project list</response>
+    /// <response code="400">Invalid filter parameters</response>
+    /// <response code="401">Unauthorized - requires authentication</response>
+    /// <remarks>
+    /// This endpoint provides a comprehensive view of all projects in the system,
+    /// with optional filtering capabilities and detailed metadata for each project.
+    /// 
+    /// **Returned Information:**
+    /// - Project name and creation timestamp
+    /// - Total number of images (raw and processed)
+    /// - Storage statistics and file sizes
+    /// - Project directory structure
+    /// - Upload and last modified dates
+    /// - AI processing status
+    /// 
+    /// **Filtering Options:**
+    /// - **Year**: Filter by creation year (e.g., "2024")
+    /// - **Project Name**: Exact or partial match on project name
+    /// - **Timestamp**: Filter by specific upload date (yyyy-MM-dd)
+    /// 
+    /// **Use Cases:**
+    /// - Browse available projects for search
+    /// - Monitor storage usage by project
+    /// - Audit project creation and modification dates
+    /// - Find projects for management or deletion
+    /// - Generate reports on photo collection organization
+    /// 
+    /// **Examples:**
+    /// 
+    ///     GET /api/image/projects
+    ///     GET /api/image/projects?year=2024
+    ///     GET /api/image/projects?projectName=Wedding
+    ///     GET /api/image/projects?timestamp=2024-01-15
+    ///     GET /api/image/projects?year=2024&projectName=Wedding
+    /// 
+    /// **Response Format:**
+    /// 
+    ///     [
+    ///       {
+    ///         "name": "Wedding_2024",
+    ///         "timestamp": "2024-01-15T10:30:00Z",
+    ///         "totalImages": 150,
+    ///         "rawImages": 120,
+    ///         "processedImages": 30,
+    ///         "totalSizeBytes": 2500000000,
+    ///         "lastModified": "2024-01-16T09:15:00Z"
+    ///       }
+    ///     ]
+    /// 
+    /// </remarks>
     [HttpGet("projects")]
     [SwaggerResponse(StatusCodes.Status200OK, Type = typeof(List<ProjectInfo>))]
     public async Task<IActionResult> GetProjects([FromQuery] string year = null,

@@ -8,6 +8,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AzurePhotoFlow.Services;
 
+/// <summary>
+/// AI embedding generation using CLIP model for semantic image search.
+/// Processes images to create vector embeddings for similarity and text-based search.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class EmbeddingController : ControllerBase
@@ -21,6 +25,65 @@ public class EmbeddingController : ControllerBase
         _vectorStore = vectorStore;
     }
 
+    /// <summary>
+    /// Generate AI embeddings for images in a ZIP archive using CLIP model.
+    /// </summary>
+    /// <param name="request">Embedding generation request with ZIP file and metadata</param>
+    /// <returns>Processing results with embedding generation statistics</returns>
+    /// <response code="200">Successfully generated embeddings for all images</response>
+    /// <response code="400">Invalid ZIP file or request parameters</response>
+    /// <response code="401">Unauthorized - requires authentication</response>
+    /// <response code="500">Error during embedding generation</response>
+    /// <remarks>
+    /// This endpoint processes a ZIP archive of images and generates vector embeddings
+    /// using the CLIP (Contrastive Language-Image Pre-training) model for semantic search.
+    /// 
+    /// **Features:**
+    /// - CLIP-based vector embeddings (512-dimensional)
+    /// - Batch processing for efficiency
+    /// - Support for raw and processed image workflows
+    /// - Automatic storage in vector database (Qdrant)
+    /// - Metadata extraction and indexing
+    /// 
+    /// **Supported Image Formats:**
+    /// - JPEG (.jpg, .jpeg)
+    /// - PNG (.png)
+    /// - GIF (.gif)
+    /// - BMP (.bmp)
+    /// - TIFF (.tiff, .tif)
+    /// - WebP (.webp)
+    /// 
+    /// **Processing:**
+    /// 1. Extract images from ZIP archive
+    /// 2. Validate image formats and sizes
+    /// 3. Generate CLIP embeddings using ONNX runtime
+    /// 4. Store embeddings in vector database
+    /// 5. Index metadata for filtering and search
+    /// 
+    /// **Use Cases:**
+    /// - Enable semantic search on uploaded images
+    /// - Generate embeddings for new image collections
+    /// - Reprocess images with updated AI models
+    /// - Batch processing for large image sets
+    /// 
+    /// **Example Request:**
+    /// 
+    ///     POST /api/embedding/generate
+    ///     Content-Type: multipart/form-data
+    ///     
+    ///     zipFile: [ZIP file containing images]
+    ///     timestamp: 2024-01-15T10:30:00.000Z
+    ///     projectName: "Wedding_Photos"
+    ///     directoryName: "Ceremony"
+    ///     isRawFiles: true
+    /// 
+    /// **Response includes:**
+    /// - Number of images processed
+    /// - Embedding generation statistics
+    /// - Processing time and performance metrics
+    /// - Error details for any failed images
+    /// 
+    /// </remarks>
     [HttpPost("generate")]
     public async Task<IActionResult> Generate([FromForm] EmbeddingRequest request)
     {

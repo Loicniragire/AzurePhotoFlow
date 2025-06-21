@@ -58,6 +58,29 @@ docker compose up
 # Qdrant dashboard: http://localhost:6333/dashboard
 ```
 
+### API Testing and Swagger Authentication
+```bash
+# Generate JWT token for API testing
+bash scripts/generate-swagger-token.sh
+
+# The backend API is accessible at:
+# - http://localhost:5001 (direct backend access)
+# - OpenAPI spec: http://localhost:5001/swagger/v1/swagger.json
+
+# For API testing, use the generated JWT token in Authorization header:
+# Authorization: Bearer <token>
+
+# Example API calls:
+TOKEN="<generated-token>"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5001/api/search/get-count
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5001/api/auth/check
+```
+
+**Note**: The Swagger UI interface may not be accessible directly. For full API testing capabilities:
+1. Import the OpenAPI spec (`http://localhost:5001/swagger/v1/swagger.json`) into Postman
+2. Use the online Swagger Editor at https://editor.swagger.io/
+3. Use curl commands with the generated JWT token
+
 ## Architecture Overview
 
 AzurePhotoFlow is a cloud-native AI-powered photo management application with:

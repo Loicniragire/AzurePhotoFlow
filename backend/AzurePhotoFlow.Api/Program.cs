@@ -64,11 +64,29 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AzurePhotoFlow API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "AzurePhotoFlow API", 
+        Version = "v1",
+        Description = "AI-powered photo management API with semantic search, face recognition, and automated organization",
+        Contact = new OpenApiContact
+        {
+            Name = "AzurePhotoFlow",
+            Url = new Uri("https://github.com/loicniragire/AzurePhotoFlow")
+        }
+    });
     c.OperationFilter<SwaggerFileOperationFilter>();
     c.EnableAnnotations();
     c.MapType<IFormFile>(() => new OpenApiSchema { Type = "string", Format = "binary" });
     c.MapType<DateTime>(() => new OpenApiSchema { Type = "string", Format = "date-time" });
+    
+    // Include XML comments
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
     
     // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

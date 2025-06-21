@@ -6,6 +6,10 @@ using System.Diagnostics;
 
 namespace Api.Controllers;
 
+/// <summary>
+/// Advanced AI-powered search capabilities for image collections.
+/// Provides semantic search, visual similarity search, and complex multi-criteria queries.
+/// </summary>
 [ApiController]
 [Route("api/search")]
 [Authorize]
@@ -136,6 +140,60 @@ public class SearchController : ControllerBase
             response.ErrorMessage = "Internal server error occurred while processing search request";
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
             return StatusCode(500, response);
+        }
+    }
+
+    /// <summary>
+    /// Get the total number of images in the vector database.
+    /// </summary>
+    /// <param name="projectName">Optional project name filter</param>
+    /// <param name="year">Optional year filter</param>
+    /// <returns>Count of images matching the filters</returns>
+    [HttpGet("get-count")]
+    public async Task<ActionResult<CountResponse>> GetImageCount(
+        [FromQuery] string? projectName = null,
+        [FromQuery] string? year = null)
+    {
+        try
+        {
+            _logger.LogInformation("Get count request: Project={Project}, Year={Year}", projectName, year);
+
+            // Build filters
+            var filters = new Dictionary<string, object>();
+            if (!string.IsNullOrWhiteSpace(projectName))
+            {
+                filters["project_name"] = projectName;
+            }
+            if (!string.IsNullOrWhiteSpace(year))
+            {
+                filters["year"] = year;
+            }
+
+            // Get count from vector store
+            var count = await _vectorStore.GetTotalCountAsync(filters);
+            var collectionName = await _vectorStore.GetCollectionNameAsync();
+
+            var response = new CountResponse
+            {
+                Count = count,
+                CollectionName = collectionName,
+                Filters = filters,
+                Success = true
+            };
+
+            _logger.LogInformation("Count request completed: Found {Count} images in collection '{Collection}'", 
+                count, collectionName);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting image count");
+            return StatusCode(500, new CountResponse
+            {
+                Success = false,
+                ErrorMessage = "Internal server error occurred while getting image count"
+            });
         }
     }
 
