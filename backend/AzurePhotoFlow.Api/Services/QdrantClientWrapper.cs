@@ -338,11 +338,16 @@ public class QdrantClientWrapper : IQdrantClientWrapper
     {
         try
         {
-            _logger.LogInformation("QdrantClientWrapper: Getting count for collection '{Collection}'", collection);
+            _logger.LogInformation("QdrantClientWrapper: Getting count for collection '{Collection}' with filter: {FilterCount} items", 
+                collection, filter?.Count ?? 0);
+
+            var filterObj = filter != null && filter.Any() ? CreateFilter(filter) : null;
+            _logger.LogInformation("QdrantClientWrapper: Created filter object: {FilterObject}", 
+                filterObj != null ? JsonSerializer.Serialize(filterObj) : "null");
 
             var countRequest = new
             {
-                filter = filter != null && filter.Any() ? CreateFilter(filter) : null
+                filter = filterObj
             };
 
             var json = JsonSerializer.Serialize(countRequest, new JsonSerializerOptions 
@@ -350,8 +355,12 @@ public class QdrantClientWrapper : IQdrantClientWrapper
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
             });
 
+            var requestUrl = $"{_baseUrl}/collections/{collection}/points/count";
+            _logger.LogInformation("QdrantClientWrapper: Making count request to URL: {RequestUrl}", requestUrl);
+            _logger.LogInformation("QdrantClientWrapper: Request body: {RequestBody}", json);
+
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync($"{_baseUrl}/collections/{collection}/points/count", content);
+            var response = await _httpClient.PostAsync(requestUrl, content);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {

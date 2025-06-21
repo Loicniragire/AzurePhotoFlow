@@ -41,6 +41,26 @@ public class QdrantVectorStore : IVectorStore
                 };
                 point.Payload.Add("path", new QdrantValue { StringValue = e.ObjectKey });
                 point.Payload.Add("object_key", new QdrantValue { StringValue = e.ObjectKey });
+                
+                // Extract metadata from object key path
+                // Expected format: {year}/{timestamp}/{projectName}/{directoryName}/{fileName}
+                // Example: "2025-06-21/Search testing/RawFiles/Test/_A8A9030.jpeg"
+                var pathParts = e.ObjectKey.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (pathParts.Length >= 1)
+                {
+                    // Try to extract year from first part (YYYY-MM-DD format)
+                    var datePart = pathParts[0];
+                    if (datePart.Length >= 4 && DateTime.TryParseExact(datePart.Substring(0, 4), "yyyy", null, System.Globalization.DateTimeStyles.None, out _))
+                    {
+                        point.Payload.Add("year", new QdrantValue { StringValue = datePart.Substring(0, 4) });
+                    }
+                }
+                if (pathParts.Length >= 2)
+                {
+                    // Second part is usually project/timestamp - use as project_name for now
+                    var projectPart = pathParts[1];
+                    point.Payload.Add("project_name", new QdrantValue { StringValue = projectPart });
+                }
                 return point;
             });
 
