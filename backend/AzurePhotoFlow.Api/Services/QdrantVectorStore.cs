@@ -36,7 +36,7 @@ public class QdrantVectorStore : IVectorStore
                 
                 var point = new PointStruct
                 {
-                    Id = new PointId { Uuid = e.ObjectKey },
+                    Id = new PointId { Uuid = GenerateUuidFromObjectKey(e.ObjectKey) },
                     Vectors = e.Vector
                 };
                 point.Payload.Add("path", new QdrantValue { StringValue = e.ObjectKey });
@@ -104,7 +104,8 @@ public class QdrantVectorStore : IVectorStore
                 objectKey, _collection);
 
             // Use the Qdrant client to retrieve the specific point by ID
-            var pointData = await _client.GetPointAsync(_collection, objectKey);
+            var pointId = GenerateUuidFromObjectKey(objectKey);
+            var pointData = await _client.GetPointAsync(_collection, pointId);
             
             if (pointData == null)
             {
@@ -152,6 +153,23 @@ public class QdrantVectorStore : IVectorStore
     public async Task<string> GetCollectionNameAsync()
     {
         return await Task.FromResult(_collection);
+    }
+
+    private string GenerateUuidFromObjectKey(string objectKey)
+    {
+        // Generate a deterministic UUID based on the object key using SHA-256 hash
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(objectKey));
+        
+        // Use the first 16 bytes of the hash to create a UUID
+        var guidBytes = new byte[16];
+        Array.Copy(hash, guidBytes, 16);
+        
+        // Set version (4) and variant bits to make it a valid UUID v4
+        guidBytes[6] = (byte)((guidBytes[6] & 0x0F) | 0x40); // Version 4
+        guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80); // Variant bits
+        
+        return new Guid(guidBytes).ToString();
     }
 
 }
