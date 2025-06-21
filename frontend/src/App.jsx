@@ -19,7 +19,6 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import Home from "./components/Home";
 import ImageUpload from "./components/ImageUpload";
 import ImageSearchNew from "./components/ImageSearch";
-import NaturalLanguageSearch from "./components/NaturalLanguageSearch";
 import Dashboard from "./components/Dashboard";
 import FaceRecognition from "./components/FaceRecognition";
 import LoginPage from "./components/LoginPage";
@@ -82,7 +81,6 @@ const App = () => {
     { text: "Home", path: "/" },
     { text: "Upload", path: "/upload" },
     { text: "Search", path: "/search" },
-    { text: "Natural Language Search", path: "/naturallanguage" },
     { text: "Dashboard", path: "/dashboard" },
     { text: "Face Recognition", path: "/facerecognition" },
   ];
@@ -177,7 +175,6 @@ const App = () => {
                   <Route path="/upload" element={<ImageUpload />} />
                   <Route path="/search" element={<ImageSearchNew />} />
 				  <Route path="/Search" element={<Navigate to="/search" replace />} />
-                  <Route path="/naturallanguage" element={<NaturalLanguageSearch />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/facerecognition" element={<FaceRecognition />} />
                 </Route>
