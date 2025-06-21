@@ -2,23 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace Api.Models;
 
-public class SemanticSearchRequest
-{
-    public string Query { get; set; } = string.Empty;
-    public int Limit { get; set; } = 20;
-    public double Threshold { get; set; } = 0.5;
-    public string? ProjectName { get; set; }
-    public string? Year { get; set; }
-}
-
-public class SimilaritySearchRequest
-{
-    public string ObjectKey { get; set; } = string.Empty;
-    public int Limit { get; set; } = 20;
-    public double Threshold { get; set; } = 0.5;
-    public string? ProjectName { get; set; }
-    public string? Year { get; set; }
-}
 
 public class ComplexSearchRequest
 {

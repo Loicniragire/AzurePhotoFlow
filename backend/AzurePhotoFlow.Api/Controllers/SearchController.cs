@@ -197,22 +197,6 @@ public class SearchController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Get search suggestions or perform advanced semantic search with detailed request model.
-    /// </summary>
-    /// <param name="request">Detailed semantic search request</param>
-    /// <returns>Semantic search results</returns>
-    [HttpPost("semantic")]
-    public async Task<ActionResult<SemanticSearchResponse>> SemanticSearchPost([FromBody] SemanticSearchRequest request)
-    {
-        // Delegate to GET method with parameters from request body
-        return await SemanticSearch(
-            request.Query, 
-            request.Limit, 
-            request.Threshold, 
-            request.ProjectName, 
-            request.Year);
-    }
 
     /// <summary>
     /// Find visually similar images based on a reference image.
@@ -335,22 +319,6 @@ public class SearchController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Advanced visual similarity search with detailed request model.
-    /// </summary>
-    /// <param name="request">Detailed similarity search request</param>
-    /// <returns>Visual similarity search results</returns>
-    [HttpPost("similarity")]
-    public async Task<ActionResult<SimilaritySearchResponse>> SimilaritySearchPost([FromBody] SimilaritySearchRequest request)
-    {
-        // Delegate to GET method with parameters from request body
-        return await SimilaritySearch(
-            request.ObjectKey, 
-            request.Limit, 
-            request.Threshold, 
-            request.ProjectName, 
-            request.Year);
-    }
 
     private static SemanticSearchResult CreateSemanticSearchResult(VectorSearchResult vectorResult)
     {

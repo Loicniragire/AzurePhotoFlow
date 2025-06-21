@@ -80,11 +80,19 @@ export const searchSimilarity = async (objectKey, options = {}) => {
 
 /**
  * Advanced Similarity Search Service
- * POST endpoint for more complex similarity search requests
+ * GET endpoint with query parameters for similarity search requests
  */
 export const searchSimilarityAdvanced = async (searchRequest) => {
     try {
-        const response = await apiClient.post('/api/search/similarity', searchRequest);
+        const params = {
+            objectKey: searchRequest.objectKey,
+            limit: searchRequest.limit || 20,
+            threshold: searchRequest.threshold || 0.5,
+            ...(searchRequest.projectName && { projectName: searchRequest.projectName }),
+            ...(searchRequest.year && { year: searchRequest.year })
+        };
+
+        const response = await apiClient.get('/api/search/similarity', { params });
         
         return {
             results: transformSearchResults(response.data.results || []),
