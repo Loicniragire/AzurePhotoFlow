@@ -61,6 +61,22 @@ public static class ApplicationBuilderExtensions
         {
             ResponseWriter = async (context, report) =>
             {
+                // Add vector store count debugging
+                long vectorStoreCount = 0;
+                try
+                {
+                    var vectorStore = context.RequestServices.GetService<Api.Interfaces.IVectorStore>();
+                    if (vectorStore != null)
+                    {
+                        vectorStoreCount = await vectorStore.GetTotalCountAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Failed to get vector store count in health check");
+                }
+
                 var result = JsonSerializer.Serialize(new
                 {
                     Status = report.Status.ToString(),
@@ -71,7 +87,8 @@ public static class ApplicationBuilderExtensions
                         Description = e.Value.Description,
                         Exception = e.Value.Exception?.Message
                     }),
-                    Duration = report.TotalDuration
+                    Duration = report.TotalDuration,
+                    VectorStoreCount = vectorStoreCount
                 });
 
                 context.Response.ContentType = "application/json";

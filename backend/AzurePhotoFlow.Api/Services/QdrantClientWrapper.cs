@@ -368,10 +368,15 @@ public class QdrantClientWrapper : IQdrantClientWrapper
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("QdrantClientWrapper: Raw count response: {ResponseContent}", responseContent);
+            
             var countResponse = JsonSerializer.Deserialize<CountResponseWrapper>(responseContent, new JsonSerializerOptions 
             { 
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
             });
+
+            _logger.LogInformation("QdrantClientWrapper: Deserialized countResponse - Result null: {ResultNull}, Result.Count: {ResultCount}", 
+                countResponse?.Result == null, countResponse?.Result?.Count);
 
             var count = countResponse?.Result?.Count ?? 0;
             _logger.LogInformation("QdrantClientWrapper: Collection '{Collection}' has {Count} points", collection, count);
