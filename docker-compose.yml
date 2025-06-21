@@ -2,7 +2,7 @@ services:
   nginx:
     image: nginx:latest
     ports:
-      - "80:80"
+      - "8080:80"  # Changed from 80:80 to 8080:80 to avoid conflicts
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -13,6 +13,8 @@ services:
 
   backend:
     image: "${CONTAINER_REGISTRY}/azurephotoflow-backend:${stableTag:-latest}"
+    ports:
+      - "5001:80"  # Add direct access to backend API
     build:
       context: .
       dockerfile: backend/AzurePhotoFlow.Api/Dockerfile
@@ -30,6 +32,7 @@ services:
       - ./models:/models
     environment:
       - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=${MODE:-Development}
       - AZURE_BLOB_STORAGE=${AZURE_BLOB_STORAGE}
       - CERTIFICATE_PATH=${CERTIFICATE_PATH}
       - CERTIFICATE_PASSWORD=${CERTIFICATE_PASSWORD}

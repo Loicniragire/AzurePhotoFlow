@@ -229,14 +229,20 @@ app.UseSecurityHeaders();
 // Development Configuration
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
     app.UseDeveloperExceptionPage();
 }
 
 // Middleware Pipeline
 app.UseRouting();
 app.UseCors("AllowSpecificOrigin");
+
+// Enable Swagger in all environments for API testing
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AzurePhotoFlow API v1");
+    c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+});
 
 app.UseGlobalExceptionHandling(app.Environment);
 
