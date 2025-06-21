@@ -255,7 +255,7 @@ const ImageSearchNew = () => {
                             for &quot;{searchMeta.query}&quot; in {searchMeta.processingTime}ms
                         </p>
                         <p className="search-scope">
-                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''} in collection "{searchMeta.collectionName}"
+                            Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''} in collection &quot;{searchMeta.collectionName}&quot;
                             {searchMeta.totalImagesSearched === 0 && " (No images found in collection - try uploading some images first)"}
                         </p>
                         {searchMeta.appliedFilters && Object.keys(searchMeta.appliedFilters).length > 0 && (
@@ -271,6 +271,48 @@ const ImageSearchNew = () => {
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Debug section - detailed list of all search results */}
+            {searchResults.length > 0 && (
+                <div className="debug-section">
+                    <details className="debug-details">
+                        <summary className="debug-summary">
+                            🔍 Debug: Show All Search Results ({searchResults.length} items)
+                        </summary>
+                        <div className="debug-content">
+                            <div className="debug-list">
+                                {searchResults.map((result, index) => {
+                                    const fileName = result.metadata?.fileName || result.objectKey?.split('/').pop() || `Unknown-${index + 1}`;
+                                    const score = result.similarityScore || 0;
+                                    return (
+                                        <div key={result.objectKey || index} className="debug-item">
+                                            <span className="debug-rank">#{index + 1}</span>
+                                            <span className="debug-filename">{fileName}</span>
+                                            <span className="debug-score">
+                                                {(score * 100).toFixed(2)}%
+                                            </span>
+                                            <span className="debug-project">
+                                                {result.metadata?.projectName || 'No Project'}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="debug-stats">
+                                <p><strong>Average Similarity:</strong> {searchResults.length > 0 ? 
+                                    (searchResults.reduce((sum, r) => sum + (r.similarityScore || 0), 0) / searchResults.length * 100).toFixed(2) : 0}%
+                                </p>
+                                <p><strong>Highest Score:</strong> {searchResults.length > 0 ? 
+                                    Math.max(...searchResults.map(r => r.similarityScore || 0)) * 100 : 0}%
+                                </p>
+                                <p><strong>Lowest Score:</strong> {searchResults.length > 0 ? 
+                                    Math.min(...searchResults.map(r => r.similarityScore || 0)) * 100 : 0}%
+                                </p>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             )}
 

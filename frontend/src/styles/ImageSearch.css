@@ -405,3 +405,157 @@
     margin-bottom: 5px;
 }
 
+/* Debug Section */
+.debug-section {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.debug-details {
+    width: 100%;
+}
+
+.debug-summary {
+    padding: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    background: #e9ecef;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 0.95rem;
+    color: #495057;
+    transition: background-color 0.2s ease;
+}
+
+.debug-summary:hover {
+    background: #dee2e6;
+}
+
+.debug-content {
+    padding: 20px;
+    background: white;
+    border-radius: 0 0 8px 8px;
+}
+
+.debug-list {
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.debug-item {
+    display: grid;
+    grid-template-columns: 50px 1fr 80px 120px;
+    gap: 15px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f1f3f4;
+    align-items: center;
+    background: white;
+    font-size: 0.9rem;
+}
+
+.debug-item:last-child {
+    border-bottom: none;
+}
+
+.debug-item:hover {
+    background: #f8f9fa;
+}
+
+.debug-rank {
+    font-weight: 600;
+    color: #6c757d;
+    text-align: center;
+}
+
+.debug-filename {
+    font-family: 'Courier New', monospace;
+    color: #212529;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.debug-score {
+    font-weight: 600;
+    color: #007bff;
+    text-align: right;
+}
+
+.debug-project {
+    color: #6c757d;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.debug-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.debug-stats p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Header row for debug list */
+.debug-list::before {
+    content: "";
+    display: block;
+    background: #e9ecef;
+    padding: 0;
+    position: relative;
+}
+
+.debug-list::before {
+    content: "Rank File Name Score Project";
+    display: grid;
+    grid-template-columns: 50px 1fr 80px 120px;
+    gap: 15px;
+    padding: 10px 15px;
+    background: #e9ecef;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Responsive design for debug section */
+@media (max-width: 768px) {
+    .debug-item {
+        grid-template-columns: 40px 1fr 70px;
+        gap: 10px;
+        font-size: 0.85rem;
+    }
+    
+    .debug-project {
+        display: none;
+    }
+    
+    .debug-list::before {
+        content: "Rank File Name Score";
+        grid-template-columns: 40px 1fr 70px;
+        gap: 10px;
+    }
+    
+    .debug-stats {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
