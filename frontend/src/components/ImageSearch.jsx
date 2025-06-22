@@ -177,17 +177,26 @@ const ImageSearchNew = () => {
                     </div>
 
                     <div className="filter-group">
-                        <label htmlFor="threshold-filter">Similarity:</label>
-                        <select
-                            id="threshold-filter"
-                            value={filters.threshold}
-                            onChange={(e) => setFilters(prev => ({ ...prev, threshold: parseFloat(e.target.value) }))}
-                        >
-                            <option value={0.3}>Low (30%)</option>
-                            <option value={0.5}>Medium (50%)</option>
-                            <option value={0.7}>High (70%)</option>
-                            <option value={0.9}>Very High (90%)</option>
-                        </select>
+                        <label htmlFor="threshold-filter">
+                            Similarity: {(filters.threshold * 100).toFixed(0)}%
+                        </label>
+                        <div className="threshold-slider-container">
+                            <input
+                                type="range"
+                                id="threshold-filter"
+                                min="0.1"
+                                max="0.95"
+                                step="0.05"
+                                value={filters.threshold}
+                                onChange={(e) => setFilters(prev => ({ ...prev, threshold: parseFloat(e.target.value) }))}
+                                className="threshold-slider"
+                            />
+                            <div className="threshold-labels">
+                                <span>10%</span>
+                                <span>50%</span>
+                                <span>95%</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

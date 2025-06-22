@@ -6,15 +6,15 @@ import apiClient from './apiClient';
 const transformSearchResults = (results) => {
     return results.map(result => ({
         imageUrl: result.objectKey ? `/api/images/${result.objectKey}` : null,
-        altText: result.metadata?.fileName || 'Image',
-        metadata: result.metadata ? {
-            fileName: result.metadata.fileName,
-            uploadDate: result.metadata.uploadDate,
-            fileSize: result.metadata.fileSize,
-            projectName: result.metadata.projectName,
-            year: result.metadata.year,
-            directory: result.metadata.directory
-        } : null,
+        altText: result.fileName || result.metadata?.fileName || 'Image',
+        metadata: {
+            fileName: result.fileName || result.metadata?.fileName,
+            uploadDate: result.uploadDate || result.metadata?.uploadDate,
+            fileSize: result.fileSize || result.metadata?.fileSize,
+            projectName: result.projectName || result.metadata?.projectName,
+            year: result.year || result.metadata?.year,
+            directory: result.directoryName || result.metadata?.directory
+        },
         objectKey: result.objectKey,
         similarityScore: result.similarityScore || result.score
     }));
