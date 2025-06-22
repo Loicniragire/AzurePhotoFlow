@@ -559,5 +559,47 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
 
         return (uploadResponse, embeddings);
     }
+
+    public async Task<Stream?> GetImageStreamAsync(string objectKey)
+    {
+        try
+        {
+            _log.LogInformation("Getting image stream for object key: {ObjectKey}", objectKey);
+            
+            // Check if object exists first
+            var args = new StatObjectArgs()
+                .WithBucket(BucketName)
+                .WithObject(objectKey);
+                
+            try
+            {
+                await _minioClient.StatObjectAsync(args);
+            }
+            catch (Exception)
+            {
+                _log.LogWarning("Object not found: {ObjectKey}", objectKey);
+                return null;
+            }
+            
+            // Get the object stream
+            var memoryStream = new MemoryStream();
+            var getArgs = new GetObjectArgs()
+                .WithBucket(BucketName)
+                .WithObject(objectKey)
+                .WithCallbackStream(async (stream) => {
+                    await stream.CopyToAsync(memoryStream);
+                });
+            
+            await _minioClient.GetObjectAsync(getArgs);
+            
+            memoryStream.Position = 0;
+            return memoryStream;
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Error getting image stream for object key: {ObjectKey}", objectKey);
+            return null;
+        }
+    }
 }
 

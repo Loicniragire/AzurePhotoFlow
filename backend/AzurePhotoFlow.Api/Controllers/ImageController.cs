@@ -434,6 +434,50 @@ public class ImageController : ControllerBase
         return uploadResponse;
     }
     
+    /// <summary>
+    /// Serve an image file from storage by its object key/path.
+    /// </summary>
+    /// <param name="objectKey">The object key/path of the image in storage</param>
+    /// <returns>The image file as a stream</returns>
+    [HttpGet("{*objectKey}")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Image file", typeof(FileStreamResult))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Image not found")]
+    public async Task<IActionResult> GetImage(string objectKey)
+    {
+        try
+        {
+            _logger.LogInformation("Serving image: {ObjectKey}", objectKey);
+            
+            // Get the image stream from the upload service
+            var imageStream = await _imageUploadService.GetImageStreamAsync(objectKey);
+            
+            if (imageStream == null)
+            {
+                _logger.LogWarning("Image not found: {ObjectKey}", objectKey);
+                return NotFound($"Image not found: {objectKey}");
+            }
+            
+            // Determine content type based on file extension
+            var extension = Path.GetExtension(objectKey).ToLowerInvariant();
+            var contentType = extension switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                ".bmp" => "image/bmp",
+                _ => "application/octet-stream"
+            };
+            
+            return File(imageStream, contentType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error serving image: {ObjectKey}", objectKey);
+            return StatusCode(500, "Internal server error while serving image");
+        }
+    }
+
     private static async IAsyncEnumerable<ImageEmbeddingInput> CreateAsyncEnumerable(ImageEmbeddingInput input)
     {
         yield return input;

@@ -40,6 +40,11 @@ public interface IImageUploadService
         DateTime timestamp,
         bool isRawFiles = true,
         string rawfileDirectoryName = "");
+    
+    /// <summary>
+    /// Get image stream by object key for serving images
+    /// </summary>
+    Task<Stream?> GetImageStreamAsync(string objectKey);
 }
 
 

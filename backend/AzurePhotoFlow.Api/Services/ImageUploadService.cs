@@ -518,5 +518,36 @@ public class ImageUploadService : IImageUploadService
 
         return (uploadResponse, embeddings);
     }
+
+    public async Task<Stream?> GetImageStreamAsync(string objectKey)
+    {
+        try
+        {
+            _log.LogInformation("Getting image stream for object key: {ObjectKey}", objectKey);
+            
+            var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+            var blobClient = containerClient.GetBlobClient(objectKey);
+            
+            // Check if blob exists
+            var exists = await blobClient.ExistsAsync();
+            if (!exists.Value)
+            {
+                _log.LogWarning("Blob not found: {ObjectKey}", objectKey);
+                return null;
+            }
+            
+            // Download blob to memory stream
+            var memoryStream = new MemoryStream();
+            await blobClient.DownloadToAsync(memoryStream);
+            memoryStream.Position = 0;
+            
+            return memoryStream;
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Error getting image stream for object key: {ObjectKey}", objectKey);
+            return null;
+        }
+    }
 }
 
