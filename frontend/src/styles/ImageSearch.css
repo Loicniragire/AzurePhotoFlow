@@ -559,3 +559,37 @@
     }
 }
 
+/* Debug Mode Toggle */
+.debug-mode-toggle {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+}
+
+.debug-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #856404;
+}
+
+.debug-checkbox input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+.debug-label {
+    user-select: none;
+    font-weight: 500;
+}
+
+.debug-checkbox:hover .debug-label {
+    color: #533f03;
+}
+

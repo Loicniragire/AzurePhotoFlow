@@ -16,6 +16,7 @@ const ImageSearchNew = () => {
     const [error, setError] = useState('');
     const [searchMeta, setSearchMeta] = useState(null);
     const [hasSearched, setHasSearched] = useState(false);
+    const [debugMode, setDebugMode] = useState(false);
     
     // Search parameters
     const [filters, setFilters] = useState({
@@ -71,7 +72,10 @@ const ImageSearchNew = () => {
             if (filters.limit && filters.limit !== 20) searchOptions.limit = filters.limit;
             if (filters.threshold && filters.threshold !== 0.5) searchOptions.threshold = filters.threshold;
 
-            const response = await searchService.searchSemantic(searchQuery, searchOptions);
+            // Use debug endpoint if debug mode is enabled
+            const response = debugMode 
+                ? await searchService.searchDebugAllScores(searchQuery, searchOptions)
+                : await searchService.searchSemantic(searchQuery, searchOptions);
             setSearchResults(response.results || []);
             setSearchMeta({
                 totalResults: response.totalResults || 0,
@@ -79,7 +83,8 @@ const ImageSearchNew = () => {
                 collectionName: response.collectionName || 'unknown',
                 processingTime: response.processingTimeMs || 0,
                 query: response.query || searchQuery,
-                appliedFilters: searchOptions
+                appliedFilters: searchOptions,
+                debugMode: debugMode
             });
 
             // Only set error if there are truly no images in the collection
@@ -185,6 +190,20 @@ const ImageSearchNew = () => {
                         </select>
                     </div>
                 </div>
+
+                {/* Debug Mode Toggle */}
+                <div className="debug-mode-toggle">
+                    <label className="debug-checkbox">
+                        <input
+                            type="checkbox"
+                            checked={debugMode}
+                            onChange={(e) => setDebugMode(e.target.checked)}
+                        />
+                        <span className="debug-label">
+                            🔍 Debug Mode: Show ALL images with similarity scores (ignores threshold)
+                        </span>
+                    </label>
+                </div>
             </div>
             
             <div className="search-bar">
@@ -251,8 +270,9 @@ const ImageSearchNew = () => {
                 <div className="search-meta">
                     <div className="search-stats">
                         <p>
-                            Found {searchMeta.totalResults} result{searchMeta.totalResults !== 1 ? 's' : ''} 
+                            {searchMeta.debugMode ? 'Debug: ' : ''}Found {searchMeta.totalResults} result{searchMeta.totalResults !== 1 ? 's' : ''} 
                             for &quot;{searchMeta.query}&quot; in {searchMeta.processingTime}ms
+                            {searchMeta.debugMode && ' (showing ALL images)'}
                         </p>
                         <p className="search-scope">
                             Searched through {searchMeta.totalImagesSearched.toLocaleString()} image{searchMeta.totalImagesSearched !== 1 ? 's' : ''} in collection &quot;{searchMeta.collectionName}&quot;

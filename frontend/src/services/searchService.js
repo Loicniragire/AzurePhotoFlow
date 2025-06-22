@@ -128,6 +128,34 @@ export const searchComplex = async (searchRequest) => {
 };
 
 /**
+ * Debug Search Service - Get ALL similarity scores
+ * Returns all images in collection with their similarity scores for debugging
+ */
+export const searchDebugAllScores = async (query, options = {}) => {
+    try {
+        const params = {
+            query,
+            ...(options.projectName && { projectName: options.projectName }),
+            ...(options.year && { year: options.year })
+        };
+
+        const response = await apiClient.get('/api/search/debug/all-scores', { params });
+        
+        return {
+            results: transformSearchResults(response.data.results || []),
+            totalResults: response.data.totalResults || 0,
+            totalImagesSearched: response.data.totalImagesSearched || 0,
+            collectionName: response.data.collectionName || 'unknown',
+            processingTimeMs: response.data.processingTimeMs || 0,
+            query: response.data.query
+        };
+    } catch (error) {
+        console.error('Debug all-scores search failed:', error);
+        throw new Error(error.message || 'Failed to perform debug all-scores search');
+    }
+};
+
+/**
  * Get image URL for display
  */
 export const getImageUrl = (objectKey) => {
@@ -143,6 +171,7 @@ const searchService = {
     searchSimilarity,
     searchSimilarityAdvanced,
     searchComplex,
+    searchDebugAllScores,
     getImageUrl
 };
 

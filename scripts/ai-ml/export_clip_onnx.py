@@ -33,14 +33,14 @@ def export_clip_model(output_dir: str, model_name: str = "openai/clip-vit-base-p
 
     # Export Vision Model
     class VisionWrapper(torch.nn.Module):
-        def __init__(self, vision_model):
+        def __init__(self, clip_model):
             super().__init__()
-            self.vision_model = vision_model
+            self.clip_model = clip_model
 
         def forward(self, pixel_values):
-            return self.vision_model(pixel_values).last_hidden_state
+            return self.clip_model.get_image_features(pixel_values)
 
-    vision_wrapper = VisionWrapper(model.vision_model)
+    vision_wrapper = VisionWrapper(model)
     vision_dummy_input = torch.zeros((1, 3, 224, 224), dtype=torch.float32)
 
     vision_output_path = os.path.join(output_dir, "vision_model.onnx")
@@ -60,14 +60,14 @@ def export_clip_model(output_dir: str, model_name: str = "openai/clip-vit-base-p
 
     # Export Text Model
     class TextWrapper(torch.nn.Module):
-        def __init__(self, text_model):
+        def __init__(self, clip_model):
             super().__init__()
-            self.text_model = text_model
+            self.clip_model = clip_model
 
         def forward(self, input_ids, attention_mask):
-            return self.text_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+            return self.clip_model.get_text_features(input_ids=input_ids, attention_mask=attention_mask)
 
-    text_wrapper = TextWrapper(model.text_model)
+    text_wrapper = TextWrapper(model)
     
     # Create dummy text inputs (max length 77 for CLIP)
     text_dummy_input_ids = torch.zeros((1, 77), dtype=torch.long)

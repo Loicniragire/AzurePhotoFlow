@@ -146,6 +146,90 @@ public class SearchController : ControllerBase
     }
 
     /// <summary>
+    /// Debug endpoint: Get similarity scores for ALL images in collection against a query.
+    /// This endpoint returns all images with their similarity scores, ignoring threshold.
+    /// </summary>
+    /// <param name="query">Text query to compare against all images</param>
+    /// <param name="projectName">Optional project name filter</param>
+    /// <param name="year">Optional year filter</param>
+    /// <returns>All images with their similarity scores for debugging</returns>
+    [HttpGet("debug/all-scores")]
+    public async Task<ActionResult<SemanticSearchResponse>> GetAllSimilarityScores(
+        [FromQuery] string query,
+        [FromQuery] string? projectName = null,
+        [FromQuery] string? year = null)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var response = new SemanticSearchResponse { Query = query };
+
+        try
+        {
+            _logger.LogInformation("Debug all-scores request: Query='{Query}', Project={Project}, Year={Year}", 
+                query, projectName, year);
+
+            // Validate input parameters
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return BadRequest(new SemanticSearchResponse 
+                { 
+                    Query = query ?? "", 
+                    Success = false, 
+                    ErrorMessage = "Search query cannot be empty" 
+                });
+            }
+
+            // Generate embedding for the search query
+            _logger.LogInformation("Debug: Generating text embedding for query: '{Query}'", query);
+            var queryEmbedding = await _embeddingService.GenerateTextEmbeddingAsync(query);
+
+            // Build search filters
+            var filters = new Dictionary<string, object>();
+            if (!string.IsNullOrWhiteSpace(projectName))
+            {
+                filters["project_name"] = projectName;
+            }
+            if (!string.IsNullOrWhiteSpace(year))
+            {
+                filters["year"] = year;
+            }
+
+            // Get total count of images being searched
+            var totalImagesSearched = await _vectorStore.GetTotalCountAsync(filters);
+
+            // Perform vector similarity search with NO threshold and high limit to get ALL results
+            _logger.LogDebug("Debug: Performing vector search for ALL images");
+            var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, (int)totalImagesSearched, 0.0, filters);
+
+            // Convert vector search results to semantic search results
+            var searchResults = vectorResults.Select(vr => CreateSemanticSearchResult(vr)).ToList();
+
+            // Sort by similarity score descending
+            searchResults = searchResults.OrderByDescending(r => r.SimilarityScore).ToList();
+
+            // Populate response
+            response.Results = searchResults;
+            response.TotalResults = searchResults.Count;
+            response.TotalImagesSearched = totalImagesSearched;
+            response.CollectionName = await _vectorStore.GetCollectionNameAsync();
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            response.Success = true;
+
+            _logger.LogInformation("Debug all-scores completed: Found {ResultCount} total images in {ProcessingTimeMs}ms for query '{Query}'", 
+                response.TotalResults, response.ProcessingTimeMs, query);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing debug all-scores request: {Query}", query);
+            response.Success = false;
+            response.ErrorMessage = "Internal server error occurred while processing debug request";
+            response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+            return StatusCode(500, response);
+        }
+    }
+
+    /// <summary>
     /// Get the total number of images in the vector database.
     /// </summary>
     /// <param name="projectName">Optional project name filter</param>

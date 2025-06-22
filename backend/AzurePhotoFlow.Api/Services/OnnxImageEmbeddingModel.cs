@@ -79,9 +79,16 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         using var results = _visionSession.Run(inputs);
         var output = results.First().AsEnumerable<float>().ToArray();
         
-        // Extract the proper 512-dimensional CLIP embedding
-        // CLIP vision models typically output 512-dimensional embeddings
-        return output.Take(EmbeddingSize).ToArray();
+        _logger.LogInformation("[EMBEDDING DEBUG] Vision model output - Length: {Length}, First 5 values: [{Values}]", 
+            output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
+        
+        // CLIP vision model should now output exactly 512 dimensions
+        if (output.Length != EmbeddingSize)
+        {
+            throw new InvalidOperationException($"Vision model output size {output.Length} does not match expected size {EmbeddingSize}");
+        }
+        
+        return output;
     }
 
     public float[] GenerateTextEmbedding(string text)
@@ -147,11 +154,16 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         using var results = _textSession!.Run(inputs);
         var output = results.First().AsEnumerable<float>().ToArray();
         
-        // Extract the proper 512-dimensional CLIP text embedding
-        // CLIP text models should output 512-dimensional embeddings in the same space as vision embeddings
-        var textEmbedding = output.Take(EmbeddingSize).ToArray();
+        _logger.LogInformation("[EMBEDDING DEBUG] Text model output - Length: {Length}, First 5 values: [{Values}]", 
+            output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
         
-        return textEmbedding;
+        // CLIP text model should now output exactly 512 dimensions  
+        if (output.Length != EmbeddingSize)
+        {
+            throw new InvalidOperationException($"Text model output size {output.Length} does not match expected size {EmbeddingSize}");
+        }
+        
+        return output;
     }
 
     private long[] TokenizeText(string text)
