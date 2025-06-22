@@ -75,12 +75,12 @@ public class QdrantClientWrapper : IQdrantClientWrapper
             {
                 _logger.LogInformation("QdrantClientWrapper: Collection '{Collection}' does not exist, creating it", collection);
                 
-                // Create collection with 38400-dimensional vectors (CLIP vision model output size)
+                // Create collection with 512-dimensional vectors (standard CLIP embedding size)
                 var createRequest = new
                 {
                     vectors = new
                     {
-                        size = 38400,
+                        size = 512,
                         distance = "Cosine"
                     }
                 };

@@ -4,8 +4,6 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Text;
-using System.Security.Cryptography;
-using System.Text.Json;
 using SixLaborsImage = SixLabors.ImageSharp.Image;
 
 namespace AzurePhotoFlow.Services;
@@ -17,7 +15,7 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
     private readonly Dictionary<string, object>? _tokenizer;
     private readonly ILogger<OnnxImageEmbeddingModel> _logger;
     private const int InputSize = 224;
-    private const int EmbeddingSize = 38400; // 50 * 768
+    private const int EmbeddingSize = 512; // Standard CLIP embedding size
     private const int MaxTokenLength = 77;
 
     public OnnxImageEmbeddingModel(InferenceSession visionSession, InferenceSession? textSession = null, Dictionary<string, object>? tokenizer = null, ILogger<OnnxImageEmbeddingModel>? logger = null)
@@ -81,17 +79,18 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         using var results = _visionSession.Run(inputs);
         var output = results.First().AsEnumerable<float>().ToArray();
         
-        // Flatten the output to get the final embedding
+        // Extract the proper 512-dimensional CLIP embedding
+        // CLIP vision models typically output 512-dimensional embeddings
         return output.Take(EmbeddingSize).ToArray();
     }
 
     public float[] GenerateTextEmbedding(string text)
     {
-        // If no text model available, fall back to placeholder
+        // Require text model to be available - no fallback
         if (_textSession == null || _tokenizer == null)
         {
-            _logger.LogInformation("[EMBEDDING DEBUG] No text model available - using fallback hash-based text embedding for: '{Text}'", text);
-            return GenerateTextEmbeddingFromString(text);
+            _logger.LogError("[EMBEDDING DEBUG] No text model available for text embedding generation: '{Text}'", text);
+            throw new InvalidOperationException("CLIP text model is required for text embedding generation. Please ensure the text model is properly loaded.");
         }
 
         try
@@ -101,9 +100,8 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("[EMBEDDING DEBUG] CLIP text model failed: {ErrorMessage} - falling back to hash-based embedding for: '{Text}'", ex.Message, text);
-            // Fall back to placeholder on error
-            return GenerateTextEmbeddingFromString(text);
+            _logger.LogError(ex, "[EMBEDDING DEBUG] CLIP text model failed for text: '{Text}'", text);
+            throw new InvalidOperationException($"Failed to generate text embedding: {ex.Message}", ex);
         }
     }
 
@@ -149,15 +147,9 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         using var results = _textSession!.Run(inputs);
         var output = results.First().AsEnumerable<float>().ToArray();
         
-        // Get the [CLS] token embedding (first token) and expand to match vision embedding size
-        var textEmbedding = new float[EmbeddingSize];
-        var baseEmbedding = output.Take(768).ToArray(); // CLIP text embedding is 768 dimensions
-        
-        // Repeat the 768-dim embedding to match 38400 dimensions (50 * 768)
-        for (int i = 0; i < EmbeddingSize; i++)
-        {
-            textEmbedding[i] = baseEmbedding[i % 768];
-        }
+        // Extract the proper 512-dimensional CLIP text embedding
+        // CLIP text models should output 512-dimensional embeddings in the same space as vision embeddings
+        var textEmbedding = output.Take(EmbeddingSize).ToArray();
         
         return textEmbedding;
     }
@@ -196,83 +188,7 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         return tokens.ToArray();
     }
 
-    private float[] GenerateTextEmbeddingFromString(string text)
-    {
-        var embedding = new float[EmbeddingSize];
-        
-        // Use SHA256 to create a deterministic hash from the text
-        using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(text.ToLowerInvariant()));
-        
-        // Generate embedding based on hash and text characteristics
-        for (int i = 0; i < EmbeddingSize; i++)
-        {
-            var byteIndex = i % hash.Length;
-            var wordIndex = (i / hash.Length) % text.Length;
-            
-            // Combine hash byte with character from text to create variation
-            var combined = hash[byteIndex] + (text[wordIndex] * 7);
-            embedding[i] = (float)Math.Sin(combined * 0.01) * 0.5f;
-        }
-        
-        // Add some semantic similarity for common words
-        AddSemanticSimilarity(text, embedding);
-        
-        return embedding;
-    }
 
-    private void AddSemanticSimilarity(string text, float[] embedding)
-    {
-        // Enhanced semantic grouping for common photo-related terms
-        var semanticGroups = new Dictionary<string[], float[]>
-        {
-            { new[] { "dog", "dogs", "puppy", "puppies", "pet", "pets", "canine" }, new float[] { 0.8f, 0.2f, 0.5f, 0.9f, 0.7f, 0.3f, 0.6f, 0.4f } },
-            { new[] { "cat", "cats", "kitten", "kittens", "feline" }, new float[] { 0.7f, 0.3f, 0.6f, 0.8f, 0.5f, 0.9f, 0.2f, 0.4f } },
-            { new[] { "tree", "trees", "forest", "woods", "nature", "plant", "leaf", "leaves" }, new float[] { 0.1f, 0.9f, 0.2f, 0.7f, 0.6f, 0.4f, 0.8f, 0.3f } },
-            { new[] { "water", "ocean", "sea", "lake", "river", "beach", "wave", "waves" }, new float[] { 0.2f, 0.1f, 0.8f, 0.6f, 0.9f, 0.3f, 0.7f, 0.5f } },
-            { new[] { "car", "cars", "vehicle", "automobile", "truck", "road", "street" }, new float[] { 0.9f, 0.1f, 0.3f, 0.4f, 0.8f, 0.6f, 0.2f, 0.7f } },
-            { new[] { "person", "people", "human", "man", "woman", "child", "face", "portrait" }, new float[] { 0.5f, 0.7f, 0.9f, 0.3f, 0.8f, 0.1f, 0.6f, 0.4f } },
-            { new[] { "sky", "cloud", "clouds", "blue", "sunset", "sunrise" }, new float[] { 0.3f, 0.8f, 0.1f, 0.9f, 0.5f, 0.7f, 0.2f, 0.6f } },
-            { new[] { "building", "house", "architecture", "city", "urban" }, new float[] { 0.6f, 0.2f, 0.9f, 0.4f, 0.7f, 0.1f, 0.8f, 0.3f } },
-            { new[] { "food", "meal", "eating", "restaurant", "kitchen" }, new float[] { 0.4f, 0.9f, 0.2f, 0.6f, 0.8f, 0.3f, 0.7f, 0.1f } },
-            { new[] { "flower", "flowers", "garden", "bloom", "petal" }, new float[] { 0.8f, 0.4f, 0.6f, 0.2f, 0.9f, 0.7f, 0.1f, 0.5f } }
-        };
-
-        var textLower = text.ToLowerInvariant();
-        
-        foreach (var group in semanticGroups)
-        {
-            foreach (var keyword in group.Key)
-            {
-                if (textLower.Contains(keyword))
-                {
-                    // Apply semantic pattern to embedding
-                    for (int i = 0; i < Math.Min(group.Value.Length, 100); i++)
-                    {
-                        var targetIndex = (i * 384) % EmbeddingSize; // Spread pattern across embedding
-                        embedding[targetIndex] = (embedding[targetIndex] + group.Value[i]) * 0.7f;
-                        
-                        // Also apply to nearby positions for smoother pattern
-                        if (targetIndex + 1 < EmbeddingSize)
-                            embedding[targetIndex + 1] = (embedding[targetIndex + 1] + group.Value[i] * 0.5f) * 0.8f;
-                        if (targetIndex + 2 < EmbeddingSize)
-                            embedding[targetIndex + 2] = (embedding[targetIndex + 2] + group.Value[i] * 0.3f) * 0.9f;
-                    }
-                    break; // Only apply first matching pattern per group
-                }
-            }
-        }
-        
-        // Normalize the final embedding to prevent values from growing too large
-        var norm = Math.Sqrt(embedding.Sum(x => x * x));
-        if (norm > 0)
-        {
-            for (int i = 0; i < embedding.Length; i++)
-            {
-                embedding[i] = (float)(embedding[i] / norm);
-            }
-        }
-    }
 
     public void Dispose()
     {
