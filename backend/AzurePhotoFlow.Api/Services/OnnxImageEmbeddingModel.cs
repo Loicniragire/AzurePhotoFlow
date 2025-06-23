@@ -87,16 +87,19 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
         
         using var results = _visionSession.Run(inputs);
-        var output = results.First().AsEnumerable<float>().ToArray();
-        
-        _logger.LogInformation("[EMBEDDING DEBUG] Vision model output - Length: {Length}, First 5 values: [{Values}]", 
-            output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
+        var rawOutput = results.First().AsEnumerable<float>().ToArray();
         
         // CLIP vision model should output exactly the configured dimensions
-        if (output.Length != EmbeddingSize)
+        if (rawOutput.Length != EmbeddingSize)
         {
-            throw new InvalidOperationException($"Vision model output size {output.Length} does not match configured embedding size {EmbeddingSize}. Ensure the model variant '{_config.ModelVariant}' matches the configuration.");
+            throw new InvalidOperationException($"Vision model output size {rawOutput.Length} does not match configured embedding size {EmbeddingSize}. Ensure the model variant '{_config.ModelVariant}' matches the configuration.");
         }
+        
+        // Apply L2 normalization for optimal cosine similarity performance
+        var output = NormalizeEmbedding(rawOutput);
+        
+        _logger.LogInformation("[EMBEDDING DEBUG] Vision model output - Length: {Length}, First 5 values: [{Values}] (L2 normalized)", 
+            output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
         
         return output;
     }
@@ -162,16 +165,19 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         };
         
         using var results = _textSession!.Run(inputs);
-        var output = results.First().AsEnumerable<float>().ToArray();
-        
-        _logger.LogInformation("[EMBEDDING DEBUG] Text model output - Length: {Length}, First 5 values: [{Values}]", 
-            output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
+        var rawOutput = results.First().AsEnumerable<float>().ToArray();
         
         // CLIP text model should output exactly the configured dimensions  
-        if (output.Length != EmbeddingSize)
+        if (rawOutput.Length != EmbeddingSize)
         {
-            throw new InvalidOperationException($"Text model output size {output.Length} does not match configured embedding size {EmbeddingSize}. Ensure the model variant '{_config.ModelVariant}' matches the configuration.");
+            throw new InvalidOperationException($"Text model output size {rawOutput.Length} does not match configured embedding size {EmbeddingSize}. Ensure the model variant '{_config.ModelVariant}' matches the configuration.");
         }
+        
+        // Apply L2 normalization for optimal cosine similarity performance
+        var output = NormalizeEmbedding(rawOutput);
+        
+        _logger.LogInformation("[EMBEDDING DEBUG] Text model output - Length: {Length}, First 5 values: [{Values}] (L2 normalized)", 
+            output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
         
         return output;
     }
@@ -332,7 +338,32 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         };
     }
 
-
+    /// <summary>
+    /// Applies L2 normalization to embedding vectors for optimal cosine similarity performance.
+    /// This is especially important for higher-dimensional CLIP models (768D, 1024D).
+    /// </summary>
+    /// <param name="embedding">Raw embedding vector from ONNX model</param>
+    /// <returns>L2-normalized embedding vector (unit vector)</returns>
+    private float[] NormalizeEmbedding(float[] embedding)
+    {
+        // Calculate L2 norm (Euclidean magnitude)
+        var norm = Math.Sqrt(embedding.Sum(x => x * x));
+        
+        // Avoid division by zero (though unlikely with CLIP embeddings)
+        if (norm < 1e-12f)
+        {
+            _logger.LogWarning("[EMBEDDING DEBUG] Near-zero norm detected ({Norm}), returning original embedding", norm);
+            return embedding;
+        }
+        
+        // Normalize to unit vector
+        var normalizedEmbedding = embedding.Select(x => x / (float)norm).ToArray();
+        
+        _logger.LogDebug("[EMBEDDING DEBUG] Embedding normalized - Original norm: {OriginalNorm:F6}, New norm: {NewNorm:F6}", 
+            norm, Math.Sqrt(normalizedEmbedding.Sum(x => x * x)));
+        
+        return normalizedEmbedding;
+    }
 
     public void Dispose()
     {
