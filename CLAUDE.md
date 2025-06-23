@@ -39,23 +39,69 @@ dotnet test backend.tests.sln
 python scripts/ai-ml/setup_venv.py --path .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Export CLIP vision and text models to ONNX format (required for backend)
-python scripts/ai-ml/export_clip_onnx.py --output models
+# AUTOMATED MODEL EXPORT (RECOMMENDED)
+# Auto-export models based on .env configuration
+python scripts/ai-ml/auto_export_models.py
+
+# Complete automated setup (includes model export)
+make setup
+# or
+./scripts/setup/auto-setup.sh
+
+# MANUAL MODEL EXPORT (if needed)
+# Base model (512 dimensions) - default
+python scripts/ai-ml/export_clip_onnx.py --variant base --output models
+
+# Large model (768 dimensions) - better accuracy, more resource intensive
+python scripts/ai-ml/export_clip_onnx.py --variant large --output models
+
+# Huge model (1024 dimensions) - best accuracy, most resource intensive
+python scripts/ai-ml/export_clip_onnx.py --variant huge --output models
+
+# QUICK MODEL SWITCHING
+make models-512    # Switch to base model (512D)
+make models-768    # Switch to large model (768D)
+make models-1024   # Switch to huge model (1024D)
 
 # This creates:
 # - models/vision_model.onnx (for image embeddings)
 # - models/text_model.onnx (for text embeddings)  
 # - models/tokenizer/ (CLIP tokenizer files)
 # - models/model.onnx (backward compatibility symlink)
+# - models/model_info.txt (tracks current model variant)
 ```
 
 ### Docker Development
 ```bash
-# Start all services (backend, frontend, MinIO, Qdrant)
-docker compose up
+# AUTOMATED SETUP (RECOMMENDED)
+make setup              # Complete setup with model auto-export
+make dev               # Start with model verification
+make deploy-768        # Quick deploy with large model (768D)
 
-# MinIO admin console: http://localhost:9001 (minioadmin:minioadmin)
-# Qdrant dashboard: http://localhost:6333/dashboard
+# MANUAL DOCKER COMMANDS
+docker compose up      # Start all services (backend, frontend, MinIO, Qdrant)
+
+# Service URLs:
+# - MinIO admin console: http://localhost:9001 (minioadmin:minioadmin)
+# - Qdrant dashboard: http://localhost:6333/dashboard
+# - Backend API: http://localhost:5001
+# - Frontend: http://localhost:8080
+```
+
+### Development Workflow
+```bash
+# 1. One-time setup
+make setup
+
+# 2. Change embedding dimension (edit .env or use shortcuts)
+make models-768        # Switch to 768-dimensional embeddings
+
+# 3. Start development
+make dev              # Models are auto-verified and exported if needed
+
+# 4. Check current configuration
+make config           # Show current .env settings
+make check-models     # Verify models match configuration
 ```
 
 ### API Testing and Swagger Authentication
@@ -122,6 +168,30 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application with:
 - `ENABLE_EMBEDDINGS` - Enable/disable AI embeddings processing (`true`/`false`)
 - `ALLOWED_ORIGINS` - CORS origins (comma-separated)
 - `OPENAI_API_KEY` - OpenAI API key for additional AI features (optional)
+
+### Embedding Configuration (Optional Environment Overrides)
+- `EMBEDDING_DIMENSION` - Override embedding dimension (512, 768, 1024)
+- `EMBEDDING_MODEL_VARIANT` - Override model variant (base, large, huge)  
+- `EMBEDDING_DISTANCE_METRIC` - Override distance metric (Cosine, Dot, Euclidean)
+
+**Configuration in appsettings.json:**
+```json
+{
+  "EmbeddingConfig": {
+    "EmbeddingDimension": 512,      // 512 (base), 768 (large), 1024 (huge)
+    "ModelVariant": "base",         // "base", "large", "huge"
+    "DistanceMetric": "Cosine",     // "Cosine", "Dot", "Euclidean"
+    "EnableTextPreprocessing": true, // Improves search accuracy
+    "MaxTokenLength": 77,           // CLIP standard token limit
+    "ImageInputSize": 224           // CLIP standard image size
+  }
+}
+```
+
+**Note**: When changing embedding dimensions, ensure:
+1. Export the correct CLIP model variant using the export script
+2. Update the configuration to match the model's output dimensions  
+3. Recreate Qdrant collections (existing data will be incompatible)
 
 ### Development vs Production
 - Use `MODE=development` for local development

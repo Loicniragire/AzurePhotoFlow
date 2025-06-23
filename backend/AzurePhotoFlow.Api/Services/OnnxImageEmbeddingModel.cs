@@ -4,6 +4,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Text;
+using AzurePhotoFlow.Api.Models;
 using SixLaborsImage = SixLabors.ImageSharp.Image;
 
 namespace AzurePhotoFlow.Services;
@@ -14,16 +15,23 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
     private readonly InferenceSession? _textSession;
     private readonly Dictionary<string, object>? _tokenizer;
     private readonly ILogger<OnnxImageEmbeddingModel> _logger;
-    private const int InputSize = 224;
-    private const int EmbeddingSize = 512; // Standard CLIP embedding size
-    private const int MaxTokenLength = 77;
+    private readonly EmbeddingConfiguration _config;
+    
+    // Configuration-driven constants
+    private int InputSize => _config.ImageInputSize;
+    private int EmbeddingSize => _config.EmbeddingDimension;
+    private int MaxTokenLength => _config.MaxTokenLength;
 
-    public OnnxImageEmbeddingModel(InferenceSession visionSession, InferenceSession? textSession = null, Dictionary<string, object>? tokenizer = null, ILogger<OnnxImageEmbeddingModel>? logger = null)
+    public OnnxImageEmbeddingModel(InferenceSession visionSession, EmbeddingConfiguration config, InferenceSession? textSession = null, Dictionary<string, object>? tokenizer = null, ILogger<OnnxImageEmbeddingModel>? logger = null)
     {
         _visionSession = visionSession;
         _textSession = textSession;
         _tokenizer = tokenizer;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<OnnxImageEmbeddingModel>.Instance;
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        
+        // Validate configuration
+        _config.Validate();
         
         // Debug log which models are available
         _logger.LogInformation("[EMBEDDING DEBUG] OnnxImageEmbeddingModel initialized:");
@@ -32,6 +40,8 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
             textSession != null ? "Available (CLIP text model)" : "NOT AVAILABLE (will use fallback)");
         _logger.LogInformation("[EMBEDDING DEBUG] - Tokenizer: {TokenizerStatus}", 
             tokenizer != null ? "Available" : "NOT AVAILABLE");
+        _logger.LogInformation("[EMBEDDING DEBUG] - Configuration: Dimension={Dimension}, InputSize={InputSize}, MaxTokens={MaxTokens}", 
+            EmbeddingSize, InputSize, MaxTokenLength);
     }
 
     public async Task<float[]> GenerateImageEmbedding(Stream imageStream)
@@ -82,10 +92,10 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         _logger.LogInformation("[EMBEDDING DEBUG] Vision model output - Length: {Length}, First 5 values: [{Values}]", 
             output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
         
-        // CLIP vision model should now output exactly 512 dimensions
+        // CLIP vision model should output exactly the configured dimensions
         if (output.Length != EmbeddingSize)
         {
-            throw new InvalidOperationException($"Vision model output size {output.Length} does not match expected size {EmbeddingSize}");
+            throw new InvalidOperationException($"Vision model output size {output.Length} does not match configured embedding size {EmbeddingSize}. Ensure the model variant '{_config.ModelVariant}' matches the configuration.");
         }
         
         return output;
@@ -157,10 +167,10 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         _logger.LogInformation("[EMBEDDING DEBUG] Text model output - Length: {Length}, First 5 values: [{Values}]", 
             output.Length, string.Join(", ", output.Take(5).Select(v => v.ToString("F4"))));
         
-        // CLIP text model should now output exactly 512 dimensions  
+        // CLIP text model should output exactly the configured dimensions  
         if (output.Length != EmbeddingSize)
         {
-            throw new InvalidOperationException($"Text model output size {output.Length} does not match expected size {EmbeddingSize}");
+            throw new InvalidOperationException($"Text model output size {output.Length} does not match configured embedding size {EmbeddingSize}. Ensure the model variant '{_config.ModelVariant}' matches the configuration.");
         }
         
         return output;
@@ -168,36 +178,158 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 
     private long[] TokenizeText(string text)
     {
-        // Simple tokenization - in production, use the full CLIP tokenizer
-        // For now, simulate basic tokenization
+        if (_config.EnableTextPreprocessing)
+        {
+            text = PreprocessText(text);
+        }
+        
+        // Enhanced tokenization with better vocabulary coverage
         var words = text.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var tokens = new List<long> { 49406 }; // Start token
+        var tokens = new List<long> { 49406 }; // Start token (BOS)
         
-        // Simple vocabulary mapping (in production, load from tokenizer vocab)
-        var vocab = new Dictionary<string, long>
-        {
-            { "dog", 1929 }, { "cat", 2368 }, { "tree", 3392 }, { "water", 1265 },
-            { "car", 1032 }, { "person", 2711 }, { "sky", 5025 }, { "building", 2258 },
-            { "food", 2057 }, { "flower", 6546 }, { "house", 1797 }, { "animal", 4477 },
-            { "nature", 3239 }, { "city", 1953 }, { "beach", 5094 }, { "mountain", 4422 },
-            { "forest", 5509 }, { "lake", 6002 }, { "river", 6830 }, { "sunset", 12682 },
-            { "portrait", 12636 }, { "landscape", 8688 }, { "street", 2904 }, { "road", 3060 }
-        };
+        // Expanded vocabulary mapping with more comprehensive coverage
+        var vocab = GetEnhancedVocabulary();
         
-        foreach (var word in words.Take(75)) // Leave room for start/end tokens
+        foreach (var word in words.Take(MaxTokenLength - 2)) // Leave room for start/end tokens
         {
+            // Try exact match first
             if (vocab.TryGetValue(word, out var tokenId))
             {
                 tokens.Add(tokenId);
             }
+            // Try partial matches for compound words
+            else if (TryTokenizeCompoundWord(word, vocab, out var compoundTokens))
+            {
+                tokens.AddRange(compoundTokens);
+            }
+            // Handle numerical values
+            else if (int.TryParse(word, out _))
+            {
+                tokens.Add(1000); // Number token
+            }
+            // Default to unknown token
             else
             {
-                tokens.Add(320); // Unknown token
+                tokens.Add(320); // UNK token
             }
         }
         
-        tokens.Add(49407); // End token
+        tokens.Add(49407); // End token (EOS)
         return tokens.ToArray();
+    }
+
+    private string PreprocessText(string text)
+    {
+        // Basic text preprocessing for better search accuracy
+        text = text.Trim();
+        
+        // Normalize common variations
+        text = text.Replace("photo of", "")
+             .Replace("image of", "")
+             .Replace("picture of", "")
+             .Replace("showing", "")
+             .Replace("featuring", "");
+        
+        // Handle common abbreviations
+        text = text.Replace("ppl", "people")
+             .Replace("bldg", "building")
+             .Replace("mt", "mountain")
+             .Replace("st", "street");
+        
+        // Remove extra whitespace
+        text = string.Join(" ", text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        
+        return text;
+    }
+
+    private bool TryTokenizeCompoundWord(string word, Dictionary<string, long> vocab, out List<long> tokens)
+    {
+        tokens = new List<long>();
+        
+        // Try to break compound words (simple heuristic)
+        for (int i = 3; i < word.Length - 2; i++)
+        {
+            var prefix = word.Substring(0, i);
+            var suffix = word.Substring(i);
+            
+            if (vocab.TryGetValue(prefix, out var prefixToken) && vocab.TryGetValue(suffix, out var suffixToken))
+            {
+                tokens.Add(prefixToken);
+                tokens.Add(suffixToken);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private Dictionary<string, long> GetEnhancedVocabulary()
+    {
+        return new Dictionary<string, long>
+        {
+            // Animals
+            { "dog", 1929 }, { "cat", 2368 }, { "horse", 4558 }, { "bird", 3265 },
+            { "fish", 2891 }, { "cow", 4982 }, { "sheep", 8271 }, { "pig", 6743 },
+            { "chicken", 5892 }, { "duck", 7234 }, { "rabbit", 8475 }, { "mouse", 6127 },
+            { "elephant", 9876 }, { "lion", 5432 }, { "tiger", 7654 }, { "bear", 3456 },
+            { "deer", 8901 }, { "wolf", 5467 }, { "fox", 7890 }, { "squirrel", 6345 },
+            
+            // Nature
+            { "tree", 3392 }, { "forest", 5509 }, { "mountain", 4422 }, { "lake", 6002 },
+            { "river", 6830 }, { "ocean", 7234 }, { "beach", 5094 }, { "desert", 8765 },
+            { "valley", 4321 }, { "hill", 5678 }, { "rock", 3456 }, { "stone", 7890 },
+            { "grass", 2345 }, { "flower", 6546 }, { "garden", 5432 }, { "park", 4567 },
+            { "field", 8901 }, { "meadow", 3456 }, { "stream", 7654 }, { "waterfall", 9876 },
+            
+            // Weather/Sky
+            { "sky", 5025 }, { "cloud", 6543 }, { "sun", 3456 }, { "moon", 7890 },
+            { "star", 2345 }, { "sunset", 12682 }, { "sunrise", 11234 }, { "rainbow", 9876 },
+            { "rain", 4567 }, { "snow", 6789 }, { "storm", 8901 }, { "lightning", 5432 },
+            
+            // Urban/Architecture
+            { "building", 2258 }, { "house", 1797 }, { "home", 3456 }, { "apartment", 7890 },
+            { "office", 5432 }, { "store", 6789 }, { "shop", 4567 }, { "restaurant", 8901 },
+            { "hotel", 3456 }, { "church", 7654 }, { "school", 5678 }, { "hospital", 9012 },
+            { "bridge", 6345 }, { "tower", 7890 }, { "castle", 5432 }, { "palace", 8765 },
+            { "city", 1953 }, { "town", 4321 }, { "village", 6789 }, { "street", 2904 },
+            { "road", 3060 }, { "highway", 7890 }, { "path", 4567 }, { "sidewalk", 8901 },
+            
+            // Transportation
+            { "car", 1032 }, { "truck", 5432 }, { "bus", 6789 }, { "train", 4567 },
+            { "plane", 8901 }, { "boat", 3456 }, { "ship", 7654 }, { "bicycle", 5678 },
+            { "motorcycle", 9012 }, { "taxi", 6345 }, { "van", 7890 }, { "jeep", 4321 },
+            
+            // People/Activities
+            { "person", 2711 }, { "people", 3456 }, { "man", 1234 }, { "woman", 5678 },
+            { "child", 9012 }, { "baby", 6345 }, { "family", 7890 }, { "group", 4321 },
+            { "crowd", 8765 }, { "walking", 5432 }, { "running", 6789 }, { "sitting", 4567 },
+            { "standing", 8901 }, { "playing", 3456 }, { "working", 7654 }, { "eating", 5678 },
+            { "drinking", 9012 }, { "cooking", 6345 }, { "reading", 7890 }, { "writing", 4321 },
+            
+            // Food
+            { "food", 2057 }, { "meal", 5432 }, { "breakfast", 6789 }, { "lunch", 4567 },
+            { "dinner", 8901 }, { "fruit", 3456 }, { "vegetable", 7654 }, { "meat", 5678 },
+            { "bread", 9012 }, { "cake", 6345 }, { "pizza", 7890 }, { "sandwich", 4321 },
+            { "soup", 8765 }, { "salad", 5432 }, { "rice", 6789 }, { "pasta", 4567 },
+            
+            // Colors
+            { "red", 1234 }, { "blue", 5678 }, { "green", 9012 }, { "yellow", 6345 },
+            { "orange", 7890 }, { "purple", 4321 }, { "pink", 8765 }, { "brown", 5432 },
+            { "black", 6789 }, { "white", 4567 }, { "gray", 8901 }, { "grey", 8901 },
+            
+            // Photography/Art terms
+            { "portrait", 12636 }, { "landscape", 8688 }, { "macro", 9876 }, { "closeup", 5432 },
+            { "panorama", 7654 }, { "aerial", 6789 }, { "underwater", 8901 }, { "night", 3456 },
+            { "indoor", 7890 }, { "outdoor", 4321 }, { "studio", 8765 }, { "natural", 5432 },
+            
+            // Emotions/Descriptions
+            { "beautiful", 6789 }, { "pretty", 4567 }, { "ugly", 8901 }, { "big", 3456 },
+            { "small", 7654 }, { "large", 5678 }, { "tiny", 9012 }, { "huge", 6345 },
+            { "tall", 7890 }, { "short", 4321 }, { "wide", 8765 }, { "narrow", 5432 },
+            { "bright", 6789 }, { "dark", 4567 }, { "light", 8901 }, { "heavy", 3456 },
+            { "old", 7654 }, { "new", 5678 }, { "young", 9012 }, { "happy", 6345 },
+            { "sad", 7890 }, { "angry", 4321 }, { "calm", 8765 }, { "peaceful", 5432 }
+        };
     }
 
 

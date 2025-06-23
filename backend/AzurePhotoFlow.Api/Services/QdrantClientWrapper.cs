@@ -2,6 +2,7 @@ using Api.Interfaces;
 using Qdrant.Client.Grpc;
 using System.Text;
 using System.Text.Json;
+using AzurePhotoFlow.Api.Models;
 
 namespace AzurePhotoFlow.Services;
 
@@ -10,17 +11,20 @@ public class QdrantClientWrapper : IQdrantClientWrapper
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
     private readonly ILogger<QdrantClientWrapper> _logger;
+    private readonly EmbeddingConfiguration _config;
 
-    public QdrantClientWrapper(HttpClient httpClient, ILogger<QdrantClientWrapper> logger)
+    public QdrantClientWrapper(HttpClient httpClient, EmbeddingConfiguration config, ILogger<QdrantClientWrapper> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _config = config ?? throw new ArgumentNullException(nameof(config));
         
         var host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
         var port = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6333";
         _baseUrl = $"http://{host}:{port}";
         
-        _logger.LogInformation("QdrantClientWrapper: Initialized with base URL: {BaseUrl}", _baseUrl);
+        _logger.LogInformation("QdrantClientWrapper: Initialized with base URL: {BaseUrl}, EmbeddingDimension: {Dimension}, DistanceMetric: {Metric}", 
+            _baseUrl, _config.EmbeddingDimension, _config.DistanceMetric);
     }
 
     public async Task UpsertAsync(string collection, IEnumerable<PointStruct> points)
@@ -75,13 +79,13 @@ public class QdrantClientWrapper : IQdrantClientWrapper
             {
                 _logger.LogInformation("QdrantClientWrapper: Collection '{Collection}' does not exist, creating it", collection);
                 
-                // Create collection with 512-dimensional vectors (standard CLIP embedding size)
+                // Create collection with configured embedding dimensions and distance metric
                 var createRequest = new
                 {
                     vectors = new
                     {
-                        size = 512,
-                        distance = "Cosine"
+                        size = _config.EmbeddingDimension,
+                        distance = _config.DistanceMetric
                     }
                 };
                 
@@ -99,7 +103,8 @@ public class QdrantClientWrapper : IQdrantClientWrapper
                     throw new Exception($"Failed to create collection: {createResponse.StatusCode} - {errorContent}");
                 }
                 
-                _logger.LogInformation("QdrantClientWrapper: Successfully created collection '{Collection}'", collection);
+                _logger.LogInformation("QdrantClientWrapper: Successfully created collection '{Collection}' with {Dimensions} dimensions using {Metric} distance", 
+                    collection, _config.EmbeddingDimension, _config.DistanceMetric);
             }
         }
         catch (Exception ex)

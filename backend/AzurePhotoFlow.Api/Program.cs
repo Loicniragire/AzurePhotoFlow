@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.Interfaces;
 using Api.Models;
 using AzurePhotoFlow.Api.Data;
+using AzurePhotoFlow.Api.Models;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -122,6 +123,21 @@ builder.Logging.AddJsonConsole(options =>
     options.JsonWriterOptions = new JsonWriterOptions { Indented = true };
 });
 
+// Configure embedding settings
+var embeddingConfig = new EmbeddingConfiguration();
+builder.Configuration.GetSection("EmbeddingConfig").Bind(embeddingConfig);
+
+// Support environment variable overrides
+if (int.TryParse(Environment.GetEnvironmentVariable("EMBEDDING_DIMENSION"), out var dimension))
+    embeddingConfig.EmbeddingDimension = dimension;
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("EMBEDDING_MODEL_VARIANT")))
+    embeddingConfig.ModelVariant = Environment.GetEnvironmentVariable("EMBEDDING_MODEL_VARIANT");
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("EMBEDDING_DISTANCE_METRIC")))
+    embeddingConfig.DistanceMetric = Environment.GetEnvironmentVariable("EMBEDDING_DISTANCE_METRIC");
+
+embeddingConfig.Validate();
+builder.Services.AddSingleton(embeddingConfig);
+
 builder.Services.AddMinioClient();
 builder.Services.AddVectorStore();
 builder.Services.AddPhotoFlowDatabase();
@@ -142,10 +158,17 @@ builder.Services.AddSingleton<InferenceSession>(serviceProvider =>
 
 builder.Services.AddScoped<IMetadataExtractorService, MetadataExtractorService>();
 builder.Services.AddScoped<IImageUploadService, MinIOImageUploadService>();
-builder.Services.AddSingleton<IQdrantClientWrapper, QdrantClientWrapper>();
+builder.Services.AddSingleton<IQdrantClientWrapper>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var config = sp.GetRequiredService<EmbeddingConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<QdrantClientWrapper>>();
+    return new QdrantClientWrapper(httpClient, config, logger);
+});
 builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
 {
     var visionSession = sp.GetRequiredService<InferenceSession>();
+    var config = sp.GetRequiredService<EmbeddingConfiguration>();
     
     // Try to load text model if available
     InferenceSession textSession = null;
@@ -189,7 +212,7 @@ builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
     }
     
     var logger = sp.GetRequiredService<ILogger<OnnxImageEmbeddingModel>>();
-    return new OnnxImageEmbeddingModel(visionSession, textSession, tokenizer, logger);
+    return new OnnxImageEmbeddingModel(visionSession, config, textSession, tokenizer, logger);
 });
 builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 

@@ -8,6 +8,6 @@ public interface IImageEmbeddingModel
     /// Generate embedding for text input using CLIP text encoder.
     /// </summary>
     /// <param name="text">Text to generate embedding for</param>
-    /// <returns>512-dimensional embedding vector</returns>
+    /// <returns>Embedding vector with dimension specified in configuration (512/768/1024)</returns>
     float[] GenerateTextEmbedding(string text);
 }

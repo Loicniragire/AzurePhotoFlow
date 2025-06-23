@@ -48,6 +48,7 @@ Thumbs.db
 
 # Cache directories
 .hf_cache/
+cache/
 
 # Build and dist directories
 build/

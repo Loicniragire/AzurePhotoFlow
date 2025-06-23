@@ -50,6 +50,10 @@ services:
       - ENABLE_EMBEDDINGS=${ENABLE_EMBEDDINGS:-false}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
       - DATABASE_CONNECTION_STRING=Data Source=/app/data/photoflow.db;Cache=Shared
+      # Embedding Configuration
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-512}
+      - EMBEDDING_MODEL_VARIANT=${EMBEDDING_MODEL_VARIANT:-base}
+      - EMBEDDING_DISTANCE_METRIC=${EMBEDDING_DISTANCE_METRIC:-Cosine}
     networks:
       - app-network
     depends_on:

@@ -105,13 +105,75 @@ def export_clip_model(output_dir: str, model_name: str = "openai/clip-vit-base-p
         print(f"Created backward compatibility symlink: {legacy_path}")
 
     print("✅ CLIP model export complete!")
+    
+    # Validate the exported models
+    validate_exported_models(output_dir)
+
+def validate_exported_models(output_dir: str):
+    """Validate that exported ONNX models have correct output dimensions."""
+    try:
+        import onnxruntime as ort
+        import numpy as np
+        
+        vision_path = os.path.join(output_dir, "vision_model.onnx")
+        text_path = os.path.join(output_dir, "text_model.onnx")
+        
+        if os.path.exists(vision_path):
+            print("🔍 Validating vision model...")
+            vision_session = ort.InferenceSession(vision_path)
+            dummy_image = np.random.randn(1, 3, 224, 224).astype(np.float32)
+            vision_outputs = vision_session.run(None, {"input": dummy_image})
+            vision_dims = vision_outputs[0].shape[-1]
+            print(f"✅ Vision model output dimensions: {vision_dims}")
+            
+        if os.path.exists(text_path):
+            print("🔍 Validating text model...")
+            text_session = ort.InferenceSession(text_path)
+            dummy_input_ids = np.zeros((1, 77), dtype=np.int64)
+            dummy_attention_mask = np.ones((1, 77), dtype=np.int64)
+            text_outputs = text_session.run(None, {
+                "input_ids": dummy_input_ids,
+                "attention_mask": dummy_attention_mask
+            })
+            text_dims = text_outputs[0].shape[-1]
+            print(f"✅ Text model output dimensions: {text_dims}")
+            
+            # Verify both models have matching dimensions
+            if os.path.exists(vision_path) and vision_dims == text_dims:
+                print(f"✅ Model validation successful: Both models output {vision_dims}-dimensional embeddings")
+            elif os.path.exists(vision_path):
+                print(f"⚠️  Dimension mismatch: Vision={vision_dims}, Text={text_dims}")
+                
+    except ImportError:
+        print("⚠️  ONNX Runtime not available for validation. Install with: pip install onnxruntime")
+    except Exception as e:
+        print(f"⚠️  Validation error: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Export CLIP model to ONNX")
     parser.add_argument("--model", default="openai/clip-vit-base-patch32", help="HuggingFace model name")
+    parser.add_argument("--variant", choices=["base", "large", "huge"], help="Model variant (overrides --model)")
     parser.add_argument("--output", default="models", help="Output directory for ONNX models")
     args = parser.parse_args()
-    export_clip_model(args.output, args.model)
+    
+    # Map variant to model name
+    if args.variant:
+        variant_models = {
+            "base": "openai/clip-vit-base-patch32",      # 512 dimensions
+            "large": "openai/clip-vit-large-patch14",    # 768 dimensions  
+            "huge": "laion/CLIP-ViT-H-14-laion2B-s32B-b79K"  # 1024 dimensions
+        }
+        model_name = variant_models[args.variant]
+        print(f"🎯 Using model variant '{args.variant}': {model_name}")
+        
+        # Get expected dimensions for validation
+        expected_dims = {"base": 512, "large": 768, "huge": 1024}
+        print(f"📏 Expected embedding dimensions: {expected_dims[args.variant]}")
+    else:
+        model_name = args.model
+        print(f"🎯 Using custom model: {model_name}")
+    
+    export_clip_model(args.output, model_name)
 
 
 if __name__ == "__main__":
