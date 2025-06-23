@@ -51,8 +51,6 @@ public class ImageController : ControllerBase
     /// - Automatic image extraction from ZIP archives
     /// - AI-powered image embeddings generation using CLIP model
     /// - EXIF metadata extraction
-    /// - Face detection and recognition
-    /// - OCR (text extraction from images)
     /// - Organized storage with hierarchical structure
     /// 
     /// **File Organization:**
@@ -60,7 +58,7 @@ public class ImageController : ControllerBase
     /// 
     /// **Supported Formats:**
     /// - ZIP archives (.zip)
-    /// - Image formats: JPEG, PNG, GIF, BMP, TIFF, WebP
+    /// - Image formats: JPEG, PNG, GIF, BMP, TIFF, WebP, RAW
     /// 
     /// **Processing:**
     /// - Each image generates vector embeddings for semantic search

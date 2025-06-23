@@ -5,6 +5,7 @@ using Minio.DataModel.Args;
 using AzurePhotoFlow.Services;
 using Microsoft.Extensions.Logging;
 using Api.Interfaces;
+using AzurePhotoFlow.Api.Interfaces;
 using System.Net; // Added for potential WebUtility usage and for SUT's usage
 
 namespace unitTests
@@ -15,6 +16,7 @@ namespace unitTests
         private readonly Mock<IMinioClient> _mockMinioClient;
         private readonly Mock<ILogger<MinIOImageUploadService>> _mockLogger;
         private readonly Mock<IMetadataExtractorService> _mockMetadataExtractorService;
+        private readonly Mock<IImageMappingRepository> _mockImageMappingRepository;
         private readonly MinIOImageUploadService _service;
 
         private const string BucketName = "photostore";
@@ -29,10 +31,13 @@ namespace unitTests
             _mockLogger = new Mock<ILogger<MinIOImageUploadService>>();
             _mockMetadataExtractorService = new Mock<IMetadataExtractorService>();
 
+            _mockImageMappingRepository = new Mock<IImageMappingRepository>();
+            
             _service = new MinIOImageUploadService(
                 _mockMinioClient.Object,
                 _mockLogger.Object,
-                _mockMetadataExtractorService.Object
+                _mockMetadataExtractorService.Object,
+                _mockImageMappingRepository.Object
             );
 
             // Default setup for BucketExistsAsync

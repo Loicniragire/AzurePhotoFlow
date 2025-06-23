@@ -80,6 +80,7 @@ public class MinIOImageUploadService : IImageUploadService
 
         int uploadedCount = 0;
         int totalCount = 0;
+        var uploadedFiles = new List<UploadedFileInfo>();
 
         using var zipStream = directoryFile.OpenReadStream();
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
@@ -161,6 +162,19 @@ public class MinIOImageUploadService : IImageUploadService
                     // Save mapping to database
                     await _imageMappingRepository.AddAsync(imageMapping);
 
+                    // Add to uploaded files list
+                    uploadedFiles.Add(new UploadedFileInfo
+                    {
+                        Id = imageMapping.Id,
+                        FileName = entry.Name,
+                        ObjectKey = objectKey,
+                        Success = true,
+                        FileSize = entry.Length,
+                        ContentType = MinIODirectoryHelper.GetMimeType(entry.Name),
+                        Width = cameraMetadata?.ImageWidth,
+                        Height = cameraMetadata?.ImageHeight
+                    });
+
                     // Legacy metadata processing (for backward compatibility)
                     var metadata = new ImageMetadata
                     {
@@ -188,10 +202,27 @@ public class MinIOImageUploadService : IImageUploadService
             catch (Exception ex)
             {
                 _log.LogError(ex, "Failed processing entry {Entry}", entry.FullName);
+                
+                // Add failed upload to the list
+                uploadedFiles.Add(new UploadedFileInfo
+                {
+                    Id = Guid.Empty,
+                    FileName = entry.Name,
+                    ObjectKey = $"{destinationPath}/{MinIODirectoryHelper.GetRelativePath(entry.FullName, directoryName)}",
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    FileSize = entry.Length,
+                    ContentType = MinIODirectoryHelper.GetMimeType(entry.Name)
+                });
             }
         }
 
-        return new UploadResponse { UploadedCount = uploadedCount, OriginalCount = totalCount };
+        return new UploadResponse 
+        { 
+            UploadedCount = uploadedCount, 
+            OriginalCount = totalCount,
+            Files = uploadedFiles
+        };
     }
 
     public Task Delete(string projectName, DateTime timestamp) => throw new NotImplementedException();
@@ -508,6 +539,63 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
         }
     }
 
+    public async Task<(ImageUploadResult uploadResult, ImageMapping? imageMapping)> UploadImageFromBytesWithMappingAsync(
+        byte[] imageData, string objectKey, string fileName, string projectName, string directoryName, DateTime timestamp)
+    {
+        try
+        {
+            // Ensure bucket exists
+            if (!await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(BucketName)))
+            {
+                await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(BucketName));
+            }
+
+            using var stream = new MemoryStream(imageData);
+            var putArgs = new PutObjectArgs()
+                .WithBucket(BucketName)
+                .WithObject(objectKey)
+                .WithStreamData(stream)
+                .WithObjectSize(stream.Length)
+                .WithContentType(MinIODirectoryHelper.GetMimeType(fileName));
+
+            await _minioClient.PutObjectAsync(putArgs);
+            
+            // Extract metadata
+            stream.Position = 0;
+            var cameraMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(stream);
+            
+            // Create ImageMapping record
+            var imageMapping = new ImageMapping
+            {
+                Id = Guid.NewGuid(),
+                ObjectKey = objectKey,
+                FileName = fileName,
+                ProjectName = projectName,
+                UploadDate = DateTime.UtcNow,
+                FileSize = imageData.Length,
+                ContentType = MinIODirectoryHelper.GetMimeType(fileName),
+                DirectoryName = directoryName,
+                Year = timestamp.ToString("yyyy"),
+                Width = cameraMetadata?.ImageWidth,
+                Height = cameraMetadata?.ImageHeight,
+                MetadataJson = JsonConvert.SerializeObject(cameraMetadata, 
+                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                IsActive = true
+            };
+
+            // Save mapping to database
+            await _imageMappingRepository.AddAsync(imageMapping);
+
+            _log.LogInformation("Uploaded image with mapping: {ObjectKey} -> GUID: {Id}", objectKey, imageMapping.Id);
+            return (ImageUploadResult.Ok(objectKey), imageMapping);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to upload image with mapping {ObjectKey}", objectKey);
+            return (ImageUploadResult.Fail(objectKey, ex.Message), null);
+        }
+    }
+
     public async Task<(UploadResponse uploadResponse, List<ImageEmbeddingInput> embeddings)> ProcessZipOptimizedAsync(
         IFormFile directoryFile,
         string projectName,
@@ -523,7 +611,8 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
         }
 
         var embeddings = new List<ImageEmbeddingInput>();
-        var uploadTasks = new List<Task<ImageUploadResult>>();
+        var uploadTasks = new List<Task<(ImageUploadResult, ImageMapping?)>>();
+        var uploadedFiles = new List<UploadedFileInfo>();
         int totalCount = 0;
 
         string destinationPath = MinIODirectoryHelper.GetDestinationPath(
@@ -566,24 +655,69 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
                 // Add to embeddings list
                 embeddings.Add(new ImageEmbeddingInput(objectKey, imageData));
 
-                // Start upload task
-                var uploadTask = UploadImageFromBytesAsync(imageData, objectKey, entry.Name);
+                // Start upload task with mapping
+                var uploadTask = UploadImageFromBytesWithMappingAsync(imageData, objectKey, entry.Name, projectName, directoryName, timestamp);
                 uploadTasks.Add(uploadTask);
             }
             catch (Exception ex)
             {
                 _log.LogError(ex, "Failed processing entry {Entry}", entry.FullName);
+                
+                // Add failed upload to the list
+                string relPath = MinIODirectoryHelper.GetRelativePath(entry.FullName, directoryName);
+                string objectKey = $"{destinationPath}/{relPath}";
+                
+                uploadedFiles.Add(new UploadedFileInfo
+                {
+                    Id = Guid.Empty,
+                    FileName = entry.Name,
+                    ObjectKey = objectKey,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    FileSize = entry.Length,
+                    ContentType = MinIODirectoryHelper.GetMimeType(entry.Name)
+                });
             }
         }
 
         // Wait for all uploads to complete
         var uploadResults = await Task.WhenAll(uploadTasks);
-        int uploadedCount = uploadResults.Count(r => r.Success);
+        
+        // Process results and build file list
+        foreach (var (uploadResult, imageMapping) in uploadResults)
+        {
+            if (uploadResult.Success && imageMapping != null)
+            {
+                uploadedFiles.Add(new UploadedFileInfo
+                {
+                    Id = imageMapping.Id,
+                    FileName = imageMapping.FileName,
+                    ObjectKey = imageMapping.ObjectKey,
+                    Success = true,
+                    FileSize = imageMapping.FileSize,
+                    ContentType = imageMapping.ContentType,
+                    Width = imageMapping.Width,
+                    Height = imageMapping.Height
+                });
+            }
+            else if (!uploadResult.Success)
+            {
+                // Find existing failed entry or create new one
+                var existingFailed = uploadedFiles.FirstOrDefault(f => f.ObjectKey == uploadResult.ObjectKey && !f.Success);
+                if (existingFailed != null)
+                {
+                    existingFailed.ErrorMessage = uploadResult.ErrorMessage;
+                }
+            }
+        }
+        
+        int uploadedCount = uploadResults.Count(r => r.Item1.Success);
 
         var uploadResponse = new UploadResponse 
         { 
             UploadedCount = uploadedCount, 
-            OriginalCount = totalCount 
+            OriginalCount = totalCount,
+            Files = uploadedFiles
         };
 
         return (uploadResponse, embeddings);

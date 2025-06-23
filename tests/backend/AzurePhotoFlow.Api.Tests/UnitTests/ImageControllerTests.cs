@@ -1,5 +1,6 @@
 using Api.Interfaces;
 using Api.Models;
+using AzurePhotoFlow.Api.Interfaces;
 using AzurePhotoFlow.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,8 @@ public class ImageControllerTests
             }
         }
 
-        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, mockEmbeddingService.Object, mockStore.Object);
+        var mockImageMappingRepo = new Mock<IImageMappingRepository>();
+        var controller = new ImageController(new Mock<ILogger<ImageController>>().Object, mockUploadService.Object, mockEmbeddingService.Object, mockStore.Object, mockImageMappingRepo.Object);
 
         Environment.SetEnvironmentVariable("ENABLE_EMBEDDINGS", "true");
 
@@ -77,10 +79,12 @@ public class ImageControllerTests
     public async Task UploadDirectory_MissingProjectName_ReturnsBadRequest()
     {
         var mockUploadService = new Mock<IImageUploadService>();
+        var mockImageMappingRepo = new Mock<IImageMappingRepository>();
         var controller = new ImageController(new Mock<ILogger<ImageController>>().Object,
                                             mockUploadService.Object,
                                             new Mock<IEmbeddingService>().Object,
-                                            new Mock<IVectorStore>().Object);
+                                            new Mock<IVectorStore>().Object,
+                                            mockImageMappingRepo.Object);
 
         var stream = new MemoryStream(new byte[] {1});
         IFormFile file = new FormFile(stream, 0, stream.Length, "file", "f.zip");
@@ -93,10 +97,12 @@ public class ImageControllerTests
     [Test]
     public async Task UploadDirectory_MissingFile_ReturnsBadRequest()
     {
+        var mockImageMappingRepo = new Mock<IImageMappingRepository>();
         var controller = new ImageController(new Mock<ILogger<ImageController>>().Object,
                                             new Mock<IImageUploadService>().Object,
                                             new Mock<IEmbeddingService>().Object,
-                                            new Mock<IVectorStore>().Object);
+                                            new Mock<IVectorStore>().Object,
+                                            mockImageMappingRepo.Object);
 
         var result = await controller.UploadDirectory(DateTime.UtcNow, "proj", null!);
 
