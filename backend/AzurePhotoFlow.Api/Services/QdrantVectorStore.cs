@@ -170,17 +170,25 @@ public class QdrantVectorStore : IVectorStore
             _logger.LogInformation("QdrantVectorStore: Retrieving embedding for ObjectKey: {ObjectKey} from collection '{Collection}'", 
                 objectKey, _collection);
 
-            // Use the Qdrant client to retrieve the specific point by ID
-            var pointId = GenerateUuidFromObjectKey(objectKey);
+            // Get the actual GUID from the database instead of generating one
+            var mapping = await _imageMappingRepository.GetByObjectKeyAsync(objectKey);
+            if (mapping == null)
+            {
+                _logger.LogWarning("QdrantVectorStore: No image mapping found for ObjectKey: {ObjectKey}", objectKey);
+                return null;
+            }
+
+            // Use the actual GUID from the database as the point ID
+            var pointId = mapping.Id.ToString();
             var pointData = await _client.GetPointAsync(_collection, pointId);
             
             if (pointData == null)
             {
-                _logger.LogWarning("QdrantVectorStore: No embedding found for ObjectKey: {ObjectKey}", objectKey);
+                _logger.LogWarning("QdrantVectorStore: No embedding found for ObjectKey: {ObjectKey} with GUID: {PointId}", objectKey, pointId);
                 return null;
             }
 
-            _logger.LogInformation("QdrantVectorStore: Successfully retrieved embedding for ObjectKey: {ObjectKey}", objectKey);
+            _logger.LogInformation("QdrantVectorStore: Successfully retrieved embedding for ObjectKey: {ObjectKey} with GUID: {PointId}", objectKey, pointId);
             return pointData.Vector;
         }
         catch (Exception ex)
