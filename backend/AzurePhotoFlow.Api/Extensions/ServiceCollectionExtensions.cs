@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
             var port = int.TryParse(portEnv, out var p) ? p : 6333;
             return new QdrantClient(host, port);
         });
-        services.AddSingleton<IVectorStore, QdrantVectorStore>();
+        services.AddScoped<IVectorStore, QdrantVectorStore>();
 
         return services;
     }
