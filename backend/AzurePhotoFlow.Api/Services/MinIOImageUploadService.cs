@@ -26,17 +26,21 @@ public class MinIOImageUploadService : IImageUploadService
     private readonly IImageMappingRepository _imageMappingRepository;
     /* private readonly IMessageQueueingService _messageQueueingService; */
 
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+
     public MinIOImageUploadService(
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
         IMetadataExtractorService metadataExtractorService,
-        IImageMappingRepository imageMappingRepository)
+        IImageMappingRepository imageMappingRepository,
+        IServiceScopeFactory serviceScopeFactory)
     /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
         _imageMappingRepository = imageMappingRepository;
+        _serviceScopeFactory = serviceScopeFactory;
         /* _messageQueueingService = messageQueueingService; */
     }
 
@@ -159,8 +163,10 @@ public class MinIOImageUploadService : IImageUploadService
                         IsActive = true
                     };
 
-                    // Save mapping to database
-                    await _imageMappingRepository.AddAsync(imageMapping);
+                    // Save mapping to database using a new scope to be consistent
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var repository = scope.ServiceProvider.GetRequiredService<IImageMappingRepository>();
+                    await repository.AddAsync(imageMapping);
 
                     // Add to uploaded files list
                     uploadedFiles.Add(new UploadedFileInfo
@@ -587,8 +593,10 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
                 IsActive = true
             };
 
-            // Save mapping to database
-            await _imageMappingRepository.AddAsync(imageMapping);
+            // Save mapping to database using a new scope to avoid threading issues
+            using var scope = _serviceScopeFactory.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IImageMappingRepository>();
+            await repository.AddAsync(imageMapping);
 
             _log.LogInformation("Uploaded image with mapping: {ObjectKey} -> GUID: {Id}", objectKey, imageMapping.Id);
             return (ImageUploadResult.Ok(objectKey), imageMapping);
