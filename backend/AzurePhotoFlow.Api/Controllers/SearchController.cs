@@ -1,5 +1,6 @@
 using Api.Interfaces;
 using Api.Models;
+using AzurePhotoFlow.Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -18,15 +19,18 @@ public class SearchController : ControllerBase
     private readonly ILogger<SearchController> _logger;
     private readonly IEmbeddingService _embeddingService;
     private readonly IVectorStore _vectorStore;
+    private readonly IImageMappingRepository _imageMappingRepository;
 
     public SearchController(
         ILogger<SearchController> logger, 
         IEmbeddingService embeddingService,
-        IVectorStore vectorStore)
+        IVectorStore vectorStore,
+        IImageMappingRepository imageMappingRepository)
     {
         _logger = logger;
         _embeddingService = embeddingService;
         _vectorStore = vectorStore;
+        _imageMappingRepository = imageMappingRepository;
     }
 
     /// <summary>
@@ -112,11 +116,11 @@ public class SearchController : ControllerBase
 			_logger.LogDebug("Vector search results size: {Count}", vectorResults.Count());
 
             // Convert vector search results to semantic search results
-            var searchResults = vectorResults.Select(vr => CreateSemanticSearchResult(vr)).ToList();
+            var searchResults = await Task.WhenAll(vectorResults.Select(vr => CreateSemanticSearchResult(vr)));
 
             // Populate response
-            response.Results = searchResults;
-            response.TotalResults = searchResults.Count;
+            response.Results = searchResults.ToList();
+            response.TotalResults = searchResults.Length;
             response.TotalImagesSearched = totalImagesSearched;
             response.CollectionName = await _vectorStore.GetCollectionNameAsync();
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
@@ -201,14 +205,14 @@ public class SearchController : ControllerBase
             var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, (int)totalImagesSearched, 0.0, filters);
 
             // Convert vector search results to semantic search results
-            var searchResults = vectorResults.Select(vr => CreateSemanticSearchResult(vr)).ToList();
+            var searchResults = await Task.WhenAll(vectorResults.Select(vr => CreateSemanticSearchResult(vr)));
 
             // Sort by similarity score descending
-            searchResults = searchResults.OrderByDescending(r => r.SimilarityScore).ToList();
+            var sortedResults = searchResults.OrderByDescending(r => r.SimilarityScore).ToList();
 
             // Populate response
-            response.Results = searchResults;
-            response.TotalResults = searchResults.Count;
+            response.Results = sortedResults;
+            response.TotalResults = sortedResults.Count;
             response.TotalImagesSearched = totalImagesSearched;
             response.CollectionName = await _vectorStore.GetCollectionNameAsync();
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
@@ -370,15 +374,15 @@ public class SearchController : ControllerBase
             var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, limit + 1, threshold, filters);
 
             // Filter out the reference image itself and convert results
-            var searchResults = vectorResults
+            var filteredResults = vectorResults
                 .Where(vr => vr.ObjectKey != objectKey) // Exclude reference image
-                .Take(limit) // Limit results after excluding reference
-                .Select(vr => CreateSimilaritySearchResult(vr))
-                .ToList();
+                .Take(limit); // Limit results after excluding reference
+            
+            var searchResults = await Task.WhenAll(filteredResults.Select(vr => CreateSimilaritySearchResult(vr)));
 
             // Populate response
-            response.Results = searchResults;
-            response.TotalResults = searchResults.Count;
+            response.Results = searchResults.ToList();
+            response.TotalResults = searchResults.Length;
             response.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
             response.Success = true;
 
@@ -406,7 +410,7 @@ public class SearchController : ControllerBase
     }
 
 
-    private static SemanticSearchResult CreateSemanticSearchResult(VectorSearchResult vectorResult)
+    private async Task<SemanticSearchResult> CreateSemanticSearchResult(VectorSearchResult vectorResult)
     {
         var result = new SemanticSearchResult
         {
@@ -416,8 +420,32 @@ public class SearchController : ControllerBase
             Metadata = vectorResult.Metadata
         };
 
+        // Try to get image metadata from database using GUID
+        if (Guid.TryParse(vectorResult.Id, out var imageId))
+        {
+            try
+            {
+                var imageMapping = await _imageMappingRepository.GetByIdAsync(imageId);
+                if (imageMapping != null)
+                {
+                    // Use reliable database values
+                    result.FileName = imageMapping.FileName;
+                    result.ProjectName = imageMapping.ProjectName;
+                    result.DirectoryName = imageMapping.DirectoryName;
+                    result.Year = imageMapping.Year?.ToString();
+                    result.UploadDate = imageMapping.UploadDate;
+                    result.ObjectKey = imageMapping.ObjectKey;
 
-        // Extract metadata fields
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to lookup image mapping for ID: {ImageId}", imageId);
+            }
+        }
+
+        // Fallback to metadata parsing if database lookup fails
         if (vectorResult.Metadata.TryGetValue("path", out var pathObj) && pathObj is string path)
         {
             result.ObjectKey = path;
@@ -443,7 +471,7 @@ public class SearchController : ControllerBase
             }
         }
 
-        // Extract other metadata fields if available
+        // Extract other metadata fields if available (additional fallback)
         if (vectorResult.Metadata.TryGetValue("project_name", out var projectObj) && projectObj is string project)
         {
             result.ProjectName = project;
@@ -463,7 +491,7 @@ public class SearchController : ControllerBase
         return result;
     }
 
-    private static SimilaritySearchResult CreateSimilaritySearchResult(VectorSearchResult vectorResult)
+    private async Task<SimilaritySearchResult> CreateSimilaritySearchResult(VectorSearchResult vectorResult)
     {
         var result = new SimilaritySearchResult
         {
@@ -473,7 +501,32 @@ public class SearchController : ControllerBase
             Metadata = vectorResult.Metadata
         };
 
-        // Extract metadata fields
+        // Try to get image metadata from database using GUID
+        if (Guid.TryParse(vectorResult.Id, out var imageId))
+        {
+            try
+            {
+                var imageMapping = await _imageMappingRepository.GetByIdAsync(imageId);
+                if (imageMapping != null)
+                {
+                    // Use reliable database values
+                    result.FileName = imageMapping.FileName;
+                    result.ProjectName = imageMapping.ProjectName;
+                    result.DirectoryName = imageMapping.DirectoryName;
+                    result.Year = imageMapping.Year?.ToString();
+                    result.UploadDate = imageMapping.UploadDate;
+                    result.ObjectKey = imageMapping.ObjectKey;
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to lookup image mapping for ID: {ImageId}", imageId);
+            }
+        }
+
+        // Fallback to metadata parsing if database lookup fails
         if (vectorResult.Metadata.TryGetValue("path", out var pathObj) && pathObj is string path)
         {
             result.ObjectKey = path;
@@ -499,7 +552,7 @@ public class SearchController : ControllerBase
             }
         }
 
-        // Extract other metadata fields if available
+        // Extract other metadata fields if available (additional fallback)
         if (vectorResult.Metadata.TryGetValue("project_name", out var projectObj) && projectObj is string project)
         {
             result.ProjectName = project;
@@ -582,7 +635,7 @@ public class SearchController : ControllerBase
                     var queryEmbedding = await _embeddingService.GenerateTextEmbeddingAsync(request.SemanticQuery);
                     var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, request.Limit * 2, request.Threshold, commonFilters);
                     
-                    semanticResults = vectorResults.Select(vr => CreateSemanticSearchResult(vr)).ToList();
+                    semanticResults = (await Task.WhenAll(vectorResults.Select(vr => CreateSemanticSearchResult(vr)))).ToList();
                     response.Breakdown.SemanticResults = semanticResults.Count;
                 }
                 catch (Exception ex)
@@ -606,10 +659,10 @@ public class SearchController : ControllerBase
                         var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, request.Limit * 2, request.Threshold, commonFilters);
                         
                         // Filter out the reference image itself
-                        similarityResults = vectorResults
-                            .Where(vr => vr.ObjectKey != request.SimilarityReferenceKey)
-                            .Select(vr => CreateSimilaritySearchResult(vr))
-                            .ToList();
+                        var filteredSimilarityResults = vectorResults
+                            .Where(vr => vr.ObjectKey != request.SimilarityReferenceKey);
+                        
+                        similarityResults = (await Task.WhenAll(filteredSimilarityResults.Select(vr => CreateSimilaritySearchResult(vr)))).ToList();
                         
                         response.Breakdown.SimilarityResults = similarityResults.Count;
                     }
