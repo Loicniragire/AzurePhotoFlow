@@ -108,6 +108,17 @@ public class ImageMappingRepository : IImageMappingRepository
     {
         try
         {
+            // Check if an active mapping with this ObjectKey already exists
+            var existingMapping = await _context.ImageMappings
+                .FirstOrDefaultAsync(x => x.ObjectKey == imageMapping.ObjectKey && x.IsActive);
+
+            if (existingMapping != null)
+            {
+                _logger.LogWarning("Image mapping with ObjectKey {ObjectKey} already exists, returning existing mapping with Id {Id}", 
+                    imageMapping.ObjectKey, existingMapping.Id);
+                return existingMapping;
+            }
+
             imageMapping.UploadDate = DateTime.UtcNow;
             imageMapping.UpdatedDate = DateTime.UtcNow;
 
@@ -132,19 +143,41 @@ public class ImageMappingRepository : IImageMappingRepository
         {
             var mappingsList = imageMappings.ToList();
             var now = DateTime.UtcNow;
+            var resultMappings = new List<ImageMapping>();
 
-            foreach (var mapping in mappingsList)
+            // Get existing ObjectKeys to avoid duplicates
+            var objectKeys = mappingsList.Select(x => x.ObjectKey).ToList();
+            var existingMappings = await _context.ImageMappings
+                .Where(x => objectKeys.Contains(x.ObjectKey) && x.IsActive)
+                .ToListAsync();
+
+            var existingObjectKeys = existingMappings.Select(x => x.ObjectKey).ToHashSet();
+
+            // Filter out duplicates and prepare new mappings
+            var newMappings = mappingsList
+                .Where(x => !existingObjectKeys.Contains(x.ObjectKey))
+                .ToList();
+
+            foreach (var mapping in newMappings)
             {
                 mapping.UploadDate = now;
                 mapping.UpdatedDate = now;
             }
 
-            _context.ImageMappings.AddRange(mappingsList);
-            await _context.SaveChangesAsync();
+            if (newMappings.Any())
+            {
+                _context.ImageMappings.AddRange(newMappings);
+                await _context.SaveChangesAsync();
+            }
 
-            _logger.LogInformation("Added {Count} image mappings", mappingsList.Count);
+            // Add both new and existing mappings to result
+            resultMappings.AddRange(newMappings);
+            resultMappings.AddRange(existingMappings);
 
-            return mappingsList;
+            _logger.LogInformation("Added {NewCount} new image mappings, found {ExistingCount} existing mappings", 
+                newMappings.Count, existingMappings.Count);
+
+            return resultMappings;
         }
         catch (Exception ex)
         {
