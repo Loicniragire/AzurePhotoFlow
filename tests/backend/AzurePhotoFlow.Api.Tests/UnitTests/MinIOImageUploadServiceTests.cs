@@ -7,6 +7,13 @@ using Microsoft.Extensions.Logging;
 using Api.Interfaces;
 using AzurePhotoFlow.Api.Interfaces;
 using System.Net; // Added for potential WebUtility usage and for SUT's usage
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using System.IO;
+using System.IO.Compression;
+using Api.Models;
+using AzurePhotoFlow.POCO.QueueModels;
+using AzurePhotoFlow.Api.Data;
 
 namespace unitTests
 {
@@ -17,6 +24,7 @@ namespace unitTests
         private readonly Mock<ILogger<MinIOImageUploadService>> _mockLogger;
         private readonly Mock<IMetadataExtractorService> _mockMetadataExtractorService;
         private readonly Mock<IImageMappingRepository> _mockImageMappingRepository;
+        private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
         private readonly MinIOImageUploadService _service;
 
         private const string BucketName = "photostore";
@@ -32,12 +40,21 @@ namespace unitTests
             _mockMetadataExtractorService = new Mock<IMetadataExtractorService>();
 
             _mockImageMappingRepository = new Mock<IImageMappingRepository>();
-            
+            _mockScopeFactory = new Mock<IServiceScopeFactory>();
+
+            var mockScope = new Mock<IServiceScope>();
+            var mockProvider = new Mock<IServiceProvider>();
+            mockProvider.Setup(p => p.GetService(typeof(IImageMappingRepository)))
+                         .Returns(_mockImageMappingRepository.Object);
+            mockScope.SetupGet(s => s.ServiceProvider).Returns(mockProvider.Object);
+            _mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+
             _service = new MinIOImageUploadService(
                 _mockMinioClient.Object,
                 _mockLogger.Object,
                 _mockMetadataExtractorService.Object,
-                _mockImageMappingRepository.Object
+                _mockImageMappingRepository.Object,
+                _mockScopeFactory.Object
             );
 
             // Default setup for BucketExistsAsync
@@ -202,5 +219,48 @@ namespace unitTests
         /*      */
         /*     _mockMinioClient.Verify(); // Verify all verifiable mocks were called */
         /* } */
+
+        [Test]
+        public async Task ExtractAndUploadImagesAsync_UsesExistingMappingIdOnDuplicate()
+        {
+            // Arrange
+            var existingId = Guid.NewGuid();
+
+            _mockMinioClient.Setup(c => c.PutObjectAsync(It.IsAny<PutObjectArgs>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var headers = new Dictionary<string, string>
+            {
+                {"etag", "etag"},
+                {"last-modified", DateTime.UtcNow.ToString("R")},
+                {"content-length", "1"}
+            };
+            var stat = ObjectStat.FromResponseHeaders("img.jpg", headers);
+            _mockMinioClient.Setup(c => c.StatObjectAsync(It.IsAny<StatObjectArgs>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(stat);
+
+            _mockMetadataExtractorService.Setup(m => m.GetCameraGeneratedMetadata(It.IsAny<Stream>()))
+                .Returns(new CameraGeneratedMetadata());
+
+            _mockImageMappingRepository.Setup(r => r.AddAsync(It.IsAny<ImageMapping>()))
+                .ReturnsAsync(new ImageMapping { Id = existingId });
+
+            var zipStream = new MemoryStream();
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
+            {
+                var entry = archive.CreateEntry("dir/img.jpg");
+                await using var es = entry.Open();
+                await es.WriteAsync(new byte[] {1,2});
+            }
+            zipStream.Position = 0;
+            IFormFile file = new FormFile(zipStream, 0, zipStream.Length, "directory", "archive.zip");
+
+            // Act
+            var response = await _service.ExtractAndUploadImagesAsync(file, "proj", "dir", DateTime.UtcNow);
+
+            // Assert
+            Assert.That(response.Files, Has.Count.EqualTo(1));
+            Assert.AreEqual(existingId, response.Files[0].Id);
+        }
     }
 }

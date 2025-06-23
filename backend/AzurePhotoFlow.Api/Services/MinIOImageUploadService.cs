@@ -166,7 +166,10 @@ public class MinIOImageUploadService : IImageUploadService
                     // Save mapping to database using a new scope to be consistent
                     using var scope = _serviceScopeFactory.CreateScope();
                     var repository = scope.ServiceProvider.GetRequiredService<IImageMappingRepository>();
-                    await repository.AddAsync(imageMapping);
+                    var savedMapping = await repository.AddAsync(imageMapping);
+
+                    // If the repository returned an existing mapping, use its Id
+                    imageMapping = savedMapping;
 
                     // Add to uploaded files list
                     uploadedFiles.Add(new UploadedFileInfo
