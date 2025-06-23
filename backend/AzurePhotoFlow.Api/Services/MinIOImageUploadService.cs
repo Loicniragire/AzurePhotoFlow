@@ -579,7 +579,11 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
                 Width = cameraMetadata?.ImageWidth,
                 Height = cameraMetadata?.ImageHeight,
                 MetadataJson = JsonConvert.SerializeObject(cameraMetadata, 
-                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                    new JsonSerializerSettings 
+                    { 
+                        NullValueHandling = NullValueHandling.Ignore,
+                        Converters = { new NewtonsoftRationalConverter() }
+                    }),
                 IsActive = true
             };
 
