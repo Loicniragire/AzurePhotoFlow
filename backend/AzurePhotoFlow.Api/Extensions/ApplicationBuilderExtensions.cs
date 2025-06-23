@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Api.Interfaces;
 
 namespace AzurePhotoFlow.Services;
 
@@ -65,7 +66,7 @@ public static class ApplicationBuilderExtensions
                 long vectorStoreCount = 0;
                 try
                 {
-                    var vectorStore = context.RequestServices.GetService<Api.Interfaces.IVectorStore>();
+                    var vectorStore = context.RequestServices.GetService<IVectorStore>();
                     if (vectorStore != null)
                     {
                         vectorStoreCount = await vectorStore.GetTotalCountAsync();

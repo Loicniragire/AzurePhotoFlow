@@ -137,8 +137,8 @@ public class QdrantVectorStore : IVectorStore
                     point.Payload.ContainsKey("path") ? point.Payload["path"].ToString() ?? "" : "",
                 // Add GUID for new system
                 Id = point.Payload.ContainsKey("guid") ? 
-                    point.Payload["guid"].ToString() ?? point.Id.Uuid :
-                    point.Id.Uuid,
+                    point.Payload["guid"].ToString() ?? point.Id :
+                    point.Id,
                 SimilarityScore = point.Score,
                 Metadata = point.Payload
             }).ToList();
