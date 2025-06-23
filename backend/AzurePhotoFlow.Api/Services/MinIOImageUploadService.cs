@@ -759,13 +759,13 @@ private async Task<List<ProjectDirectory>> GetDirectoryDetailsAsync(
                 return null;
             }
             
-            // Get the object stream
+            // Get the object stream - use synchronous callback to avoid disposal issues
             var memoryStream = new MemoryStream();
             var getArgs = new GetObjectArgs()
                 .WithBucket(BucketName)
                 .WithObject(objectKey)
-                .WithCallbackStream(async (stream) => {
-                    await stream.CopyToAsync(memoryStream);
+                .WithCallbackStream((stream) => {
+                    stream.CopyTo(memoryStream);
                 });
             
             await _minioClient.GetObjectAsync(getArgs);
