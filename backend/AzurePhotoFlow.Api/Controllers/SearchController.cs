@@ -410,7 +410,8 @@ public class SearchController : ControllerBase
     {
         var result = new SemanticSearchResult
         {
-            ObjectKey = vectorResult.ObjectKey,
+            Id = vectorResult.Id, // GUID identifier from Qdrant point ID
+            ObjectKey = vectorResult.ObjectKey, // For backward compatibility
             SimilarityScore = vectorResult.SimilarityScore,
             Metadata = vectorResult.Metadata
         };
@@ -466,7 +467,8 @@ public class SearchController : ControllerBase
     {
         var result = new SimilaritySearchResult
         {
-            ObjectKey = vectorResult.ObjectKey,
+            Id = vectorResult.Id, // GUID identifier from Qdrant point ID
+            ObjectKey = vectorResult.ObjectKey, // For backward compatibility
             SimilarityScore = vectorResult.SimilarityScore,
             Metadata = vectorResult.Metadata
         };
@@ -704,6 +706,7 @@ public class SearchController : ControllerBase
         {
             var complexResult = new ComplexSearchResult
             {
+                Id = semanticResult.Id, // Include GUID for consistency
                 ObjectKey = semanticResult.ObjectKey,
                 FileName = semanticResult.FileName,
                 ProjectName = semanticResult.ProjectName,
@@ -734,6 +737,7 @@ public class SearchController : ControllerBase
                 // Add new similarity-only result
                 var complexResult = new ComplexSearchResult
                 {
+                    Id = similarityResult.Id, // Include GUID for consistency
                     ObjectKey = similarityResult.ObjectKey,
                     FileName = similarityResult.FileName,
                     ProjectName = similarityResult.ProjectName,

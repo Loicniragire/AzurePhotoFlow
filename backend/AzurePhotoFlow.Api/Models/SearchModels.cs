@@ -73,7 +73,8 @@ public class ComplexSearchResponse
 
 public class SemanticSearchResult
 {
-    public string ObjectKey { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty; // GUID identifier
+    public string ObjectKey { get; set; } = string.Empty; // For backward compatibility
     public string? FileName { get; set; }
     public string? ProjectName { get; set; }
     public string? DirectoryName { get; set; }
@@ -86,7 +87,8 @@ public class SemanticSearchResult
 
 public class SimilaritySearchResult
 {
-    public string ObjectKey { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty; // GUID identifier
+    public string ObjectKey { get; set; } = string.Empty; // For backward compatibility
     public string? FileName { get; set; }
     public string? ProjectName { get; set; }
     public string? DirectoryName { get; set; }
@@ -99,7 +101,8 @@ public class SimilaritySearchResult
 
 public class ComplexSearchResult
 {
-    public string ObjectKey { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty; // GUID identifier
+    public string ObjectKey { get; set; } = string.Empty; // For backward compatibility
     public string? FileName { get; set; }
     public string? ProjectName { get; set; }
     public string? DirectoryName { get; set; }
@@ -125,7 +128,8 @@ public class SearchResultBreakdown
 
 public class VectorSearchResult
 {
-    public string ObjectKey { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty; // GUID identifier
+    public string ObjectKey { get; set; } = string.Empty; // For backward compatibility
     public double SimilarityScore { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();
 }

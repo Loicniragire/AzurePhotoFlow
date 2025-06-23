@@ -1,5 +1,6 @@
 using Api.Interfaces;
 using Api.Models;
+using AzurePhotoFlow.Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -17,16 +18,19 @@ public class ImageController : ControllerBase
     private readonly ILogger<ImageController> _logger;
     private readonly IEmbeddingService _embeddingService;
     private readonly IVectorStore _vectorStore;
+    private readonly IImageMappingRepository _imageMappingRepository;
 
     public ImageController(ILogger<ImageController> logger,
                            IImageUploadService imageUploadService,
                            IEmbeddingService embeddingService,
-                           IVectorStore vectorStore)
+                           IVectorStore vectorStore,
+                           IImageMappingRepository imageMappingRepository)
     {
         _imageUploadService = imageUploadService;
         _logger = logger;
         _embeddingService = embeddingService;
         _vectorStore = vectorStore;
+        _imageMappingRepository = imageMappingRepository;
     }
 
     /// <summary>
@@ -435,6 +439,50 @@ public class ImageController : ControllerBase
     }
     
     /// <summary>
+    /// Serve an image file from storage by its GUID.
+    /// </summary>
+    /// <param name="id">The GUID identifier of the image</param>
+    /// <returns>The image file as a stream</returns>
+    [HttpGet("by-id/{id:guid}")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Image file", typeof(FileStreamResult))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Image not found")]
+    public async Task<IActionResult> GetImageById(Guid id)
+    {
+        try
+        {
+            _logger.LogInformation("Serving image by ID: {Id}", id);
+            
+            // Get the image mapping to find the object key
+            var imageMapping = await _imageMappingRepository.GetByIdAsync(id);
+            if (imageMapping == null)
+            {
+                _logger.LogWarning("Image mapping not found for ID: {Id}", id);
+                return NotFound($"Image not found: {id}");
+            }
+            
+            // Get the image stream from the upload service using the object key
+            var imageStream = await _imageUploadService.GetImageStreamAsync(imageMapping.ObjectKey);
+            if (imageStream == null)
+            {
+                _logger.LogWarning("Image file not found for ID: {Id}, ObjectKey: {ObjectKey}", id, imageMapping.ObjectKey);
+                return NotFound($"Image file not found: {id}");
+            }
+            
+            // Use the content type from the mapping if available, otherwise determine from filename
+            var contentType = !string.IsNullOrEmpty(imageMapping.ContentType) 
+                ? imageMapping.ContentType 
+                : GetContentTypeFromFileName(imageMapping.FileName);
+            
+            return File(imageStream, contentType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error serving image by ID: {Id}", id);
+            return StatusCode(500, "Internal server error while serving image");
+        }
+    }
+
+    /// <summary>
     /// Serve an image file from storage by its object key/path.
     /// </summary>
     /// <param name="objectKey">The object key/path of the image in storage</param>
@@ -458,16 +506,7 @@ public class ImageController : ControllerBase
             }
             
             // Determine content type based on file extension
-            var extension = Path.GetExtension(objectKey).ToLowerInvariant();
-            var contentType = extension switch
-            {
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                ".gif" => "image/gif",
-                ".webp" => "image/webp",
-                ".bmp" => "image/bmp",
-                _ => "application/octet-stream"
-            };
+            var contentType = GetContentTypeFromFileName(objectKey);
             
             return File(imageStream, contentType);
         }
@@ -482,6 +521,25 @@ public class ImageController : ControllerBase
     {
         yield return input;
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Determine MIME content type from filename extension
+    /// </summary>
+    private static string GetContentTypeFromFileName(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            ".tiff" or ".tif" => "image/tiff",
+            ".svg" => "image/svg+xml",
+            _ => "application/octet-stream"
+        };
     }
 }
 

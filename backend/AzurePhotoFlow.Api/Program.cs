@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Api.Interfaces;
 using Api.Models;
+using AzurePhotoFlow.Api.Data;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -123,6 +124,7 @@ builder.Logging.AddJsonConsole(options =>
 
 builder.Services.AddMinioClient();
 builder.Services.AddVectorStore();
+builder.Services.AddPhotoFlowDatabase();
 
 builder.Services.AddSingleton<InferenceSession>(serviceProvider =>
 {
@@ -285,8 +287,14 @@ app.MapHealthEndpoint();
 
 app.MapControllers();
 
-// Graceful Shutdown Handling
+// Initialize Database
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<PhotoFlowDbContext>();
+    context.Database.EnsureCreated();
+}
 
+// Graceful Shutdown Handling
 app.UseShutdownLogging();
 
 app.Run();

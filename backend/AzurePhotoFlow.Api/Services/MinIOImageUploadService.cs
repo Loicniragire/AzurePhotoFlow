@@ -12,6 +12,8 @@ using System.Collections.Concurrent;
 using Minio.DataModel;
 using System.Collections.Generic; // Added for HashSet
 using System.Net;
+using AzurePhotoFlow.Api.Data;
+using AzurePhotoFlow.Api.Interfaces;
 
 namespace AzurePhotoFlow.Services;
 
@@ -21,17 +23,20 @@ public class MinIOImageUploadService : IImageUploadService
     private readonly IMinioClient _minioClient;
     private readonly ILogger<MinIOImageUploadService> _log;
     private readonly IMetadataExtractorService _metadataExtractorService;
+    private readonly IImageMappingRepository _imageMappingRepository;
     /* private readonly IMessageQueueingService _messageQueueingService; */
 
     public MinIOImageUploadService(
         IMinioClient minioClient,
         ILogger<MinIOImageUploadService> logger,
-        IMetadataExtractorService metadataExtractorService)
+        IMetadataExtractorService metadataExtractorService,
+        IImageMappingRepository imageMappingRepository)
     /* IMessageQueueingService messageQueueingService) */
     {
         _minioClient = minioClient;
         _log = logger;
         _metadataExtractorService = metadataExtractorService;
+        _imageMappingRepository = imageMappingRepository;
         /* _messageQueueingService = messageQueueingService; */
     }
 
@@ -132,14 +137,38 @@ public class MinIOImageUploadService : IImageUploadService
 
                     // Reset stream for EXIF extraction.
                     uploadStream.Position = 0;
+                    var cameraMetadata = _metadataExtractorService.GetCameraGeneratedMetadata(uploadStream);
+                    
+                    // Create ImageMapping record
+                    var imageMapping = new ImageMapping
+                    {
+                        Id = Guid.NewGuid(),
+                        ObjectKey = objectKey,
+                        FileName = entry.Name,
+                        ProjectName = projectName,
+                        UploadDate = DateTime.UtcNow,
+                        FileSize = entry.Length,
+                        ContentType = MinIODirectoryHelper.GetMimeType(entry.Name),
+                        DirectoryName = directoryName,
+                        Year = timestamp.ToString("yyyy"),
+                        Width = cameraMetadata?.ImageWidth,
+                        Height = cameraMetadata?.ImageHeight,
+                        MetadataJson = JsonConvert.SerializeObject(cameraMetadata, 
+                            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                        IsActive = true
+                    };
+
+                    // Save mapping to database
+                    await _imageMappingRepository.AddAsync(imageMapping);
+
+                    // Legacy metadata processing (for backward compatibility)
                     var metadata = new ImageMetadata
                     {
                         Id = stat.VersionId ?? stat.ETag,
                         BlobUri = $"s3://{BucketName}/{objectKey}",
                         UploadedBy = "Admin",
                         UploadDate = stat.LastModified,
-                        CameraGeneratedMetadata =
-                            _metadataExtractorService.GetCameraGeneratedMetadata(uploadStream)
+                        CameraGeneratedMetadata = cameraMetadata
                     };
 
                     string serialized = JsonConvert.SerializeObject(
@@ -148,7 +177,7 @@ public class MinIOImageUploadService : IImageUploadService
 
                     /* await _messageQueueingService.EnqueueMessageAsync(serialized); */
 
-                    _log.LogInformation("Uploaded: {Key}", objectKey);
+                    _log.LogInformation("Uploaded: {Key} -> GUID: {Id}", objectKey, imageMapping.Id);
                     uploadedCount++;
                 }
                 finally

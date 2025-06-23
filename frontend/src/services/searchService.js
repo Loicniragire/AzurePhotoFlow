@@ -5,7 +5,9 @@ import apiClient from './apiClient';
  */
 const transformSearchResults = (results) => {
     return results.map(result => ({
-        imageUrl: result.objectKey ? `/api/images/${result.objectKey}` : null,
+        // Use GUID-based URL if available, fallback to object key for backward compatibility
+        imageUrl: result.id ? `/api/image/by-id/${result.id}` : 
+                  result.objectKey ? `/api/image/${encodeURIComponent(result.objectKey)}` : null,
         altText: result.fileName || result.metadata?.fileName || 'Image',
         metadata: {
             fileName: result.fileName || result.metadata?.fileName,
@@ -15,7 +17,8 @@ const transformSearchResults = (results) => {
             year: result.year || result.metadata?.year,
             directory: result.directoryName || result.metadata?.directory
         },
-        objectKey: result.objectKey,
+        id: result.id, // GUID identifier
+        objectKey: result.objectKey, // For backward compatibility
         similarityScore: result.similarityScore || result.score
     }));
 };
@@ -158,9 +161,19 @@ export const searchDebugAllScores = async (query, options = {}) => {
 /**
  * Get image URL for display
  */
-export const getImageUrl = (objectKey) => {
-    if (!objectKey) return null;
-    return `/api/images/${objectKey}`;
+export const getImageUrl = (objectKeyOrId) => {
+    if (!objectKeyOrId) return null;
+    
+    // Check if it's a GUID format (standard GUID with hyphens)
+    const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (guidPattern.test(objectKeyOrId)) {
+        // Use GUID-based endpoint
+        return `/api/image/by-id/${objectKeyOrId}`;
+    } else {
+        // Use object key endpoint with URL encoding
+        return `/api/image/${encodeURIComponent(objectKeyOrId)}`;
+    }
 };
 
 /**
