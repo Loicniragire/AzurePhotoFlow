@@ -30,6 +30,7 @@ services:
     container_name: backend
     volumes:
       - ./models:/models
+      - photoflow-db:/app/data
     environment:
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_ENVIRONMENT=${MODE:-Development}
@@ -48,6 +49,7 @@ services:
       - CLIP_MODEL_PATH=${CLIP_MODEL_PATH:-/models/model.onnx}
       - ENABLE_EMBEDDINGS=${ENABLE_EMBEDDINGS:-false}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
+      - DATABASE_CONNECTION_STRING=Data Source=/app/data/photoflow.db;Cache=Shared
     networks:
       - app-network
     depends_on:
@@ -98,3 +100,4 @@ networks:
 
 volumes:
   minio-data:
+  photoflow-db:
