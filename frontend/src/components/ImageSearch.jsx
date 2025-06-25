@@ -23,7 +23,7 @@ const ImageSearchNew = () => {
         year: '',
         projectName: '',
         limit: 20,
-        threshold: 0.5
+        threshold: 0.15
     });
     
     // Available options for filters
@@ -184,17 +184,17 @@ const ImageSearchNew = () => {
                             <input
                                 type="range"
                                 id="threshold-filter"
-                                min="0.1"
-                                max="0.95"
-                                step="0.05"
+                                min="0.05"
+                                max="0.4"
+                                step="0.025"
                                 value={filters.threshold}
                                 onChange={(e) => setFilters(prev => ({ ...prev, threshold: parseFloat(e.target.value) }))}
                                 className="threshold-slider"
                             />
                             <div className="threshold-labels">
-                                <span>10%</span>
-                                <span>50%</span>
-                                <span>95%</span>
+                                <span>5%</span>
+                                <span>20%</span>
+                                <span>40%</span>
                             </div>
                         </div>
                     </div>
