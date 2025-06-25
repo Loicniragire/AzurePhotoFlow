@@ -76,6 +76,7 @@ const ImageSearchNew = () => {
             if (filters.year) searchOptions.year = filters.year;
             if (filters.limit && filters.limit !== 20) searchOptions.limit = filters.limit;
             if (filters.threshold && filters.threshold !== 0.5) searchOptions.threshold = filters.threshold;
+            searchOptions.similarityRanges = filters.similarityRanges;
 
             // Use debug endpoint if debug mode is enabled
             const response = debugMode 
