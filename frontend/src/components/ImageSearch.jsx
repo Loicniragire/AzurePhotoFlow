@@ -23,7 +23,12 @@ const ImageSearchNew = () => {
         year: '',
         projectName: '',
         limit: 20,
-        threshold: 0.15
+        similarityRanges: {
+            strong: true,    // 0.25-0.40
+            moderate: true,  // 0.18-0.25
+            weak: true,      // 0.10-0.18
+            poor: false      // Below 0.10
+        }
     });
     
     // Available options for filters
@@ -177,24 +182,67 @@ const ImageSearchNew = () => {
                     </div>
 
                     <div className="filter-group">
-                        <label htmlFor="threshold-filter">
-                            Similarity: {(filters.threshold * 100).toFixed(0)}%
-                        </label>
-                        <div className="threshold-slider-container">
-                            <input
-                                type="range"
-                                id="threshold-filter"
-                                min="0.05"
-                                max="0.4"
-                                step="0.025"
-                                value={filters.threshold}
-                                onChange={(e) => setFilters(prev => ({ ...prev, threshold: parseFloat(e.target.value) }))}
-                                className="threshold-slider"
-                            />
-                            <div className="threshold-labels">
-                                <span>5%</span>
-                                <span>20%</span>
-                                <span>40%</span>
+                        <label>Similarity Ranges:</label>
+                        <div className="similarity-checkboxes">
+                            <div className="checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    id="strong-matches"
+                                    checked={filters.similarityRanges.strong}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        similarityRanges: {
+                                            ...prev.similarityRanges,
+                                            strong: e.target.checked
+                                        }
+                                    }))}
+                                />
+                                <label htmlFor="strong-matches">Strong matches (25-40%)</label>
+                            </div>
+                            <div className="checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    id="moderate-matches"
+                                    checked={filters.similarityRanges.moderate}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        similarityRanges: {
+                                            ...prev.similarityRanges,
+                                            moderate: e.target.checked
+                                        }
+                                    }))}
+                                />
+                                <label htmlFor="moderate-matches">Moderate matches (18-25%)</label>
+                            </div>
+                            <div className="checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    id="weak-matches"
+                                    checked={filters.similarityRanges.weak}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        similarityRanges: {
+                                            ...prev.similarityRanges,
+                                            weak: e.target.checked
+                                        }
+                                    }))}
+                                />
+                                <label htmlFor="weak-matches">Weak matches (10-18%)</label>
+                            </div>
+                            <div className="checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    id="poor-matches"
+                                    checked={filters.similarityRanges.poor}
+                                    onChange={(e) => setFilters(prev => ({
+                                        ...prev,
+                                        similarityRanges: {
+                                            ...prev.similarityRanges,
+                                            poor: e.target.checked
+                                        }
+                                    }))}
+                                />
+                                <label htmlFor="poor-matches">Poor matches (&lt;10%)</label>
                             </div>
                         </div>
                     </div>

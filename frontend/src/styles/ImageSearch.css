@@ -593,86 +593,53 @@
     color: #533f03;
 }
 
-/* Threshold Slider */
-.threshold-slider-container {
+/* Similarity Checkboxes */
+.similarity-checkboxes {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    width: 100%;
+    gap: 8px;
+    margin-top: 5px;
 }
 
-.threshold-slider {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: #e0e0e0;
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.threshold-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #007bff;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-}
-
-.threshold-slider::-webkit-slider-thumb:hover {
-    background: #0056b3;
-    transform: scale(1.1);
-}
-
-.threshold-slider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #007bff;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-}
-
-.threshold-slider::-moz-range-thumb:hover {
-    background: #0056b3;
-    transform: scale(1.1);
-}
-
-.threshold-slider::-moz-range-track {
-    height: 6px;
-    border-radius: 3px;
-    background: #e0e0e0;
-    border: none;
-}
-
-.threshold-labels {
+.checkbox-item {
     display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: #666;
-    margin-top: 2px;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    -webkit-appearance: none;
 }
 
-.threshold-labels span {
+.checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #007bff;
+    cursor: pointer;
+}
+
+.checkbox-item label {
+    font-size: 0.9rem;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-item input[type="checkbox"]:checked + label {
     font-weight: 500;
+    color: #007bff;
 }
 
-/* Responsive adjustments for threshold slider */
+.checkbox-item:hover label {
+    color: #0056b3;
+}
+
+/* Responsive adjustments for similarity checkboxes */
 @media (max-width: 768px) {
-    .threshold-slider-container {
-        min-width: 100px;
+    .similarity-checkboxes {
+        gap: 6px;
     }
     
-    .threshold-labels {
-        font-size: 0.7rem;
+    .checkbox-item label {
+        font-size: 0.85rem;
     }
 }
 

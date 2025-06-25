@@ -29,10 +29,30 @@ const transformSearchResults = (results) => {
  */
 export const searchSemantic = async (query, options = {}) => {
     try {
+        // Convert similarity ranges to min/max threshold
+        let minThreshold = 0;
+        let maxThreshold = 1;
+        
+        if (options.similarityRanges) {
+            const ranges = options.similarityRanges;
+            const activeRanges = [];
+            
+            if (ranges.strong) activeRanges.push({ min: 0.25, max: 0.40 });
+            if (ranges.moderate) activeRanges.push({ min: 0.18, max: 0.25 });
+            if (ranges.weak) activeRanges.push({ min: 0.10, max: 0.18 });
+            if (ranges.poor) activeRanges.push({ min: 0, max: 0.10 });
+            
+            if (activeRanges.length > 0) {
+                minThreshold = Math.min(...activeRanges.map(r => r.min));
+                maxThreshold = Math.max(...activeRanges.map(r => r.max));
+            }
+        }
+        
         const params = {
             query,
             limit: options.limit || 20,
-            threshold: options.threshold || 0.5,
+            threshold: options.threshold || minThreshold,
+            maxThreshold: maxThreshold < 1 ? maxThreshold : undefined,
             ...(options.projectName && { projectName: options.projectName }),
             ...(options.year && { year: options.year })
         };
@@ -59,10 +79,30 @@ export const searchSemantic = async (query, options = {}) => {
  */
 export const searchSimilarity = async (objectKey, options = {}) => {
     try {
+        // Convert similarity ranges to min/max threshold
+        let minThreshold = 0;
+        let maxThreshold = 1;
+        
+        if (options.similarityRanges) {
+            const ranges = options.similarityRanges;
+            const activeRanges = [];
+            
+            if (ranges.strong) activeRanges.push({ min: 0.25, max: 0.40 });
+            if (ranges.moderate) activeRanges.push({ min: 0.18, max: 0.25 });
+            if (ranges.weak) activeRanges.push({ min: 0.10, max: 0.18 });
+            if (ranges.poor) activeRanges.push({ min: 0, max: 0.10 });
+            
+            if (activeRanges.length > 0) {
+                minThreshold = Math.min(...activeRanges.map(r => r.min));
+                maxThreshold = Math.max(...activeRanges.map(r => r.max));
+            }
+        }
+        
         const params = {
             objectKey,
             limit: options.limit || 20,
-            threshold: options.threshold || 0.5,
+            threshold: options.threshold || minThreshold,
+            maxThreshold: maxThreshold < 1 ? maxThreshold : undefined,
             ...(options.projectName && { projectName: options.projectName }),
             ...(options.year && { year: options.year })
         };
@@ -87,10 +127,30 @@ export const searchSimilarity = async (objectKey, options = {}) => {
  */
 export const searchSimilarityAdvanced = async (searchRequest) => {
     try {
+        // Convert similarity ranges to min/max threshold
+        let minThreshold = 0;
+        let maxThreshold = 1;
+        
+        if (searchRequest.similarityRanges) {
+            const ranges = searchRequest.similarityRanges;
+            const activeRanges = [];
+            
+            if (ranges.strong) activeRanges.push({ min: 0.25, max: 0.40 });
+            if (ranges.moderate) activeRanges.push({ min: 0.18, max: 0.25 });
+            if (ranges.weak) activeRanges.push({ min: 0.10, max: 0.18 });
+            if (ranges.poor) activeRanges.push({ min: 0, max: 0.10 });
+            
+            if (activeRanges.length > 0) {
+                minThreshold = Math.min(...activeRanges.map(r => r.min));
+                maxThreshold = Math.max(...activeRanges.map(r => r.max));
+            }
+        }
+        
         const params = {
             objectKey: searchRequest.objectKey,
             limit: searchRequest.limit || 20,
-            threshold: searchRequest.threshold || 0.5,
+            threshold: searchRequest.threshold || minThreshold,
+            maxThreshold: maxThreshold < 1 ? maxThreshold : undefined,
             ...(searchRequest.projectName && { projectName: searchRequest.projectName }),
             ...(searchRequest.year && { year: searchRequest.year })
         };
