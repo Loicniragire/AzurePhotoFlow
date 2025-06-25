@@ -16,6 +16,8 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
     private readonly InferenceSession? _textSession;
     private readonly Dictionary<string, object>? _tokenizer;
     private readonly ClipTokenizer? _clipTokenizer;
+    private readonly SimpleClipTokenizer? _simpleClipTokenizer;
+    private readonly DirectClipTokenizer? _directClipTokenizer;
     private readonly ILogger<OnnxImageEmbeddingModel> _logger;
     private readonly EmbeddingConfiguration _config;
     
@@ -38,12 +40,34 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         {
             try
             {
-                _clipTokenizer = new ClipTokenizer(tokenizerPath);
-                _logger.LogInformation("[EMBEDDING DEBUG] CLIP BPE tokenizer loaded successfully from {TokenizerPath}", tokenizerPath);
+                _directClipTokenizer = new DirectClipTokenizer(tokenizerPath);
+                _logger.LogInformation("[EMBEDDING DEBUG] Direct CLIP tokenizer loaded successfully from {TokenizerPath}", tokenizerPath);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("[EMBEDDING DEBUG] Failed to load CLIP tokenizer from {TokenizerPath}: {Error}", tokenizerPath, ex.Message);
+                _logger.LogWarning("[EMBEDDING DEBUG] Failed to load Direct CLIP tokenizer from {TokenizerPath}: {Error}", tokenizerPath, ex.Message);
+                
+                // Fallback to simple tokenizer
+                try
+                {
+                    _simpleClipTokenizer = new SimpleClipTokenizer(tokenizerPath);
+                    _logger.LogInformation("[EMBEDDING DEBUG] Simple CLIP tokenizer loaded as fallback from {TokenizerPath}", tokenizerPath);
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogWarning("[EMBEDDING DEBUG] Failed to load Simple CLIP tokenizer from {TokenizerPath}: {Error}", tokenizerPath, ex2.Message);
+                    
+                    // Fallback to complex tokenizer
+                    try
+                    {
+                        _clipTokenizer = new ClipTokenizer(tokenizerPath);
+                        _logger.LogInformation("[EMBEDDING DEBUG] Complex CLIP BPE tokenizer loaded as fallback from {TokenizerPath}", tokenizerPath);
+                    }
+                    catch (Exception ex3)
+                    {
+                        _logger.LogWarning("[EMBEDDING DEBUG] Failed to load any CLIP tokenizer from {TokenizerPath}: {Error}", tokenizerPath, ex3.Message);
+                    }
+                }
             }
         }
         
@@ -56,7 +80,10 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         _logger.LogInformation("[EMBEDDING DEBUG] - Text model: {TextModelStatus} (for text embeddings)", 
             textSession != null ? "Available (CLIP text model)" : "NOT AVAILABLE (will use fallback)");
         _logger.LogInformation("[EMBEDDING DEBUG] - Tokenizer: {TokenizerStatus}", 
-            _clipTokenizer != null ? "Available (CLIP BPE tokenizer)" : tokenizer != null ? "Available (legacy)" : "NOT AVAILABLE");
+            _directClipTokenizer != null ? "Available (Direct CLIP tokenizer)" :
+            _simpleClipTokenizer != null ? "Available (Simple CLIP tokenizer)" : 
+            _clipTokenizer != null ? "Available (Complex CLIP BPE tokenizer)" : 
+            tokenizer != null ? "Available (legacy)" : "NOT AVAILABLE");
         _logger.LogInformation("[EMBEDDING DEBUG] - Configuration: Dimension={Dimension}, InputSize={InputSize}, MaxTokens={MaxTokens}", 
             EmbeddingSize, InputSize, MaxTokenLength);
     }
@@ -131,7 +158,7 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         }
 
         // Check tokenizer availability
-        if (_clipTokenizer == null && _tokenizer == null)
+        if (_directClipTokenizer == null && _simpleClipTokenizer == null && _clipTokenizer == null && _tokenizer == null)
         {
             _logger.LogWarning("[EMBEDDING DEBUG] No tokenizer available, using fallback tokenization for text: '{Text}'", text);
         }
@@ -139,7 +166,9 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         try
         {
             _logger.LogInformation("[EMBEDDING DEBUG] Using CLIP text model{TokenizerInfo} for text embedding generation: '{Text}'", 
-                _clipTokenizer != null ? " with BPE tokenizer" : " with legacy tokenizer", text);
+                _directClipTokenizer != null ? " with Direct CLIP tokenizer" :
+                _simpleClipTokenizer != null ? " with Simple CLIP tokenizer" :
+                _clipTokenizer != null ? " with Complex BPE tokenizer" : " with legacy tokenizer", text);
             return GenerateRealTextEmbedding(text);
         }
         catch (Exception ex)
@@ -208,12 +237,33 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 
     private long[] TokenizeText(string text)
     {
-        // Use CLIP tokenizer if available
+        // Use Direct CLIP tokenizer first
+        if (_directClipTokenizer != null)
+        {
+            _logger.LogDebug("[EMBEDDING DEBUG] Using Direct CLIP tokenizer for text: '{Text}'", text);
+            var directTokens = _directClipTokenizer.Tokenize(text);
+            _logger.LogDebug("[EMBEDDING DEBUG] Direct CLIP tokenization result: {TokenCount} tokens: [{Tokens}]", 
+                directTokens.Length, string.Join(", ", directTokens.Take(10)));
+            return directTokens;
+        }
+        
+        // Fallback to Simple CLIP tokenizer
+        if (_simpleClipTokenizer != null)
+        {
+            _logger.LogDebug("[EMBEDDING DEBUG] Using Simple CLIP tokenizer for text: '{Text}'", text);
+            var simpleTokens = _simpleClipTokenizer.Tokenize(text);
+            _logger.LogDebug("[EMBEDDING DEBUG] Simple CLIP tokenization result: {TokenCount} tokens: [{Tokens}]", 
+                simpleTokens.Length, string.Join(", ", simpleTokens.Take(10)));
+            return simpleTokens;
+        }
+        
+        // Fallback to complex CLIP tokenizer
         if (_clipTokenizer != null)
         {
-            _logger.LogDebug("[EMBEDDING DEBUG] Using CLIP BPE tokenizer for text: '{Text}'", text);
+            _logger.LogDebug("[EMBEDDING DEBUG] Using Complex CLIP BPE tokenizer for text: '{Text}'", text);
             var clipTokens = _clipTokenizer.Tokenize(text);
-            _logger.LogDebug("[EMBEDDING DEBUG] CLIP tokenization result: {TokenCount} tokens", clipTokens.Length);
+            _logger.LogDebug("[EMBEDDING DEBUG] Complex CLIP tokenization result: {TokenCount} tokens: [{Tokens}]", 
+                clipTokens.Length, string.Join(", ", clipTokens.Take(10)));
             return clipTokens;
         }
 
