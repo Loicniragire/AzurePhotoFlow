@@ -98,6 +98,17 @@ def export_clip_model(output_dir: str, model_name: str = "openai/clip-vit-base-p
     tokenizer.save_pretrained(tokenizer_path)
     print(f"Tokenizer saved to {tokenizer_path}")
 
+    # Create model info file
+    info_path = os.path.join(output_dir, "model_info.txt")
+    with open(info_path, "w") as f:
+        f.write(f"model_name={model_name}\n")
+        f.write(f"tokenizer_type=CLIPTokenizer\n")
+        f.write(f"tokenizer_method=BPE\n")
+        f.write(f"max_tokens=77\n")
+        f.write(f"vocab_size={tokenizer.vocab_size}\n")
+        f.write(f"exports=vision_model.onnx,text_model.onnx,tokenizer/\n")
+    print(f"Model info saved to {info_path}")
+
     # Create backward compatibility symlink for vision model
     legacy_path = os.path.join(output_dir, "model.onnx")
     if not os.path.exists(legacy_path):

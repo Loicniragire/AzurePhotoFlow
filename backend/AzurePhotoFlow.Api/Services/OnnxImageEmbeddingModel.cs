@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Text;
 using AzurePhotoFlow.Api.Models;
+using AzurePhotoFlow.Api.Services;
 using SixLaborsImage = SixLabors.ImageSharp.Image;
 
 namespace AzurePhotoFlow.Services;
@@ -14,6 +15,7 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
     private readonly InferenceSession _visionSession;
     private readonly InferenceSession? _textSession;
     private readonly Dictionary<string, object>? _tokenizer;
+    private readonly ClipTokenizer? _clipTokenizer;
     private readonly ILogger<OnnxImageEmbeddingModel> _logger;
     private readonly EmbeddingConfiguration _config;
     
@@ -30,6 +32,21 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<OnnxImageEmbeddingModel>.Instance;
         _config = config ?? throw new ArgumentNullException(nameof(config));
         
+        // Initialize CLIP tokenizer if available
+        var tokenizerPath = Path.Combine(Path.GetDirectoryName(Environment.GetEnvironmentVariable("CLIP_MODEL_PATH") ?? "/models/vision_model.onnx") ?? "/models", "tokenizer");
+        if (Directory.Exists(tokenizerPath))
+        {
+            try
+            {
+                _clipTokenizer = new ClipTokenizer(tokenizerPath);
+                _logger.LogInformation("[EMBEDDING DEBUG] CLIP BPE tokenizer loaded successfully from {TokenizerPath}", tokenizerPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("[EMBEDDING DEBUG] Failed to load CLIP tokenizer from {TokenizerPath}: {Error}", tokenizerPath, ex.Message);
+            }
+        }
+        
         // Validate configuration
         _config.Validate();
         
@@ -39,7 +56,7 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
         _logger.LogInformation("[EMBEDDING DEBUG] - Text model: {TextModelStatus} (for text embeddings)", 
             textSession != null ? "Available (CLIP text model)" : "NOT AVAILABLE (will use fallback)");
         _logger.LogInformation("[EMBEDDING DEBUG] - Tokenizer: {TokenizerStatus}", 
-            tokenizer != null ? "Available" : "NOT AVAILABLE");
+            _clipTokenizer != null ? "Available (CLIP BPE tokenizer)" : tokenizer != null ? "Available (legacy)" : "NOT AVAILABLE");
         _logger.LogInformation("[EMBEDDING DEBUG] - Configuration: Dimension={Dimension}, InputSize={InputSize}, MaxTokens={MaxTokens}", 
             EmbeddingSize, InputSize, MaxTokenLength);
     }
@@ -107,15 +124,22 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
     public float[] GenerateTextEmbedding(string text)
     {
         // Require text model to be available - no fallback
-        if (_textSession == null || _tokenizer == null)
+        if (_textSession == null)
         {
             _logger.LogError("[EMBEDDING DEBUG] No text model available for text embedding generation: '{Text}'", text);
             throw new InvalidOperationException("CLIP text model is required for text embedding generation. Please ensure the text model is properly loaded.");
         }
 
+        // Check tokenizer availability
+        if (_clipTokenizer == null && _tokenizer == null)
+        {
+            _logger.LogWarning("[EMBEDDING DEBUG] No tokenizer available, using fallback tokenization for text: '{Text}'", text);
+        }
+
         try
         {
-            _logger.LogInformation("[EMBEDDING DEBUG] Using CLIP text model for text embedding generation: '{Text}'", text);
+            _logger.LogInformation("[EMBEDDING DEBUG] Using CLIP text model{TokenizerInfo} for text embedding generation: '{Text}'", 
+                _clipTokenizer != null ? " with BPE tokenizer" : " with legacy tokenizer", text);
             return GenerateRealTextEmbedding(text);
         }
         catch (Exception ex)
@@ -184,6 +208,18 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 
     private long[] TokenizeText(string text)
     {
+        // Use CLIP tokenizer if available
+        if (_clipTokenizer != null)
+        {
+            _logger.LogDebug("[EMBEDDING DEBUG] Using CLIP BPE tokenizer for text: '{Text}'", text);
+            var clipTokens = _clipTokenizer.Tokenize(text);
+            _logger.LogDebug("[EMBEDDING DEBUG] CLIP tokenization result: {TokenCount} tokens", clipTokens.Length);
+            return clipTokens;
+        }
+
+        // Fallback to legacy tokenization
+        _logger.LogDebug("[EMBEDDING DEBUG] Using legacy tokenizer for text: '{Text}'", text);
+        
         if (_config.EnableTextPreprocessing)
         {
             text = PreprocessText(text);
