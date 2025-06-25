@@ -13,9 +13,10 @@ public interface IQdrantClientWrapper
     /// <param name="vector">Query vector</param>
     /// <param name="limit">Maximum number of results</param>
     /// <param name="threshold">Minimum similarity threshold</param>
+    /// <param name="maxThreshold">Maximum similarity threshold, null for no upper limit</param>
     /// <param name="filter">Optional metadata filter</param>
     /// <returns>Search results with scores and metadata</returns>
-    Task<SearchResult> SearchAsync(string collection, float[] vector, int limit, double threshold, Dictionary<string, object>? filter = null);
+    Task<SearchResult> SearchAsync(string collection, float[] vector, int limit, double threshold, double? maxThreshold = null, Dictionary<string, object>? filter = null);
     
     /// <summary>
     /// Get a specific point by ID from the collection.

@@ -127,17 +127,21 @@ public class QdrantClientWrapper : IQdrantClientWrapper
         };
     }
     
-    public async Task<SearchResult> SearchAsync(string collection, float[] vector, int limit, double threshold, Dictionary<string, object>? filter = null)
+    public async Task<SearchResult> SearchAsync(string collection, float[] vector, int limit, double threshold, double? maxThreshold = null, Dictionary<string, object>? filter = null)
     {
         try
         {
-            _logger.LogInformation("QdrantClientWrapper: Searching collection '{Collection}' with limit {Limit} and threshold {Threshold}", 
-                collection, limit, threshold);
+            var maxThresholdText = maxThreshold.HasValue ? maxThreshold.Value.ToString("F4") : "null";
+            _logger.LogInformation("QdrantClientWrapper: Searching collection '{Collection}' with limit {Limit}, threshold {Threshold}, and maxThreshold {MaxThreshold}", 
+                collection, limit, threshold, maxThresholdText);
 
+            // If maxThreshold is specified, we need to potentially fetch more results to filter them afterward
+            var searchLimit = maxThreshold.HasValue ? Math.Max(limit * 2, 100) : limit;
+            
             var searchRequest = new
             {
                 vector = vector,
-                limit = limit,
+                limit = searchLimit,
                 score_threshold = threshold,
                 with_payload = true,
                 filter = filter != null && filter.Any() ? CreateFilter(filter) : null
@@ -195,14 +199,34 @@ public class QdrantClientWrapper : IQdrantClientWrapper
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
             });
 
+            var allPoints = searchResponse?.Result?.Select(p => new SearchResultPoint
+            {
+                Id = p.Id,
+                Score = p.Score,
+                Payload = p.Payload ?? new Dictionary<string, object>()
+            }).ToList() ?? new List<SearchResultPoint>();
+
+            // Apply maxThreshold filtering if specified
+            var filteredPoints = allPoints;
+            if (maxThreshold.HasValue)
+            {
+                var originalCount = filteredPoints.Count;
+                filteredPoints = filteredPoints.Where(p => p.Score <= maxThreshold.Value).ToList();
+                var filteredCount = filteredPoints.Count;
+                
+                if (originalCount != filteredCount)
+                {
+                    _logger.LogInformation("QdrantClientWrapper: Filtered {FilteredOut} results that exceeded maxThreshold {MaxThreshold}. Results: {OriginalCount} -> {FilteredCount}", 
+                        originalCount - filteredCount, maxThreshold.Value, originalCount, filteredCount);
+                }
+            }
+            
+            // Limit to the requested count
+            var finalPoints = filteredPoints.Take(limit).ToList();
+
             var result = new SearchResult
             {
-                Points = searchResponse?.Result?.Select(p => new SearchResultPoint
-                {
-                    Id = p.Id,
-                    Score = p.Score,
-                    Payload = p.Payload ?? new Dictionary<string, object>()
-                }).ToList() ?? new List<SearchResultPoint>()
+                Points = finalPoints
             };
 
             _logger.LogInformation("QdrantClientWrapper: Found {ResultCount} results for search in collection '{Collection}'", 

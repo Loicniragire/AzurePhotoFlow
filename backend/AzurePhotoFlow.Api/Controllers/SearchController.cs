@@ -39,6 +39,7 @@ public class SearchController : ControllerBase
     /// <param name="query">Natural language search query (e.g., "photos of dogs in parks")</param>
     /// <param name="limit">Maximum number of results to return (1-100, default: 20)</param>
     /// <param name="threshold">Minimum similarity threshold (0.0-1.0, default: 0.5)</param>
+    /// <param name="maxThreshold">Maximum similarity threshold (0.0-1.0), null for no upper limit</param>
     /// <param name="projectName">Optional project name filter</param>
     /// <param name="year">Optional year filter</param>
     /// <returns>Semantic search results with similarity scores</returns>
@@ -47,6 +48,7 @@ public class SearchController : ControllerBase
         [FromQuery] string query,
         [FromQuery] int limit = 20,
         [FromQuery] double threshold = 0.5,
+        [FromQuery] double? maxThreshold = null,
         [FromQuery] string? projectName = null,
         [FromQuery] string? year = null)
     {
@@ -55,8 +57,9 @@ public class SearchController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Semantic search request: Query='{Query}', Limit={Limit}, Threshold={Threshold}, Project={Project}, Year={Year}", 
-                query, limit, threshold, projectName, year);
+            var maxThresholdText = maxThreshold.HasValue ? maxThreshold.Value.ToString("F4") : "null";
+            _logger.LogInformation("Semantic search request: Query='{Query}', Limit={Limit}, Threshold={Threshold}, MaxThreshold={MaxThreshold}, Project={Project}, Year={Year}", 
+                query, limit, threshold, maxThresholdText, projectName, year);
 
             // Validate input parameters
             if (string.IsNullOrWhiteSpace(query))
@@ -89,6 +92,26 @@ public class SearchController : ControllerBase
                 });
             }
 
+            if (maxThreshold.HasValue && (maxThreshold.Value < 0.0 || maxThreshold.Value > 1.0))
+            {
+                return BadRequest(new SemanticSearchResponse 
+                { 
+                    Query = query, 
+                    Success = false, 
+                    ErrorMessage = "MaxThreshold must be between 0.0 and 1.0" 
+                });
+            }
+
+            if (maxThreshold.HasValue && maxThreshold.Value < threshold)
+            {
+                return BadRequest(new SemanticSearchResponse 
+                { 
+                    Query = query, 
+                    Success = false, 
+                    ErrorMessage = "MaxThreshold must be greater than or equal to threshold" 
+                });
+            }
+
             // Generate embedding for the search query
             _logger.LogInformation("SearchController: Generating text embedding for query: '{Query}'", query);
             var queryEmbedding = await _embeddingService.GenerateTextEmbeddingAsync(query);
@@ -111,7 +134,7 @@ public class SearchController : ControllerBase
 
             // Perform vector similarity search
             _logger.LogDebug("Performing vector search with {Dimensions} dimensional query vector", queryEmbedding.Length);
-            var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, limit, threshold, filters);
+            var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, limit, threshold, maxThreshold, filters);
 
 			_logger.LogDebug("Vector search results size: {Count}", vectorResults.Count());
 
@@ -202,7 +225,7 @@ public class SearchController : ControllerBase
 
             // Perform vector similarity search with NO threshold and high limit to get ALL results
             _logger.LogDebug("Debug: Performing vector search for ALL images");
-            var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, (int)totalImagesSearched, 0.0, filters);
+            var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, (int)totalImagesSearched, 0.0, null, filters);
 
             // Convert vector search results to semantic search results
             var searchResults = await Task.WhenAll(vectorResults.Select(vr => CreateSemanticSearchResult(vr)));
@@ -294,6 +317,7 @@ public class SearchController : ControllerBase
     /// <param name="objectKey">Object key/path of the reference image</param>
     /// <param name="limit">Maximum number of results to return (1-100, default: 20)</param>
     /// <param name="threshold">Minimum similarity threshold (0.0-1.0, default: 0.5)</param>
+    /// <param name="maxThreshold">Maximum similarity threshold (0.0-1.0), null for no upper limit</param>
     /// <param name="projectName">Optional project name filter</param>
     /// <param name="year">Optional year filter</param>
     /// <returns>Visual similarity search results with similarity scores</returns>
@@ -302,6 +326,7 @@ public class SearchController : ControllerBase
         [FromQuery] string objectKey,
         [FromQuery] int limit = 20,
         [FromQuery] double threshold = 0.5,
+        [FromQuery] double? maxThreshold = null,
         [FromQuery] string? projectName = null,
         [FromQuery] string? year = null)
     {
@@ -310,8 +335,9 @@ public class SearchController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Similarity search request: ObjectKey='{ObjectKey}', Limit={Limit}, Threshold={Threshold}, Project={Project}, Year={Year}", 
-                objectKey, limit, threshold, projectName, year);
+            var maxThresholdText = maxThreshold.HasValue ? maxThreshold.Value.ToString("F4") : "null";
+            _logger.LogInformation("Similarity search request: ObjectKey='{ObjectKey}', Limit={Limit}, Threshold={Threshold}, MaxThreshold={MaxThreshold}, Project={Project}, Year={Year}", 
+                objectKey, limit, threshold, maxThresholdText, projectName, year);
 
             // Validate input parameters
             if (string.IsNullOrWhiteSpace(objectKey))
@@ -344,6 +370,26 @@ public class SearchController : ControllerBase
                 });
             }
 
+            if (maxThreshold.HasValue && (maxThreshold.Value < 0.0 || maxThreshold.Value > 1.0))
+            {
+                return BadRequest(new SimilaritySearchResponse 
+                { 
+                    ReferenceObjectKey = objectKey, 
+                    Success = false, 
+                    ErrorMessage = "MaxThreshold must be between 0.0 and 1.0" 
+                });
+            }
+
+            if (maxThreshold.HasValue && maxThreshold.Value < threshold)
+            {
+                return BadRequest(new SimilaritySearchResponse 
+                { 
+                    ReferenceObjectKey = objectKey, 
+                    Success = false, 
+                    ErrorMessage = "MaxThreshold must be greater than or equal to threshold" 
+                });
+            }
+
             // Get the embedding for the reference image
             _logger.LogDebug("Retrieving embedding for reference image: {ObjectKey}", objectKey);
             var referenceEmbedding = await _vectorStore.GetEmbeddingAsync(objectKey);
@@ -371,7 +417,7 @@ public class SearchController : ControllerBase
 
             // Perform vector similarity search
             _logger.LogDebug("Performing similarity search with {Dimensions} dimensional reference vector", referenceEmbedding.Length);
-            var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, limit + 1, threshold, filters);
+            var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, limit + 1, threshold, maxThreshold, filters);
 
             // Filter out the reference image itself and convert results
             var filteredResults = vectorResults
@@ -633,7 +679,7 @@ public class SearchController : ControllerBase
                 {
                     _logger.LogDebug("Performing semantic search for query: {Query}", request.SemanticQuery);
                     var queryEmbedding = await _embeddingService.GenerateTextEmbeddingAsync(request.SemanticQuery);
-                    var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, request.Limit * 2, request.Threshold, commonFilters);
+                    var vectorResults = await _vectorStore.SearchAsync(queryEmbedding, request.Limit * 2, request.Threshold, null, commonFilters);
                     
                     semanticResults = (await Task.WhenAll(vectorResults.Select(vr => CreateSemanticSearchResult(vr)))).ToList();
                     response.Breakdown.SemanticResults = semanticResults.Count;
@@ -656,7 +702,7 @@ public class SearchController : ControllerBase
                     
                     if (referenceEmbedding != null)
                     {
-                        var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, request.Limit * 2, request.Threshold, commonFilters);
+                        var vectorResults = await _vectorStore.SearchAsync(referenceEmbedding, request.Limit * 2, request.Threshold, null, commonFilters);
                         
                         // Filter out the reference image itself
                         var filteredSimilarityResults = vectorResults

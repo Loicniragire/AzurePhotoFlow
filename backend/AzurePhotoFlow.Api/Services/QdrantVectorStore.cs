@@ -104,12 +104,13 @@ public class QdrantVectorStore : IVectorStore
         }
     }
 
-    public async Task<IEnumerable<VectorSearchResult>> SearchAsync(float[] queryVector, int limit = 20, double threshold = 0.5, Dictionary<string, object>? filter = null)
+    public async Task<IEnumerable<VectorSearchResult>> SearchAsync(float[] queryVector, int limit = 20, double threshold = 0.5, double? maxThreshold = null, Dictionary<string, object>? filter = null)
     {
         try
         {
-            _logger.LogInformation("QdrantVectorStore: Starting vector search in collection '{Collection}' with limit {Limit} and threshold {Threshold}", 
-                _collection, limit, threshold);
+            var maxThresholdText = maxThreshold.HasValue ? maxThreshold.Value.ToString("F4") : "null";
+            _logger.LogInformation("QdrantVectorStore: Starting vector search in collection '{Collection}' with limit {Limit}, threshold {Threshold}, and maxThreshold {MaxThreshold}", 
+                _collection, limit, threshold, maxThresholdText);
 
             // Log detailed query information
             _logger.LogInformation("QdrantVectorStore: Query vector details - Length: {VectorLength}, First 5 values: [{Values}]",
@@ -127,7 +128,7 @@ public class QdrantVectorStore : IVectorStore
             }
 
             _logger.LogDebug("QdrantVectorStore: Executing search request for collection '{Collection}'", _collection);
-            var searchResponse = await _client.SearchAsync(_collection, queryVector, limit, threshold, filter);
+            var searchResponse = await _client.SearchAsync(_collection, queryVector, limit, threshold, maxThreshold, filter);
             
             var results = searchResponse.Points.Select(point => new VectorSearchResult
             {

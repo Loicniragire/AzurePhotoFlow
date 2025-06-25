@@ -13,9 +13,10 @@ public interface IVectorStore
     /// <param name="queryVector">The query vector to search for</param>
     /// <param name="limit">Maximum number of results to return</param>
     /// <param name="threshold">Minimum similarity threshold (0.0 to 1.0)</param>
+    /// <param name="maxThreshold">Maximum similarity threshold (0.0 to 1.0), null for no upper limit</param>
     /// <param name="filter">Optional metadata filter conditions</param>
     /// <returns>List of similar vectors with similarity scores and metadata</returns>
-    Task<IEnumerable<VectorSearchResult>> SearchAsync(float[] queryVector, int limit = 20, double threshold = 0.5, Dictionary<string, object>? filter = null);
+    Task<IEnumerable<VectorSearchResult>> SearchAsync(float[] queryVector, int limit = 20, double threshold = 0.5, double? maxThreshold = null, Dictionary<string, object>? filter = null);
     
     /// <summary>
     /// Get the embedding vector for a specific object key.
