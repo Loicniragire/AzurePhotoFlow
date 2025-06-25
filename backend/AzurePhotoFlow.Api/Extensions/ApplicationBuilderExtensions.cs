@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Api.Interfaces;
+using AzurePhotoFlow.Api.Services;
 
 namespace AzurePhotoFlow.Services;
 
@@ -78,6 +79,22 @@ public static class ApplicationBuilderExtensions
                     logger.LogError(ex, "Failed to get vector store count in health check");
                 }
 
+                // Add tokenizer health check
+                TokenizerHealthResult? tokenizerHealth = null;
+                try
+                {
+                    var tokenizerHealthService = context.RequestServices.GetService<TokenizerHealthService>();
+                    if (tokenizerHealthService != null)
+                    {
+                        tokenizerHealth = tokenizerHealthService.CheckTokenizerHealth();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Failed to check tokenizer health");
+                }
+
                 var result = JsonSerializer.Serialize(new
                 {
                     Status = report.Status.ToString(),
@@ -89,7 +106,22 @@ public static class ApplicationBuilderExtensions
                         Exception = e.Value.Exception?.Message
                     }),
                     Duration = report.TotalDuration,
-                    VectorStoreCount = vectorStoreCount
+                    VectorStoreCount = vectorStoreCount,
+                    TokenizerHealth = tokenizerHealth != null ? new
+                    {
+                        IsHealthy = tokenizerHealth.IsHealthy,
+                        Issues = tokenizerHealth.Issues,
+                        VocabularySize = tokenizerHealth.VocabularySize,
+                        Files = tokenizerHealth.FileValidations.Select(f => new
+                        {
+                            FileName = f.FileName,
+                            IsValid = f.IsValid,
+                            ErrorMessage = f.ErrorMessage,
+                            FileSizeBytes = f.FileSizeBytes,
+                            LastModified = f.LastModified
+                        }),
+                        CheckedAt = tokenizerHealth.CheckedAt
+                    } : null
                 });
 
                 context.Response.ContentType = "application/json";

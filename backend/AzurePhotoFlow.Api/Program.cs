@@ -4,6 +4,7 @@ using Api.Interfaces;
 using Api.Models;
 using AzurePhotoFlow.Api.Data;
 using AzurePhotoFlow.Api.Models;
+using AzurePhotoFlow.Api.Services;
 using AzurePhotoFlow.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -215,6 +216,7 @@ builder.Services.AddSingleton<IImageEmbeddingModel>(sp =>
     return new OnnxImageEmbeddingModel(visionSession, config, textSession, tokenizer, logger);
 });
 builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
+builder.Services.AddSingleton<TokenizerHealthService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -314,6 +316,51 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<PhotoFlowDbContext>();
     context.Database.EnsureCreated();
+}
+
+// Validate Tokenizer Health at Startup
+using (var scope = app.Services.CreateScope())
+{
+    var tokenizerHealthService = scope.ServiceProvider.GetRequiredService<TokenizerHealthService>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    logger.LogInformation("[STARTUP] Performing tokenizer health check...");
+    
+    try
+    {
+        var healthResult = tokenizerHealthService.CheckTokenizerHealth();
+        
+        if (healthResult.IsHealthy)
+        {
+            logger.LogInformation("[STARTUP] ✅ Tokenizer health check PASSED");
+            logger.LogInformation("[STARTUP] - Vocabulary size: {VocabSize} tokens", healthResult.VocabularySize);
+            logger.LogInformation("[STARTUP] - All required files validated: {FileCount} files", 
+                healthResult.FileValidations.Count(f => f.IsValid));
+        }
+        else
+        {
+            logger.LogWarning("[STARTUP] ⚠️ Tokenizer health check FAILED with {IssueCount} issues:", 
+                healthResult.Issues.Count);
+            
+            foreach (var issue in healthResult.Issues)
+            {
+                logger.LogWarning("[STARTUP] - Issue: {Issue}", issue);
+            }
+            
+            foreach (var file in healthResult.FileValidations.Where(f => !f.IsValid))
+            {
+                logger.LogWarning("[STARTUP] - Invalid file: {FileName} - {Error}", 
+                    file.FileName, file.ErrorMessage);
+            }
+            
+            logger.LogWarning("[STARTUP] Application will continue with fallback tokenization, but search accuracy may be reduced");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "[STARTUP] Failed to perform tokenizer health check: {Error}", ex.Message);
+        logger.LogWarning("[STARTUP] Application will continue, but tokenizer status is unknown");
+    }
 }
 
 // Graceful Shutdown Handling

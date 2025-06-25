@@ -10,6 +10,17 @@ using SixLaborsImage = SixLabors.ImageSharp.Image;
 
 namespace AzurePhotoFlow.Services;
 
+/*
+CLIP’s tokenization process serves as the critical bridge between raw text input and the model’s internal 
+representation of semantic meaning. The model employs Byte-Pair Encoding (BPE) tokenization, 
+which breaks down text into subword units rather than complete words. This approach addresses several key challenges:
+The tokenization transforms your text queries into sequences of integers that the CLIP text encoder can process. 
+Each token in the sequence is then converted into embeddings that capture semantic relationships between concepts. 
+The quality of this tokenization directly impacts how well CLIP can understand the semantic intent of your search queries.
+ *
+ *
+ */
+
 public class OnnxImageEmbeddingModel : IImageEmbeddingModel
 {
     private readonly InferenceSession _visionSession;
@@ -201,9 +212,9 @@ public class OnnxImageEmbeddingModel : IImageEmbeddingModel
                 inputIds[i] = tokens[i];
                 attentionMask[i] = 1;
             }
-            else
+            else // we ran out of tokens, so we PAD for now...
             {
-                inputIds[i] = 0; // PAD token
+                inputIds[i] = 0; 
                 attentionMask[i] = 0;
             }
         }
