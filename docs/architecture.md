@@ -2,35 +2,42 @@
 
 ## System Overview
 
-AzurePhotoFlow is a cloud-native AI-powered photo management application built with open-source technologies for cost-effective deployment. The system uses a microservices architecture with containerized components orchestrated by Kubernetes.
+AzurePhotoFlow is a cloud-native AI-powered photo management application built with open-source technologies for cost-effective deployment. The system uses a containerized architecture orchestrated by Docker Compose (development) or Kubernetes (production).
 
 ## Architecture Diagram
 
-```
-+-------------------+    +-------------------+    +-------------------+
-|   Frontend        |    |   Backend API     |    |   AI/ML Engine    |
-|   React + Vite    |--->|   ASP.NET Core    |--->|   CLIP Vision +   |
-|   Material-UI     |    |   Clean Arch      |    |   Text + ONNX     |
-+-------------------+    +-------------------+    +-------------------+
-         |                       |                       |
-         |                       v                       |
-         |              +-------------------+            |
-         |              |   MinIO Storage   |            |
-         |              |   S3-Compatible   |            |
-         |              +-------------------+            |
-         |                                                |
-         +------------------------+-------------------------+
-                                  v
-                    +-------------------+
-                    |   Qdrant Vector   |
-                    |   Similarity DB   |
-                    +-------------------+
+```mermaid
+graph TB
+    User([User]) --> Nginx[Nginx :8080]
+
+    subgraph Frontend
+        React[React 18 SPA<br/>Vite 6 + MUI 6]
+    end
+
+    subgraph Backend
+        API[ASP.NET Core 8<br/>Clean Architecture]
+        CLIP[CLIP Models<br/>ONNX Runtime]
+    end
+
+    subgraph Storage
+        MinIO[(MinIO<br/>S3-Compatible<br/>Object Storage)]
+        Qdrant[(Qdrant<br/>Vector Database)]
+        SQLite[(SQLite<br/>Metadata & GUIDs)]
+    end
+
+    Nginx --> React
+    Nginx --> API
+    React -- REST + JWT --> API
+    API --> CLIP
+    API --> MinIO
+    API --> Qdrant
+    API --> SQLite
 ```
 
 ## Core Components
 
 ### 1. Frontend Application
-**Technology**: React 18 + Vite + Material-UI v6
+**Technology**: React 18 + Vite 6 + Material-UI v6
 
 **Responsibilities**:
 - Responsive user interface for photo management
@@ -70,17 +77,27 @@ AzurePhotoFlow is a cloud-native AI-powered photo management application built w
 ### 3. AI/ML Engine
 **Technology**: OpenAI CLIP vision and text transformers on ONNX Runtime
 
-**Model Details**:
-- Pre-trained CLIP vision model (`openai/clip-vit-base-patch32`) - 350MB ONNX
-- Pre-trained CLIP text model (`openai/clip-vit-base-patch32`) - 252MB ONNX
-- 38,400-dimensional vector embeddings (50 x 768)
+**Model Variants**:
+
+| Variant | Model | Embedding Dimensions | Notes |
+|---------|-------|---------------------|-------|
+| Base | `clip-vit-base-patch32` | 512 | Default — fastest, lowest resource usage |
+| Large | `clip-vit-large-patch14` | 768 | Balanced accuracy & performance |
+| Huge | `clip-vit-huge-patch14` | 1024 | Best accuracy, most resource intensive |
+
+The active variant is configured via the `EMBEDDING_DIMENSION` and `EMBEDDING_MODEL_VARIANT` environment variables and can be switched using `make models-512`, `make models-768`, or `make models-1024`.
+
+**Processing Details**:
 - Cross-platform inference with ONNX Runtime
-- Local processing for cost efficiency
+- BPE tokenization with max 77 tokens for text input
+- 224x224 pixel image input size
+- Cosine similarity for vector comparison (configurable to Dot or Euclidean)
+- Local processing — no external API costs
 
 **Capabilities**:
 - Semantic image understanding using vision encoder
 - Natural language query processing using text encoder
-- Accurate text-to-image similarity scoring in shared embedding space
+- Accurate text-to-image similarity scoring in shared CLIP embedding space
 - Face detection and recognition
 - OCR text extraction
 
@@ -110,38 +127,58 @@ Bucket Structure:
 **Technology**: Qdrant vector similarity search engine
 
 **Collections**:
-- Environment-specific collections
-- 512-dimensional CLIP embeddings
-- Metadata storage with vectors
-- Cosine similarity search
+- Environment-specific collection names (configured via `QDRANT_COLLECTION`)
+- 512, 768, or 1024-dimensional CLIP embeddings (configurable)
+- Cosine similarity search (default, configurable)
+- Metadata stored as payload alongside vectors
 
 **Data Model**:
 ```json
 {
-  "id": "md5_hash_of_object_key",
-  "vector": [512 float values],
+  "id": "uuid",
+  "vector": [512/768/1024 float values],
   "payload": {
     "object_key": "storage/path/to/image.jpg",
     "file_name": "image.jpg",
+    "guid": "unique-image-guid",
     "project_name": "vacation_photos",
+    "year": "2024",
     "upload_timestamp": "2024-01-01T12:00:00Z"
   }
 }
 ```
 
+#### Metadata Database (SQLite)
+**Technology**: SQLite with Entity Framework Core
+
+Stores image GUID mappings and metadata that complement the vector payloads. The database file is persisted via a Docker volume at `/app/data/photoflow.db`.
+
 ### 5. Authentication & Security
 **Technology**: Google OAuth 2.0 + JWT tokens
 
 **Flow**:
-1. User initiates Google OAuth login
-2. Backend validates OAuth token with Google
-3. Backend generates JWT with user claims
-4. Frontend stores JWT for API authentication
-5. API validates JWT on protected endpoints
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Google
+    participant Backend
+
+    User->>Frontend: Click "Sign in with Google"
+    Frontend->>Google: OAuth redirect
+    Google-->>Frontend: OAuth token
+    Frontend->>Backend: POST /api/auth/google
+    Backend->>Google: Validate token
+    Google-->>Backend: User info
+    Backend-->>Frontend: JWT (HS256, 7-day expiry)
+    Frontend->>Frontend: Store JWT in localStorage
+    Note over Frontend,Backend: Subsequent requests include<br/>Authorization: Bearer {JWT}
+```
 
 **Security Features**:
 - HTTPS-only communication
-- JWT token expiration
+- JWT token expiration (7-day default)
 - Role-based access control
 - CORS configuration
 - Input validation and sanitization
@@ -149,53 +186,67 @@ Bucket Structure:
 ## Data Flow Patterns
 
 ### Image Upload Flow
-```
-1. User uploads ZIP file -> Frontend
-2. Frontend sends to -> Backend API
-3. Backend extracts images -> MinIO Storage
-4. Background processing:
-   a. Extract EXIF metadata
-   b. Generate CLIP embeddings
-   c. Store vectors in Qdrant
-   d. Index for search
+
+```mermaid
+flowchart TD
+    A[User uploads ZIP] --> B[Backend extracts images]
+    B --> C[Validate file types]
+    C --> D[Store originals in MinIO]
+    D --> E[Extract EXIF metadata]
+    D --> F[Generate CLIP vision embeddings]
+    F --> G[Upsert vectors in Qdrant]
+    E --> H[Save GUID mapping in SQLite]
+    G --> H
+    H --> I[Return upload confirmation]
 ```
 
 ### Search Flow
-```
-1. User enters query -> Frontend
-2. Frontend sends to -> Backend Search API
-3. Backend processes:
-   a. Generate query embedding (CLIP)
-   b. Perform vector similarity search (Qdrant)
-   c. Rank results by similarity score
-   d. Fetch metadata and URLs
-4. Results returned -> Frontend display
+
+```mermaid
+flowchart TD
+    A[User enters text query] --> B[CLIP text encoder generates embedding]
+    B --> C[Qdrant cosine similarity search]
+    C --> D[Rank results by score]
+    D --> E[Resolve image URLs from MinIO]
+    E --> F[Return ranked results to frontend]
 ```
 
 ### Face Recognition Flow
-```
-1. Image upload triggers -> Face detection service
-2. Extract face embeddings -> Store in Qdrant
-3. Group similar faces -> Create person clusters
-4. User labels persons -> Update metadata
-5. Search by person -> Return tagged photos
+
+```mermaid
+flowchart TD
+    A[Image upload triggers face detection] --> B[Extract face embeddings]
+    B --> C[Store face vectors in Qdrant]
+    C --> D[Group similar faces into clusters]
+    D --> E[User labels persons]
+    E --> F[Search by person returns tagged photos]
 ```
 
 ## Deployment Architecture
 
 ### Development Environment
+
+```mermaid
+graph LR
+    subgraph Docker Compose
+        Nginx[Nginx :8080]
+        FE[Frontend]
+        BE[Backend :5001]
+        M[MinIO :9000/:9001]
+        Q[Qdrant :6333]
+    end
+
+    Nginx --> FE
+    Nginx --> BE
+    BE --> M
+    BE --> Q
 ```
-Docker Compose:
-├── nginx (Reverse Proxy)
-├── frontend (React App)
-├── backend (API Server)
-├── minio (Object Storage)
-└── qdrant (Vector Database)
-```
+
+All services run as Docker containers via `docker-compose.yml`. The backend container mounts the `models/` directory for ONNX model access and a Docker volume for SQLite persistence.
 
 ### Production Environment
 ```
-Kubernetes Cluster:
+Kubernetes Cluster (MicroK8s):
 ├── Namespace: azurephotoflow
 ├── Ingress: NGINX with SSL
 ├── Deployments:
@@ -209,16 +260,16 @@ Kubernetes Cluster:
 ```
 
 ### Container Images
-- **Frontend**: Multi-stage Dockerfile with Nginx
-- **Backend**: .NET 8 runtime with ONNX model
+- **Frontend**: Multi-stage Dockerfile — Node build + Nginx serving
+- **Backend**: .NET 8 runtime with ONNX models mounted via volume
 - **Storage**: Official MinIO and Qdrant images
 
 ## Performance Characteristics
 
 ### Scalability
 - **Horizontal scaling**: Frontend and backend can scale independently
-- **Load balancing**: NGINX distributes requests across replicas
-- **Caching**: React Query caches API responses
+- **Load balancing**: Nginx distributes requests across replicas
+- **Caching**: React Query caches API responses on the client
 - **Database**: Qdrant handles large vector collections efficiently
 
 ### Performance Metrics
@@ -232,14 +283,15 @@ Kubernetes Cluster:
 | Component | Technology | Version | Purpose |
 |-----------|------------|---------|---------|
 | Frontend | React | 18.x | User interface |
-| Build Tool | Vite | 5.x | Development and bundling |
+| Build Tool | Vite | 6.x | Development and bundling |
 | UI Framework | Material-UI | 6.x | Component library |
 | Backend | ASP.NET Core | 8.x | API server |
-| AI Model | CLIP | ONNX | Semantic embeddings |
+| AI Model | CLIP | ONNX | Semantic embeddings (512/768/1024D) |
 | Object Storage | MinIO | Latest | File storage |
 | Vector DB | Qdrant | Latest | Similarity search |
+| Metadata DB | SQLite + EF Core | — | GUID mapping & metadata |
 | Orchestration | Kubernetes | 1.20+ | Container management |
-| Reverse Proxy | NGINX | Latest | Load balancing |
+| Reverse Proxy | Nginx | Latest | Load balancing |
 | Authentication | Google OAuth | 2.0 | User authentication |
 
 ## Key Design Decisions
@@ -247,25 +299,23 @@ Kubernetes Cluster:
 ### Cost Optimization
 - **Open-source stack**: Eliminates cloud service costs
 - **Self-hosted infrastructure**: Full control over resources
-- **Local AI processing**: No external API charges
+- **Local AI processing**: No external API charges for CLIP inference
 - **Efficient storage**: S3-compatible with local deployment
 
 ### Scalability Strategy
-- **Microservices architecture**: Independent scaling
-- **Stateless design**: Easy horizontal scaling
-- **Container-first**: Cloud-native deployment
-- **Event-driven processing**: Async background tasks
+- **Containerized architecture**: Independent scaling of services
+- **Stateless design**: Easy horizontal scaling for frontend and backend
+- **Container-first**: Cloud-native deployment via Docker and Kubernetes
+- **Background processing**: Async embedding generation during uploads
 
 ### Performance Focus
-- **Vector search**: Optimized similarity algorithms
-- **Caching layers**: Multi-level caching strategy
+- **Vector search**: Optimized cosine similarity via Qdrant
+- **Caching layers**: Client-side caching with React Query
+- **Configurable models**: Trade off between accuracy and speed with 3 CLIP variants
 - **Efficient protocols**: HTTP/2, compression
-- **Resource optimization**: Memory and CPU tuning
 
 ### Security Considerations
-- **Zero-trust model**: Authentication on all endpoints
-- **Encrypted communication**: HTTPS everywhere
+- **Zero-trust model**: Authentication on all API endpoints
+- **Encrypted communication**: HTTPS everywhere in production
 - **Input validation**: Comprehensive sanitization
-- **Access control**: Role-based permissions
-
-This architecture provides a robust, scalable, and cost-effective solution for AI-powered photo management while maintaining high performance and security standards.
+- **Access control**: JWT-based authorization with role claims
